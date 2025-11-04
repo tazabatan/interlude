@@ -17,7 +17,6 @@ as $$
   select nullif(auth.jwt() ->> 'venue_id', '')::uuid;
 $$;
 
--- Enable RLS on tables that hold tenant/member data
 alter table if exists public.venues enable row level security;
 alter table if exists public.passes enable row level security;
 alter table if exists public.pass_inventory enable row level security;
@@ -27,8 +26,7 @@ alter table if exists public.venue_ledger enable row level security;
 alter table if exists public.invoices enable row level security;
 alter table if exists public.invoice_line_items enable row level security;
 
--- Bookings policies
-create policy if not exists bookings_members_select
+create policy bookings_members_select
 on public.bookings
 for select
 using (
@@ -36,7 +34,7 @@ using (
   and auth.uid() = user_id
 );
 
-create policy if not exists bookings_members_insert
+create policy bookings_members_insert
 on public.bookings
 for insert
 with check (
@@ -48,7 +46,7 @@ with check (
   and hold_status = 'none'
 );
 
-create policy if not exists bookings_staff_select
+create policy bookings_staff_select
 on public.bookings
 for select
 using (
@@ -57,7 +55,7 @@ using (
 );
 
 -- Booking audit (mirror booking visibility)
-create policy if not exists booking_audit_member_select
+create policy booking_audit_member_select
 on public.booking_audit
 for select
 using (
@@ -70,7 +68,7 @@ using (
   )
 );
 
-create policy if not exists booking_audit_staff_select
+create policy booking_audit_staff_select
 on public.booking_audit
 for select
 using (
@@ -84,7 +82,7 @@ using (
 );
 
 -- Venues
-create policy if not exists venues_staff_select
+create policy venues_staff_select
 on public.venues
 for select
 using (
@@ -93,7 +91,7 @@ using (
 );
 
 -- Passes
-create policy if not exists passes_staff_select
+create policy passes_staff_select
 on public.passes
 for select
 using (
@@ -101,7 +99,7 @@ using (
   and venue_id = current_venue_claim()
 );
 
-create policy if not exists passes_staff_modify
+create policy passes_staff_modify
 on public.passes
 for all
 using (
@@ -114,7 +112,7 @@ with check (
 );
 
 -- Pass inventory
-create policy if not exists pass_inventory_staff_select
+create policy pass_inventory_staff_select
 on public.pass_inventory
 for select
 using (
@@ -127,7 +125,7 @@ using (
   )
 );
 
-create policy if not exists pass_inventory_staff_modify
+create policy pass_inventory_staff_modify
 on public.pass_inventory
 for all
 using (
@@ -150,7 +148,7 @@ with check (
 );
 
 -- Venue ledger & invoices visibility
-create policy if not exists venue_ledger_staff_select
+create policy venue_ledger_staff_select
 on public.venue_ledger
 for select
 using (
@@ -158,7 +156,7 @@ using (
   and venue_id = current_venue_claim()
 );
 
-create policy if not exists invoices_staff_select
+create policy invoices_staff_select
 on public.invoices
 for select
 using (
@@ -166,7 +164,7 @@ using (
   and venue_id = current_venue_claim()
 );
 
-create policy if not exists invoice_line_items_staff_select
+create policy invoice_line_items_staff_select
 on public.invoice_line_items
 for select
 using (
