@@ -1,9 +1,8 @@
--- Migration: create core schema objects for Interlude MVP
 -- Enums
-create type if not exists pass_kind as enum ('MIN_SPEND', 'DAY_PASS');
-create type if not exists pricing_mode as enum ('HOLD_ONLY');
-create type if not exists pass_visibility as enum ('members', 'guest_only', 'both', 'private');
-create type if not exists booking_status as enum (
+create type pass_kind as enum ('MIN_SPEND', 'DAY_PASS');
+create type pricing_mode as enum ('HOLD_ONLY');
+create type pass_visibility as enum ('members', 'guest_only', 'both', 'private');
+create type booking_status as enum (
   'requested',
   'approved',
   'issued',
@@ -14,9 +13,9 @@ create type if not exists booking_status as enum (
   'cancelled',
   'declined'
 );
-create type if not exists hold_status as enum ('none', 'authorized', 'canceled', 'captured');
-create type if not exists invoice_status as enum ('draft', 'sent', 'paid', 'void');
-create type if not exists ledger_type as enum (
+create type hold_status as enum ('none', 'authorized', 'canceled', 'captured');
+create type invoice_status as enum ('draft', 'sent', 'paid', 'void');
+create type ledger_type as enum (
   'fee_due',
   'venue_credit_no_show',
   'platform_admin_no_show',
