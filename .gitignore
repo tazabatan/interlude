@@ -1,2 +1,8 @@
 # Supabase/Functions build artifacts
 supabase/functions/**/node_modules/
+
+# Env & local
+.env*
+supabase/config.toml
+# Build outputs
+web@0.1.0/
