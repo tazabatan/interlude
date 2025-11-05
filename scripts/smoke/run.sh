@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 DB_CONTAINER=${DB_CONTAINER:-supabase_db_interlude}
 MEMBER_ID=${MEMBER_ID:-00000000-0000-0000-0000-000000000001}
 STAFF_ID=${STAFF_ID:-00000000-0000-0000-0000-000000000002}
@@ -269,5 +272,8 @@ BEGIN
 END;
 \$\$;
 SQL
+
+echo "🧪 Running concurrency guard check..."
+DB_CONTAINER="$DB_CONTAINER" "$ROOT_DIR/scripts/concurrency/run.sh"
 
 echo "✅ Smoke tests passed."
