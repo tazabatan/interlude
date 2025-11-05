@@ -10,29 +10,30 @@ export default function AuthCallback() {
   const next = searchParams.get('next') || '/explore'
 
   useEffect(() => {
-    const run = async () => {
-      const supabase = supabaseBrowser()
-      const hashParams = new URLSearchParams(window.location.hash.slice(1))
-      const errorDescription = hashParams.get('error_description')
+    const supabase = supabaseBrowser()
 
-      if (errorDescription) {
-        alert(`Sign-in failed: ${errorDescription}`)
-        router.replace('/auth')
-        return
-      }
+    // Check for error in hash
+    const hashParams = new URLSearchParams(window.location.hash.slice(1))
+    const errorDescription = hashParams.get('error_description')
 
-      const { error } = await supabase.auth.exchangeCodeForSession(window.location.href)
-      if (error) {
-        console.error(error)
-        alert(`Sign-in failed: ${error.message}`)
-        router.replace('/auth')
-        return
-      }
-
-      router.replace(next)
+    if (errorDescription) {
+      alert(`Sign-in failed: ${errorDescription}`)
+      router.replace('/auth')
+      return
     }
 
-    run()
+    // Listen for auth state change (magic link tokens are processed automatically)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        router.replace(next)
+      } else if (event === 'SIGNED_OUT' || !session) {
+        router.replace('/auth')
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [router, next])
 
   return <p>Signing you in…</p>
