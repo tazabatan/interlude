@@ -6,3 +6,8 @@ supabase/functions/**/node_modules/
 supabase/config.toml
 # Build outputs
 web@0.1.0/
+# Next.js cache
+.next/
+next-env.d.ts
+# Supabase local ignores
+supabase/.gitignore
