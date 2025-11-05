@@ -3,16 +3,12 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 type Booking = {
   id: string;
-  hold_amount: number | null;
-  hold_currency: string | null;
   hold_status: string;
   payment_intent_ref: string | null;
 };
 
 type StripePaymentIntent = {
   id: string;
-  amount: number;
-  currency: string;
   status: string;
   cancellation_reason?: string;
   [key: string]: unknown;
@@ -32,7 +28,7 @@ const supabaseHeaders = SERVICE_ROLE_KEY
 
 async function fetchBooking(bookingId: string): Promise<Booking | null> {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/bookings?select=id,hold_amount,hold_currency,hold_status,payment_intent_ref&id=eq.${bookingId}&limit=1`,
+    `${SUPABASE_URL}/rest/v1/bookings?select=id,hold_status,payment_intent_ref&id=eq.${bookingId}&limit=1`,
     { headers: supabaseHeaders! },
   );
 
@@ -72,28 +68,23 @@ async function removeIdempotency(key: string) {
   });
 }
 
-async function stripeCapture(
+async function stripeCancel(
   paymentIntentId: string,
-  amount: number,
   idempotencyKey: string,
 ): Promise<StripePaymentIntent> {
-  const params = new URLSearchParams();
-  params.set("amount_to_capture", amount.toString());
-
-  const res = await fetch(`https://api.stripe.com/v1/payment_intents/${paymentIntentId}/capture`, {
+  const res = await fetch(`https://api.stripe.com/v1/payment_intents/${paymentIntentId}/cancel`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
       "Content-Type": "application/x-www-form-urlencoded",
       "Idempotency-Key": idempotencyKey,
     },
-    body: params.toString(),
   });
 
   const json = (await res.json()) as StripePaymentIntent;
 
   if (!res.ok) {
-    throw new Error(`stripe capture failed: ${JSON.stringify(json)}`);
+    throw new Error(`stripe cancel failed: ${JSON.stringify(json)}`);
   }
 
   return json;
@@ -123,25 +114,38 @@ serve(async (req) => {
       return new Response("booking not found", { status: 404 });
     }
 
-    if (booking.hold_status === "captured") {
+    if (booking.hold_status === "canceled") {
       return new Response(JSON.stringify({ ok: true, idem: true }), {
         headers: { "Content-Type": "application/json" },
       });
     }
 
     if (!booking.payment_intent_ref) {
-      return new Response("payment_intent_ref missing", { status: 400 });
+      const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/fn_hold_canceled`, {
+        method: "POST",
+        headers: supabaseHeaders,
+        body: JSON.stringify({
+          _booking_id: bookingId,
+          _reason: "no_payment_intent",
+        }),
+      });
+
+      if (!rpcRes.ok) {
+        return new Response(
+          `failed to persist cancel: ${rpcRes.status} ${await rpcRes.text()}`,
+          { status: 500 },
+        );
+      }
+
+      return new Response(JSON.stringify({ ok: true, noop: true }), {
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    const amount = booking.hold_amount ?? 0;
-    if (amount <= 0) {
-      return new Response("hold_amount missing", { status: 400 });
-    }
-
-    const idemKey = `hold_capture:${bookingId}`;
+    const idemKey = `hold_cancel:${bookingId}`;
     const inserted = await insertIdempotency(idemKey, {
       booking_id: bookingId,
-      job: "hold_capture",
+      job: "hold_cancel",
       created_at: new Date().toISOString(),
     });
     if (!inserted) {
@@ -152,30 +156,28 @@ serve(async (req) => {
 
     let paymentIntent: StripePaymentIntent;
     try {
-      paymentIntent = await stripeCapture(
+      paymentIntent = await stripeCancel(
         booking.payment_intent_ref,
-        amount,
-        `hold_capture_${bookingId}`,
+        `hold_cancel_${bookingId}`,
       );
     } catch (error) {
       await removeIdempotency(idemKey);
       return new Response(String(error), { status: 400 });
     }
 
-    const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/fn_hold_captured`, {
+    const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/fn_hold_canceled`, {
       method: "POST",
       headers: supabaseHeaders,
       body: JSON.stringify({
         _booking_id: bookingId,
-        _amount_cents: (paymentIntent as { amount_received?: number }).amount_received ?? paymentIntent.amount ?? amount,
-        _currency: paymentIntent.currency?.toUpperCase() ?? booking.hold_currency ?? "USD",
+        _reason: paymentIntent.cancellation_reason ?? null,
         _stripe_response: paymentIntent,
       }),
     });
 
     if (!rpcRes.ok) {
       return new Response(
-        `failed to persist capture: ${rpcRes.status} ${await rpcRes.text()}`,
+        `failed to persist cancel: ${rpcRes.status} ${await rpcRes.text()}`,
         { status: 500 },
       );
     }

@@ -38,9 +38,13 @@ set search_path = public
 as $$
 declare
   v_run_at timestamptz;
+  v_hold_amount int;
 begin
-  v_run_at := public.fn_t_minus_one_14(_window_start, 'America/Anguilla');
-  perform public.fn_enqueue('hold_authorize', _booking_id, v_run_at);
+  select hold_amount into v_hold_amount from public.bookings where id = _booking_id;
+  if coalesce(v_hold_amount, 0) > 0 then
+    v_run_at := public.fn_t_minus_one_14(_window_start, 'America/Anguilla');
+    perform public.fn_enqueue('hold_authorize', _booking_id, v_run_at);
+  end if;
 end;
 $$;
 

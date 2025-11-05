@@ -64,28 +64,6 @@ const callFunction = async (name: string, payload: Record<string, unknown>) => {
   }
 };
 
-const cancelHold = async (bookingId: string) => {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/bookings?id=eq.${bookingId}`,
-    {
-      method: "PATCH",
-      headers: {
-        apikey: SUPABASE_SERVICE_ROLE_KEY!,
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-        "Content-Type": "application/json",
-        Prefer: "return=minimal",
-      },
-      body: JSON.stringify({ hold_status: "canceled" }),
-    },
-  );
-
-  if (!res.ok) {
-    throw new Error(
-      `hold_cancel ${res.status}: ${await res.text()}`,
-    );
-  }
-};
-
 serve(async () => {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return new Response("Missing Supabase configuration", { status: 500 });
@@ -106,7 +84,7 @@ serve(async () => {
           if (!job.booking_id) {
             throw new Error("hold_cancel missing booking_id");
           }
-          await cancelHold(job.booking_id);
+          await callFunction("hold_cancel", { booking_id: job.booking_id });
           break;
         }
         case "hold_authorize": {

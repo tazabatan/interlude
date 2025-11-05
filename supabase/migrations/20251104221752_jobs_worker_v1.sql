@@ -4,6 +4,9 @@
 create index if not exists idx_due_jobs_ready
 on public.due_jobs (status, run_at);
 
+create unique index if not exists idx_due_jobs_unique
+on public.due_jobs (booking_id, job_type);
+
 create or replace function public.fn_claim_due_jobs(_limit int default 25)
 returns table(job_id uuid, job_type text, booking_id uuid, scheduled_at timestamptz)
 language plpgsql
