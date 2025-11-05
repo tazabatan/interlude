@@ -24,6 +24,7 @@ export default function RootLayout({
             </a>
             <nav className="flex gap-4 text-sm">
               <a href="/explore">Explore</a>
+              <a href="/desk">Desk</a>
               <a href="/wallet">Wallet</a>
               <a href="/auth">Sign in</a>
             </nav>

@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Desk Controls Smoke Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 16px; }
+    input, button, select { font-size: 16px; padding: 8px; }
+    .row{ display:flex; gap:8px; align-items:center; margin:8px 0; flex-wrap:wrap;}
+    .card{ border:1px solid #ddd; border-radius:12px; padding:16px; margin:16px 0;}
+    pre{ background:#111; color:#eee; padding:12px; border-radius:8px; overflow:auto; }
+    .ok{ color:#0a0; } .err{ color:#a00; }
+  </style>
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    const SUPABASE_URL = "http://127.0.0.1:54321";
+    const SUPABASE_ANON_KEY = "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    function $(id){ return document.getElementById(id); }
+    function logJSON(obj){ $("out").textContent = JSON.stringify(obj, null, 2); }
+
+    async function login(){
+      const email = $("email").value.trim();
+      const password = $("password").value;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if(error){ $("status").innerHTML = `<span class="err">Login error: ${error.message}</span>`; return; }
+      $("status").innerHTML = `<span class="ok">Logged in as ${data.user.email}</span>`;
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      $("jwtlen").textContent = token ? token.length : 0;
+    }
+
+    async function logout(){
+      await supabase.auth.signOut();
+      $("status").textContent = "Logged out.";
+      $("jwtlen").textContent = "0";
+    }
+
+    async function invoke(action, payload){
+      const { data, error } = await supabase.functions.invoke("desk_controls", {
+        body: { action, payload }
+      });
+      if(error){ $("status").innerHTML = `<span class="err">${error.message}</span>`; }
+      logJSON(data ?? error ?? { note:"no response" });
+    }
+
+    window.onLogin = login;
+    window.onLogout = logout;
+    window.onSetAuto = () => invoke("set_auto_approve", {
+      p_pass_id: $("passId").value.trim(),
+      p_enabled: $("autoApprove").checked
+    });
+    window.onSetCap = () => invoke("set_daily_cap", {
+      p_pass_id: $("passId").value.trim(),
+      p_date: $("capDate").value,
+      p_cap: Number($("cap").value)
+    });
+    window.onSetPaused = () => invoke("set_paused", {
+      p_pass_id: $("passId").value.trim(),
+      p_date: $("pauseDate").value,
+      p_paused: $("paused").checked
+    });
+    window.onSetDefaultWindow = () => invoke("set_default_arrival_window", {
+      p_pass_id: $("passId").value.trim(),
+      p_minutes: Number($("minutes").value)
+    });
+    window.onForceAuthNow = () => invoke("force_authorize_now", {
+      p_booking_id: $("bookingId").value.trim()
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const today = new Date().toISOString().slice(0,10);
+      $("capDate").value = today;
+      $("pauseDate").value = today;
+    });
+  </script>
+</head>
+<body>
+  <h1>Desk Controls — Smoke Test</h1>
+
+  <div class="card">
+    <h3>Login</h3>
+    <div class="row">
+      <input id="email" placeholder="email" value="manager@example.com" />
+      <input id="password" type="password" placeholder="password" value="DevTest123!" />
+      <button onclick="onLogin()">Log in</button>
+      <button onclick="onLogout()">Log out</button>
+    </div>
+    <div id="status">Not logged in.</div>
+    <div>JWT length: <span id="jwtlen">0</span></div>
+  </div>
+
+  <div class="card">
+    <h3>Pass Controls</h3>
+    <div class="row">
+      <input id="passId" placeholder="PASS_ID (UUID)" />
+    </div>
+
+    <div class="row">
+      <label><input type="checkbox" id="autoApprove" /> auto-approve</label>
+      <button onclick="onSetAuto()">Set Auto-Approve</button>
+    </div>
+
+    <div class="row">
+      <input id="capDate" type="date" />
+      <input id="cap" type="number" placeholder="cap" value="20" />
+      <button onclick="onSetCap()">Set Daily Cap</button>
+    </div>
+
+    <div class="row">
+      <input id="pauseDate" type="date" />
+      <label><input type="checkbox" id="paused" /> paused</label>
+      <button onclick="onSetPaused()">Set Paused</button>
+    </div>
+
+    <div class="row">
+      <input id="minutes" type="number" placeholder="default arrival window minutes" value="90" />
+      <button onclick="onSetDefaultWindow()">Set Default Arrival Window</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Booking control (optional)</h3>
+    <div class="row">
+      <input id="bookingId" placeholder="BOOKING_ID (UUID)" />
+      <button onclick="onForceAuthNow()">Force Authorize Now</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Response</h3>
+    <pre id="out">{}</pre>
+  </div>
+</body>
+</html>
