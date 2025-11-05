@@ -67,12 +67,12 @@ begin
   -- B) Block illegal transitions on UPDATE
   if NEW.status is distinct from OLD.status then
     case OLD.status
-      when 'requested' then _ok := NEW.status in ('approved','cancelled');
+      when 'requested' then _ok := NEW.status in ('approved','cancelled','declined');
       when 'approved'  then _ok := NEW.status in ('issued','cancelled');
       when 'issued'    then _ok := NEW.status in ('redeemed','pending_verification','cancelled');
       when 'pending_verification' then _ok := NEW.status in ('redeemed_late','no_show','cancelled');
       -- Terminal states: no further transitions
-      when 'redeemed','redeemed_late','no_show','cancelled' then _ok := false;
+      when 'redeemed','redeemed_late','no_show','cancelled','declined' then _ok := false;
       else _ok := false;
     end case;
 
