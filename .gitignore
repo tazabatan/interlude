@@ -11,3 +11,6 @@ web@0.1.0/
 next-env.d.ts
 # Supabase local ignores
 supabase/.gitignore
+supabase/.functions-env
+.env
+.env.local
