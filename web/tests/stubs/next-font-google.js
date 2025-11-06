@@ -6,4 +6,5 @@ function fontFactory() {
 
 module.exports = {
   Inter: fontFactory(),
+  Montserrat: fontFactory(),
 }

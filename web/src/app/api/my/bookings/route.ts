@@ -26,6 +26,7 @@ export async function GET() {
         arrival_window_end,
         qr_jti,
         hold_status,
+        pass:passes(kind),
         venue:venues(name,tz)
       `
     )

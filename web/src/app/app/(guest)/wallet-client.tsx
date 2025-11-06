@@ -1,14 +1,18 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import type { GuestBookingView } from '@/lib/bookings/view-model'
 
-type Segment = 'today' | 'upcoming' | 'past'
+type Segment = 'today' | 'upcoming' | 'past' | 'cancelled'
 
 const segmentLabels: Record<Segment, string> = {
   today: 'Today',
   upcoming: 'Upcoming',
   past: 'Past',
+  cancelled: 'Cancelled',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -24,15 +28,35 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const STATUS_VARIANTS: Record<string, string> = {
-  requested: 'bg-yellow-100 text-yellow-700',
-  approved: 'bg-emerald-100 text-emerald-700',
-  issued: 'bg-emerald-100 text-emerald-700',
-  pending_verification: 'bg-blue-100 text-blue-700',
-  declined: 'bg-rose-100 text-rose-700',
-  cancelled: 'bg-gray-200 text-gray-700',
-  no_show: 'bg-gray-300 text-gray-700',
-  redeemed: 'bg-emerald-100 text-emerald-700',
-  redeemed_late: 'bg-emerald-200 text-emerald-800',
+  requested: 'bg-[#FFF3C2] text-[#8C6B00]',
+  approved: 'bg-[#D0F3EA] text-[#0D6B56]',
+  issued: 'bg-[#D0F3EA] text-[#0D6B56]',
+  pending_verification: 'bg-[#D8E8FF] text-[#1D4ED8]',
+  declined: 'bg-[#FCE1E1] text-[#B4231F]',
+  cancelled: 'bg-[#DBD8C9] text-[#5F6059]',
+  no_show: 'bg-[#E2E0D7] text-[#5F6059]',
+  redeemed: 'bg-[#D0F3EA] text-[#0D6B56]',
+  redeemed_late: 'bg-[#BDEBD9] text-[#0B5B48]',
+}
+
+const PLACEHOLDER_IMAGES = [
+  '/wallet-photos/4655308-beachfront-five-bedroom-pool-villa-belmond-cap-juluca.jpg',
+  '/wallet-photos/belmond-cap-juluca.jpg',
+  '/wallet-photos/Fb-2.png',
+  '/wallet-photos/Screenshot 2025-10-29 at 17.48.44.png',
+  '/wallet-photos/Screenshot 2025-10-29 at 17.48.52.png',
+  '/wallet-photos/Screenshot 2025-10-29 at 17.49.28.png',
+] as const
+
+function pickImage(id: string) {
+  if (PLACEHOLDER_IMAGES.length === 0) return ''
+  let hash = 0
+  for (let i = 0; i < id.length; i += 1) {
+    hash = (hash << 5) - hash + id.charCodeAt(i)
+    hash |= 0
+  }
+  const index = Math.abs(hash) % PLACEHOLDER_IMAGES.length
+  return PLACEHOLDER_IMAGES[index]
 }
 
 function parse(dateIso: string | null) {
@@ -57,6 +81,10 @@ function isSameDay(date: Date, other: Date) {
 }
 
 function computeSegment(booking: GuestBookingView): Segment {
+  if (booking.status === 'cancelled' || booking.status === 'declined') {
+    return 'cancelled'
+  }
+
   const start = parse(booking.arrival_window_start)
   const now = new Date()
   if (start && isSameDay(start, now)) return 'today'
@@ -69,37 +97,96 @@ type Props = {
 }
 
 function BookingCard({ booking }: { booking: GuestBookingView }) {
+  const router = useRouter()
+  const isCancelled = booking.status === 'cancelled'
+
+  const handleCardClick = () => {
+    router.push(`/app/booking/${booking.id}`)
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleCardClick()
+    }
+  }
+
   const segment = computeSegment(booking)
   const statusLabel = STATUS_LABELS[booking.status] ?? booking.status
   const badgeStyle = STATUS_VARIANTS[booking.status] ?? 'bg-gray-200 text-gray-700'
   const dateToShow =
     segment === 'today' && booking.arrival_window_start ? 'Today' : formatDisplayDate(booking.date)
+  const imageSrc = pickImage(booking.id)
+
+  const showPrimaryCta = booking.status === 'issued' || booking.status === 'approved'
+  const primaryCta = booking.status === 'issued' ? 'Show pass' : 'View reservation'
+  const showCancelLink = booking.can_cancel && booking.status !== 'cancelled' && booking.status !== 'requested'
 
   return (
-    <div className="flex h-full flex-col rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="mb-4 flex items-center justify-between text-sm text-gray-500">
-        <span>{dateToShow}</span>
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${badgeStyle}`}>{statusLabel}</span>
-      </div>
-      <div className="mb-4">
-        <div className="text-lg font-semibold uppercase tracking-wide">
-          {booking.venue_name ?? 'Venue TBD'}
+    <div
+      className="mx-auto w-full max-w-[24rem] cursor-pointer rounded-[32px] focus:outline-none focus:ring-2 focus:ring-[#02374D]/40 focus:ring-offset-2 focus:ring-offset-[#F4F1E7] sm:max-w-[25.5rem] lg:max-w-[26.5rem] xl:max-w-[27.5rem]"
+      role="link"
+      tabIndex={0}
+      onClick={handleCardClick}
+      onKeyDown={handleKeyDown}
+    >
+      <div className="flex min-h-[22rem] w-full flex-col items-center justify-center gap-4 rounded-[32px] border border-[#E8E4D7] bg-[#F9F6ED] px-7 py-5 text-center shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] lg:min-h-[24rem] xl:min-h-[26rem]">
+        <div className="flex flex-col items-center text-[0.62rem] uppercase tracking-[0.22em] text-[#6F716D]">
+          <span className="tracking-[0.25em] text-[#6F716D]">{dateToShow}</span>
+          <span
+            className={`mt-1 inline-flex rounded-full px-3 py-1 text-[0.65rem] font-semibold tracking-tight ${badgeStyle}`}
+          >
+            {statusLabel}
+          </span>
         </div>
-        <div className="text-sm text-gray-600">Party {booking.party_size}</div>
-        {booking.hold_banner && (
-          <div className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">{booking.hold_banner}</div>
-        )}
-      </div>
-      <div className="mt-auto flex flex-wrap gap-3 text-sm">
-        {booking.qr_jti && (
-          <button className="rounded-full bg-black px-4 py-2 font-medium text-white hover:bg-black/80">
-            View QR
-          </button>
-        )}
-        {booking.can_cancel && (
-          <button className="rounded-full border border-red-200 px-4 py-2 font-medium text-red-600 hover:border-red-300">
-            Cancel
-          </button>
+
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-32 w-32 overflow-hidden rounded-full border-4 border-[#DBD8C9] bg-white shadow-[0px_10px_22px_rgba(0,0,0,0.12)] lg:h-36 lg:w-36">
+            {imageSrc ? (
+              <Image
+                src={imageSrc}
+                alt={booking.venue_name ?? 'Venue placeholder'}
+                width={200}
+                height={200}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="h-full w-full bg-[#DBD8C9]" />
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-lg font-semibold uppercase tracking-[0.08em] text-black">
+              {booking.venue_name ?? 'Venue TBD'}
+            </div>
+            <div className="text-sm text-[#31332f]">
+              {booking.pass_kind ?? 'Pass'} · Party {booking.party_size}
+            </div>
+          </div>
+        </div>
+
+        {!isCancelled && (
+          <div className="flex min-h-[2.5rem] items-center justify-center gap-3 text-sm">
+            {showPrimaryCta && (
+              <Link
+                href={`/app/booking/${booking.id}`}
+                onClick={(event) => event.stopPropagation()}
+                className="rounded-full bg-[#02374D] px-5 py-2 font-medium text-white transition hover:bg-[#02486A]"
+              >
+                {primaryCta}
+              </Link>
+            )}
+            {showCancelLink && (
+              <Link
+                href={`/app/booking/${booking.id}`}
+                onClick={(event) => event.stopPropagation()}
+                className="rounded-full border border-[#F5B8B8] px-5 py-2 font-medium text-[#B4231F] transition hover:border-[#f29393]"
+              >
+                Cancel
+              </Link>
+            )}
+            {!showPrimaryCta && !showCancelLink && <span className="inline-block h-10 w-0" />}
+          </div>
         )}
       </div>
     </div>
@@ -108,9 +195,29 @@ function BookingCard({ booking }: { booking: GuestBookingView }) {
 
 export default function WalletClient({ bookings }: Props) {
   const [segment, setSegment] = useState<Segment>('upcoming')
+  const [bookingsState, setBookingsState] = useState<GuestBookingView[]>(bookings)
+
+  useEffect(() => {
+    setBookingsState(bookings)
+  }, [bookings])
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/my/bookings', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = (await res.json()) as { bookings: GuestBookingView[] }
+        setBookingsState(data.bookings)
+      } catch (error) {
+        console.warn('Failed to refresh bookings', error)
+      }
+    }, 10000)
+
+    return () => clearInterval(interval)
+  }, [])
 
   const grouped = useMemo(() => {
-    return bookings.reduce(
+    return bookingsState.reduce(
       (acc, booking) => {
         const key = computeSegment(booking)
         acc[key].push(booking)
@@ -120,9 +227,10 @@ export default function WalletClient({ bookings }: Props) {
         today: [] as GuestBookingView[],
         upcoming: [] as GuestBookingView[],
         past: [] as GuestBookingView[],
+        cancelled: [] as GuestBookingView[],
       }
     )
-  }, [bookings])
+  }, [bookingsState])
 
   const upcomingCount = grouped.today.length + grouped.upcoming.length
   const activeList =
@@ -130,22 +238,45 @@ export default function WalletClient({ bookings }: Props) {
       ? grouped.today
       : segment === 'upcoming'
         ? [...grouped.today, ...grouped.upcoming]
-        : grouped.past
+        : segment === 'past'
+          ? grouped.past
+          : grouped.cancelled
+
+  const segmentCounts = {
+    today: grouped.today.length,
+    upcoming: upcomingCount,
+    past: grouped.past.length,
+    cancelled: grouped.cancelled.length,
+  }
+
+  const headlineText =
+    segment === 'today'
+      ? segmentCounts.today > 0
+        ? `You have ${segmentCounts.today} reservation${segmentCounts.today === 1 ? '' : 's'} today`
+        : 'You have no reservations today'
+      : segment === 'upcoming'
+        ? segmentCounts.upcoming > 0
+          ? `You have ${segmentCounts.upcoming} upcoming reservation${segmentCounts.upcoming === 1 ? '' : 's'}`
+          : 'You have no upcoming reservations yet'
+        : segment === 'past'
+          ? segmentCounts.past > 0
+            ? `You have ${segmentCounts.past} past reservation${segmentCounts.past === 1 ? '' : 's'}`
+            : 'You have no past reservations yet'
+          : segmentCounts.cancelled > 0
+            ? `You have ${segmentCounts.cancelled} cancelled reservation${segmentCounts.cancelled === 1 ? '' : 's'}`
+            : 'You have no cancelled reservations'
 
   return (
-    <div className="space-y-10">
-      <header className="space-y-3">
-        <p className="text-sm uppercase tracking-[0.3em] text-gray-400">Wallet</p>
-        <h1 className="text-3xl font-semibold">You have {upcomingCount} upcoming reservations</h1>
-      </header>
-
-      <div className="flex gap-2">
+    <div className="mx-auto w-full max-w-[84rem] space-y-12 px-4 sm:px-8 lg:px-12 xl:px-16 2xl:max-w-[92rem]">
+      <div className="flex justify-center gap-2 pb-6">
         {(Object.keys(segmentLabels) as Segment[]).map((key) => (
           <button
             key={key}
             onClick={() => setSegment(key)}
-            className={`rounded-full px-4 py-2 text-sm font-medium ${
-              key === segment ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              key === segment
+                ? 'bg-[#02374D] text-white shadow-[0px_4px_20px_rgba(2,55,77,0.25)]'
+                : 'bg-[#DBD8C9] text-black hover:bg-[#d0ccba]'
             }`}
           >
             {segmentLabels[key]}
@@ -153,14 +284,20 @@ export default function WalletClient({ bookings }: Props) {
         ))}
       </div>
 
+      <header className="pb-4 text-center">
+        <h1 className="text-3xl font-medium uppercase tracking-[0.02em] text-black">{headlineText}</h1>
+      </header>
+
       {activeList.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-gray-300 bg-white p-12 text-center text-gray-500">
+        <div className="rounded-3xl border border-dashed border-[#DBD8C9] bg-white/80 p-12 text-center text-[#4F514D]">
           {segment === 'past'
             ? 'No past reservations yet.'
-            : 'No reservations yet. Request a pass to get started.'}
+            : segment === 'cancelled'
+              ? 'No cancelled reservations.'
+              : 'No reservations yet. Request a pass to get started.'}
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid items-stretch justify-items-center gap-[1.1rem] sm:grid-cols-2 xl:grid-cols-3 xl:gap-[1.2rem]">
           {activeList.map((booking) => (
             <BookingCard key={booking.id} booking={booking} />
           ))}

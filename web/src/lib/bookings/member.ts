@@ -23,6 +23,7 @@ export async function fetchMemberBookings() {
         arrival_window_end,
         qr_jti,
         hold_status,
+        pass:passes(kind),
         venue:venues(name,tz)
       `
     )
@@ -38,4 +39,46 @@ export async function fetchMemberBookings() {
   const bookings = rows.map((row) => buildGuestBookingView(row))
 
   return { bookings, user }
+}
+
+export async function fetchMemberBookingById(bookingId: string) {
+  const supabase = await getSupabaseServer()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return null
+  }
+
+  const response = await supabase
+    .from('bookings')
+    .select(
+      `
+        id,
+        date,
+        party_size,
+        status,
+        arrival_window_start,
+        arrival_window_end,
+        qr_jti,
+        hold_status,
+        pass:passes(kind),
+        venue:venues(name,tz)
+      `
+    )
+    .eq('user_id', user.id)
+    .eq('id', bookingId)
+    .maybeSingle()
+
+  if (response.error) {
+    console.error('fetchMemberBookingById failed', response.error)
+    throw new Error('Failed to load booking')
+  }
+
+  if (!response.data) {
+    return null
+  }
+
+  return buildGuestBookingView(response.data as GuestBookingRow)
 }

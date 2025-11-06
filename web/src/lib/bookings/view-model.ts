@@ -7,6 +7,9 @@ export type GuestBookingRow = {
   arrival_window_end: string | null
   qr_jti: string | null
   hold_status: string
+  pass: {
+    kind: string | null
+  } | null
   venue: {
     name: string | null
     tz: string | null
@@ -23,6 +26,7 @@ type BaseDerivedFields = {
 export type GuestBookingView = GuestBookingRow &
   BaseDerivedFields & {
     venue_name: string | null
+    pass_kind: string | null
   }
 
 export type VenueBookingRow = {
@@ -73,6 +77,7 @@ export function buildGuestBookingView(row: GuestBookingRow): GuestBookingView {
     ...derived,
     hold_banner,
     venue_name: row.venue?.name ?? null,
+    pass_kind: row.pass?.kind ?? null,
   }
 }
 

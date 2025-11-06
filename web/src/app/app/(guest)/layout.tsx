@@ -1,28 +1,27 @@
 import type { ReactNode } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
+import { Montserrat } from 'next/font/google'
+import GuestNav from './nav'
+
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+})
 
 export default function GuestLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen">
-      <header className="border-b">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <Link href="/app" className="font-semibold">
-            Interlude
+    <div className={`${montserrat.className} min-h-screen bg-[#F4F1E7] text-gray-900`}>
+      <header className="bg-[#F4F1E7]/90 backdrop-blur">
+        <div className="flex w-full items-center justify-between gap-6 px-[5rem] py-6">
+          <Link href="/app" className="flex items-center">
+            <Image src="/interlude-logo.png" alt="Interlude" width={180} height={28} priority />
           </Link>
-          <nav className="flex gap-4 text-sm">
-            <Link href="/app" className="hover:underline">
-              Wallet
-            </Link>
-            <Link href="/app/explore" className="hover:underline">
-              Explore
-            </Link>
-            <Link href="/auth" className="hover:underline">
-              Account
-            </Link>
-          </nav>
+          <GuestNav />
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-6xl px-6 py-10 lg:max-w-7xl 2xl:max-w-[105rem]">{children}</main>
     </div>
   )
 }
