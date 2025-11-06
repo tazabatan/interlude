@@ -2,7 +2,7 @@ import { getSupabaseServer } from '@/lib/supabase/server'
 import { buildGuestBookingView, type GuestBookingRow } from './view-model'
 
 export async function fetchMemberBookings() {
-  const supabase = getSupabaseServer()
+  const supabase = await getSupabaseServer()
   const {
     data: { user },
   } = await supabase.auth.getUser()

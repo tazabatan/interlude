@@ -5,7 +5,7 @@ import { buildGuestBookingView, type GuestBookingRow } from '@/lib/bookings/view
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const supabase = getSupabaseServer()
+  const supabase = await getSupabaseServer()
   const {
     data: { user },
   } = await supabase.auth.getUser()

@@ -1,7 +1,7 @@
 import { getSupabaseServer } from './supabase/server'
 
 export async function getUserRole() {
-  const supabase = getSupabaseServer()
+  const supabase = await getSupabaseServer()
   const {
     data: { user },
   } = await supabase.auth.getUser()
