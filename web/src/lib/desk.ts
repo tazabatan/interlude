@@ -21,7 +21,7 @@ function parseSupabaseAuthCookie(value: string) {
   if (raw.startsWith(base64Prefix)) {
     const base64Payload = raw.slice(base64Prefix.length)
     try {
-      const globalBuffer = (globalThis as any)?.Buffer
+      const globalBuffer = (globalThis as typeof globalThis & { Buffer?: typeof Buffer }).Buffer
       if (globalBuffer?.from) {
         raw = globalBuffer.from(base64Payload, 'base64').toString('utf-8')
       } else if (typeof atob === 'function') {

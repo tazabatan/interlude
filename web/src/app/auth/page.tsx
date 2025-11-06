@@ -10,12 +10,16 @@ export default function AuthPage() {
   const [sent, setSent] = useState(false)
   const router = useRouter()
   const params = useSearchParams()
-  const next = params.get('next') ?? '/explore'
+  const nextParam = params.get('next')
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const supabase = supabaseBrowser()
-    const redirectTo = `${REDIRECT_BASE}/auth/callback?next=${encodeURIComponent(next)}`
+    const redirectUrl = new URL(`${REDIRECT_BASE}/auth/callback`)
+    if (nextParam) {
+      redirectUrl.searchParams.set('next', nextParam)
+    }
+    const redirectTo = redirectUrl.toString()
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: redirectTo },

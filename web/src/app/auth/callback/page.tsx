@@ -7,7 +7,13 @@ import { supabaseBrowser } from '@/lib/supabase/client'
 export default function AuthCallback() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const next = searchParams.get('next') || '/explore'
+  const nextParam = searchParams.get('next')
+
+  const defaultRouteForRole = (role: string | undefined) => {
+    if (role === 'admin') return '/admin'
+    if (role === 'venue_manager' || role === 'venue_staff') return '/desk'
+    return '/app'
+  }
 
   useEffect(() => {
     const supabase = supabaseBrowser()
@@ -25,7 +31,9 @@ export default function AuthCallback() {
     // Listen for auth state change (magic link tokens are processed automatically)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        router.replace(next)
+        const role = session.user.user_metadata?.app_role as string | undefined
+        const target = nextParam ?? defaultRouteForRole(role)
+        router.replace(target)
       } else if (event === 'SIGNED_OUT' || !session) {
         router.replace('/auth')
       }
@@ -34,7 +42,7 @@ export default function AuthCallback() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [router, next])
+  }, [router, nextParam])
 
   return <p>Signing you in…</p>
 }

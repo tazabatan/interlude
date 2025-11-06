@@ -3,12 +3,11 @@ import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import type { CookieOptionsWithName } from '@supabase/ssr'
 
-export async function middleware(req: NextRequest) {
-  const protectedPrefixes = ['/explore', '/venue', '/request', '/wallet']
-  if (!protectedPrefixes.some((prefix) => req.nextUrl.pathname.startsWith(prefix))) {
-    return NextResponse.next()
-  }
+const guestRoles = ['member', 'admin']
+const deskRoles = ['venue_manager', 'venue_staff', 'admin']
+const adminRoles = ['admin']
 
+export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
 
   const supabase = createServerClient(
@@ -27,16 +26,41 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  const { data } = await supabase.auth.getUser()
-  if (!data.user) {
-    const redirectUrl = new URL('/auth', req.url)
-    redirectUrl.searchParams.set('next', req.nextUrl.pathname)
-    return NextResponse.redirect(redirectUrl)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const role = (user?.user_metadata?.app_role as string | undefined) ?? 'guest'
+  const path = req.nextUrl.pathname
+
+  const buildRedirect = (target: string) => {
+    const url = new URL(target, req.url)
+    if (!user && !url.searchParams.has('next')) {
+      url.searchParams.set('next', req.nextUrl.pathname)
+    }
+    const redirectResponse = NextResponse.redirect(url)
+    // Preserve any cookie mutations Supabase may have queued on the response.
+    res.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie)
+    })
+    return redirectResponse
+  }
+
+  if (path.startsWith('/desk')) {
+    if (!user) return buildRedirect('/auth')
+    if (!deskRoles.includes(role)) return buildRedirect('/app')
+  } else if (path.startsWith('/admin')) {
+    if (!user) return buildRedirect('/auth')
+    if (!adminRoles.includes(role)) return buildRedirect('/app')
+  } else if (path.startsWith('/app')) {
+    if (!user) return buildRedirect('/auth')
+    if (deskRoles.includes(role) && !guestRoles.includes(role)) return buildRedirect('/desk')
+    if (!guestRoles.includes(role)) return buildRedirect('/auth')
   }
 
   return res
 }
 
 export const config = {
-  matcher: ['/explore/:path*', '/venue/:path*', '/request/:path*', '/wallet/:path*'],
+  matcher: ['/app/:path*', '/desk/:path*', '/admin/:path*'],
 }

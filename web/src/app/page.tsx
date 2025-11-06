@@ -1,16 +1,20 @@
 import { redirect } from 'next/navigation'
-import { supabaseServer } from '@/lib/supabase/server'
+import { getUserRole } from '@/lib/get-user-role'
 
 export default async function HomePage() {
-  const supabase = await supabaseServer()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { user, role } = await getUserRole()
 
-  if (user) {
-    redirect('/explore')
+  if (!user) {
+    redirect('/auth')
   }
 
-  redirect('/auth')
-  return null
+  if (role === 'admin') {
+    redirect('/admin')
+  }
+
+  if (role === 'venue_manager' || role === 'venue_staff') {
+    redirect('/desk')
+  }
+
+  redirect('/app')
 }
