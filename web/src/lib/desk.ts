@@ -92,8 +92,16 @@ export type DeskBooking = {
   status: string
   arrival_window_start: string | null
   arrival_window_end: string | null
+  hold_amount: number | null
+  hold_currency: string | null
+  hold_status: string | null
+  created_at: string | null
+  qr_jti: string | null
   pass: {
     kind: string | null
+    currency: string | null
+    min_spend_amount: number | null
+    display_price_text: string | null
     auto_approve_enabled: boolean
     default_arrival_start_local: string | null
     default_arrival_window_minutes: number | null
@@ -104,23 +112,62 @@ export type DeskBooking = {
   } | null
 }
 
-export async function fetchDeskBookings(status: 'requested' | 'pending_verification') {
-  const select = [
-    'id',
-    'pass_id',
-    'date',
-    'party_size',
-    'status',
-    'arrival_window_start',
-    'arrival_window_end',
-    'created_at',
-    'pass:passes(kind,auto_approve_enabled,default_arrival_start_local,default_arrival_window_minutes,venue:venues(name,tz))',
-  ].join(',')
+const BOOKING_SELECT = [
+  'id',
+  'pass_id',
+  'date',
+  'party_size',
+  'status',
+  'arrival_window_start',
+  'arrival_window_end',
+  'created_at',
+  'hold_amount',
+  'hold_currency',
+  'hold_status',
+  'qr_jti',
+  [
+    'pass:passes(',
+    'kind,',
+    'currency,',
+    'min_spend_amount,',
+    'display_price_text,',
+    'auto_approve_enabled,',
+    'default_arrival_start_local,',
+    'default_arrival_window_minutes,',
+    'venue:venues(name,tz)',
+    ')',
+  ].join(''),
+].join(',')
 
+function buildStatusFilter(statuses: string[]) {
+  if (statuses.length === 1) {
+    return `status=eq.${statuses[0]}`
+  }
+  return `status=in.(${statuses.join(',')})`
+}
+
+async function fetchBookingsWithFilter(filter: string) {
   const res = await callSupabase(
-    `/rest/v1/bookings?status=eq.${status}&order=created_at.desc&select=${encodeURIComponent(select)}`,
+    `/rest/v1/bookings?${filter}&order=created_at.desc&select=${encodeURIComponent(BOOKING_SELECT)}`,
   )
   return (await res.json()) as DeskBooking[]
+}
+
+export async function fetchDeskBookings(status: 'requested' | 'pending_verification') {
+  return fetchBookingsWithFilter(buildStatusFilter([status]))
+}
+
+export async function fetchDeskBookingById(bookingId: string) {
+  const res = await callSupabase(
+    `/rest/v1/bookings?id=eq.${bookingId}&limit=1&select=${encodeURIComponent(BOOKING_SELECT)}`
+  )
+  const rows = (await res.json()) as DeskBooking[]
+  return rows[0] ?? null
+}
+
+export async function fetchDeskBookingsByStatuses(statuses: string[]) {
+  if (statuses.length === 0) return []
+  return fetchBookingsWithFilter(buildStatusFilter(statuses))
 }
 
 export async function deskAction(action: string, payload: unknown) {
