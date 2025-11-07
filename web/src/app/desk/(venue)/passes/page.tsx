@@ -1,14 +1,20 @@
-import { fetchDeskBookings, fetchVenuePasses } from '@/lib/desk'
+import PassCard from '@/components/pass-card'
+import { fetchDeskBookings, fetchVenuePasses, fetchPassInventoryByDateRange } from '@/lib/desk'
 import { supabaseServer } from '@/lib/supabase/server'
-import { autoApproveAction, dailyCapAction, pauseAction } from '../actions'
 
 type PassControl = {
   passId: string
   name: string
+  location: string
+  kind: string | null
+  displayPriceText: string | null
+  minSpendAmount: number | null
+  currency: string | null
   tz: string
   autoApprove: boolean
   defaultStart: string
   defaultMinutes: number
+  isPaused: boolean
 }
 
 function formatPassControls(passRows: Awaited<ReturnType<typeof fetchDeskBookings>>[]) {
@@ -18,10 +24,16 @@ function formatPassControls(passRows: Awaited<ReturnType<typeof fetchDeskBooking
       map.set(booking.pass_id, {
         passId: booking.pass_id,
         name: booking.pass.venue?.name ?? booking.pass.kind ?? booking.pass_id,
+        location: 'ANGUILLA',
+        kind: booking.pass.kind,
+        displayPriceText: booking.pass.display_price_text,
+        minSpendAmount: booking.pass.min_spend_amount,
+        currency: booking.pass.currency,
         tz: booking.pass.venue?.tz ?? 'UTC',
         autoApprove: booking.pass.auto_approve_enabled,
         defaultStart: booking.pass.default_arrival_start_local ?? '12:00',
         defaultMinutes: booking.pass.default_arrival_window_minutes ?? 60,
+        isPaused: false,
       })
     }
   })
@@ -29,6 +41,7 @@ function formatPassControls(passRows: Awaited<ReturnType<typeof fetchDeskBooking
 }
 
 export default async function DeskPassesPage() {
+  const today = new Date().toISOString().slice(0, 10)
   const data = await Promise.all([fetchDeskBookings('requested'), fetchDeskBookings('pending_verification')])
   let passControls = formatPassControls(data)
 
@@ -43,22 +56,34 @@ export default async function DeskPassesPage() {
       passControls = passes.map((pass) => ({
         passId: pass.id,
         name: pass.venue?.name ?? pass.kind ?? pass.id,
+        location: 'ANGUILLA',
+        kind: pass.kind,
+        displayPriceText: pass.display_price_text ?? null,
+        minSpendAmount: pass.min_spend_amount ?? null,
+        currency: pass.currency ?? null,
         tz: pass.venue?.tz ?? 'UTC',
         autoApprove: pass.auto_approve_enabled,
         defaultStart: pass.default_arrival_start_local ?? '12:00',
         defaultMinutes: pass.default_arrival_window_minutes ?? 60,
+        isPaused: false,
       }))
     }
   }
 
-  const today = new Date().toISOString().slice(0, 10)
+  // Fetch today's inventory to check paused status
+  const inventory = await fetchPassInventoryByDateRange(today, today)
+  const pausedPassIds = new Set(inventory.filter((inv) => inv.paused).map((inv) => inv.pass_id))
+
+  // Update passControls with paused status
+  passControls = passControls.map((control) => ({
+    ...control,
+    isPaused: pausedPassIds.has(control.passId),
+  }))
 
   return (
-    <div className="space-y-8 text-[#02374D]">
-      <header className="space-y-3 text-center">
-        <p className="text-xs uppercase tracking-[0.35em] text-[#6F716D]">Venue Desk</p>
-        <h1 className="text-3xl font-semibold uppercase tracking-[0.02em] text-black">Passes</h1>
-        <p className="text-sm text-[#4F514D]">Manage auto-approve, caps, and pause states per pass.</p>
+    <div className="mx-auto w-full max-w-[84rem] space-y-12 px-4 text-[#02374D] sm:px-8 lg:px-12 xl:px-16 2xl:max-w-[92rem]">
+      <header className="text-center">
+        <h1 className="text-3xl font-medium uppercase tracking-[0.02em] text-black">Your passes</h1>
       </header>
 
       {passControls.length === 0 ? (
@@ -66,102 +91,34 @@ export default async function DeskPassesPage() {
           Pass controls will appear once bookings exist for this venue.
         </div>
       ) : (
-        <ControlsSection controls={passControls} today={today} />
+        <ControlsSection controls={passControls} />
       )}
     </div>
   )
 }
 
-function ControlsSection({ controls, today }: { controls: PassControl[]; today: string }) {
+function ControlsSection({ controls }: { controls: PassControl[] }) {
   return (
     <section className="space-y-6">
-      <div className="space-y-2 text-center">
-        <h2 className="text-2xl font-semibold uppercase tracking-[0.1em]">Pass controls</h2>
-        <p className="text-sm text-[#4F514D]">
-          Tune availability, caps, and auto-approve settings for each pass without leaving the desk.
-        </p>
-      </div>
-
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {controls.map((control) => (
-          <div
-            key={control.passId}
-            className="flex h-full flex-col rounded-[28px] border border-[#E8E4D7] bg-white px-6 py-6 shadow-[0px_4px_20px_rgba(0,0,0,0.1)]"
-          >
-            <div className="space-y-1 text-sm">
-              <div className="text-lg font-semibold uppercase tracking-[0.08em] text-black">{control.name}</div>
-              <div className="text-[#6F716D]">Timezone · {control.tz}</div>
-              <div className="text-[#6F716D]">
-                Default window · {control.defaultStart} · {control.defaultMinutes} min
-              </div>
-            </div>
-
-            <div className="mt-6 space-y-4 text-sm">
-              <form action={autoApproveAction} className="flex items-center justify-between rounded-full border border-[#DBD8C9] bg-[#F9F6ED] px-4 py-2">
-                <input type="hidden" name="passId" value={control.passId} />
-                <span className="uppercase tracking-[0.25em] text-[#6F716D]">Auto-approve</span>
-                <div className="flex gap-2">
-                  <button
-                    name="enabled"
-                    value="true"
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                      control.autoApprove ? 'bg-[#02374D] text-white' : 'bg-[#DBD8C9] text-[#02374D]'
-                    }`}
-                  >
-                    On
-                  </button>
-                  <button
-                    name="enabled"
-                    value="false"
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                      !control.autoApprove ? 'bg-[#02374D] text-white' : 'bg-[#DBD8C9] text-[#02374D]'
-                    }`}
-                  >
-                    Off
-                  </button>
-                </div>
-              </form>
-
-              <form action={dailyCapAction} className="space-y-2 rounded-[20px] border border-[#E8E4D7] bg-[#F9F6ED] p-4 text-xs uppercase tracking-[0.25em] text-[#6F716D]">
-                <input type="hidden" name="passId" value={control.passId} />
-                <input type="hidden" name="date" value={today} />
-                <label className="space-y-1">
-                  <span>Daily cap</span>
-                  <input
-                    name="cap"
-                    type="number"
-                    min={0}
-                    step={1}
-                    placeholder="20"
-                    className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-gray-700"
-                  />
-                </label>
-                <button className="w-full rounded-full border border-[#02374D] px-4 py-2 text-sm font-medium text-[#02374D] transition hover:bg-[#02374D] hover:text-white">
-                  Save cap
-                </button>
-              </form>
-
-              <div className="space-y-2 text-xs uppercase tracking-[0.25em] text-[#6F716D]">
-                <form action={pauseAction}>
-                  <input type="hidden" name="passId" value={control.passId} />
-                  <input type="hidden" name="date" value={today} />
-                  <input type="hidden" name="paused" value="true" />
-                  <button className="w-full rounded-full border border-[#B4231F] px-4 py-2 text-sm font-medium text-[#B4231F] transition hover:bg-[#F5B8B8]/30">
-                    Pause today
-                  </button>
-                </form>
-                <form action={pauseAction}>
-                  <input type="hidden" name="passId" value={control.passId} />
-                  <input type="hidden" name="date" value={today} />
-                  <input type="hidden" name="paused" value="false" />
-                  <button className="w-full rounded-full border border-[#02374D] px-4 py-2 text-sm font-medium text-[#02374D] transition hover:bg-[#02374D] hover:text-white">
-                    Resume today
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-        ))}
+        {controls
+          .filter((control) => Boolean(control.passId))
+          .map((control) => (
+            <PassCard
+              key={control.passId}
+              passId={control.passId}
+              name={control.name}
+              location={control.location}
+              kind={control.kind}
+              displayPriceText={control.displayPriceText}
+              minSpendAmount={control.minSpendAmount}
+              currency={control.currency}
+              href={`/desk/passes/${control.passId}`}
+              srLabel={`View pass controls for ${control.name}`}
+              showStatusBadge
+              status={control.isPaused ? 'paused' : 'active'}
+            />
+          ))}
       </div>
     </section>
   )

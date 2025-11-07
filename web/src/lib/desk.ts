@@ -1,18 +1,5 @@
 import { cookies } from 'next/headers'
-
-const DEFAULT_SUPABASE_URL = 'http://127.0.0.1:54321'
-
-function getBaseUrl() {
-  return (process.env.NEXT_PUBLIC_SUPABASE_URL ?? DEFAULT_SUPABASE_URL).replace(/\/$/, '')
-}
-
-function getServiceRoleKey() {
-  const srk = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!srk) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
-  }
-  return srk
-}
+import { getServiceRoleBaseUrl, serviceRoleFetch, serviceRoleRpc } from '@/lib/supabase/service-role'
 
 function parseSupabaseAuthCookie(value: string) {
   const base64Prefix = 'base64-'
@@ -51,39 +38,6 @@ type SupabaseAuthState = {
   accessToken?: string
 }
 
-async function callSupabase(path: string, init: RequestInit = {}) {
-  const srk = getServiceRoleKey()
-  const headers = new Headers(init.headers)
-  headers.set('Authorization', `Bearer ${srk}`)
-  headers.set('apikey', srk)
-
-  const method = (init.method ?? 'GET').toUpperCase()
-  if (method !== 'GET' && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json')
-  }
-
-  const res = await fetch(`${getBaseUrl()}${path}`, {
-    ...init,
-    headers,
-    cache: 'no-store',
-  })
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => 'unknown error')
-    throw new Error(`Supabase request failed (${res.status}): ${text}`)
-  }
-
-  return res
-}
-
-async function callRpc<T>(name: string, payload: Record<string, unknown>): Promise<T> {
-  const res = await callSupabase(`/rest/v1/rpc/${name}`, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
-  return res.json() as Promise<T>
-}
-
 export type DeskBooking = {
   id: string
   pass_id: string
@@ -115,9 +69,19 @@ export type DeskBooking = {
 export type DeskPass = {
   id: string
   kind: string | null
+  currency: string | null
+  min_spend_amount: number | null
+  display_price_text: string | null
+  status: string | null
+  visibility: string | null
   auto_approve_enabled: boolean
   default_arrival_start_local: string | null
   default_arrival_window_minutes: number | null
+  no_show_amount_per_person: number | null
+  service_hours_open_local: string | null
+  service_hours_close_local: string | null
+  arrival_grace_minutes: number | null
+  default_daily_cap: number
   venue: {
     name: string | null
     tz: string | null
@@ -151,12 +115,22 @@ const BOOKING_SELECT = [
   ].join(''),
 ].join(',')
 
-const PASS_SELECT = [
+export const PASS_SELECT = [
   'id',
   'kind',
+  'currency',
+  'min_spend_amount',
+  'display_price_text',
+  'status',
+  'visibility',
   'auto_approve_enabled',
   'default_arrival_start_local',
   'default_arrival_window_minutes',
+  'no_show_amount_per_person',
+  'service_hours_open_local',
+  'service_hours_close_local',
+  'arrival_grace_minutes',
+  'default_daily_cap',
   'venue:venues(name,tz)',
 ].join(',')
 
@@ -168,7 +142,7 @@ function buildStatusFilter(statuses: string[]) {
 }
 
 async function fetchBookingsWithFilter(filter: string) {
-  const res = await callSupabase(
+  const res = await serviceRoleFetch(
     `/rest/v1/bookings?${filter}&order=created_at.desc&select=${encodeURIComponent(BOOKING_SELECT)}`,
   )
   return (await res.json()) as DeskBooking[]
@@ -179,7 +153,7 @@ export async function fetchDeskBookings(status: 'requested' | 'pending_verificat
 }
 
 export async function fetchDeskBookingById(bookingId: string) {
-  const res = await callSupabase(
+  const res = await serviceRoleFetch(
     `/rest/v1/bookings?id=eq.${bookingId}&limit=1&select=${encodeURIComponent(BOOKING_SELECT)}`
   )
   const rows = (await res.json()) as DeskBooking[]
@@ -192,10 +166,18 @@ export async function fetchDeskBookingsByStatuses(statuses: string[]) {
 }
 
 export async function fetchVenuePasses(venueId: string) {
-  const res = await callSupabase(
+  const res = await serviceRoleFetch(
     `/rest/v1/passes?venue_id=eq.${venueId}&order=created_at.asc&select=${encodeURIComponent(PASS_SELECT)}`
   )
   return (await res.json()) as DeskPass[]
+}
+
+export async function fetchPassById(passId: string) {
+  const res = await serviceRoleFetch(
+    `/rest/v1/passes?id=eq.${passId}&limit=1&select=${encodeURIComponent(PASS_SELECT)}`
+  )
+  const rows = (await res.json()) as DeskPass[]
+  return rows[0] ?? null
 }
 
 export async function deskAction(action: string, payload: unknown) {
@@ -208,7 +190,9 @@ export async function deskAction(action: string, payload: unknown) {
     cookieStore.get('access-token')?.value
 
   if (!accessToken) {
-    const authCookie = cookiesList.find((c) => c.name.includes('-auth-token'))
+    const authCookie =
+      cookiesList.find((c) => c.name.endsWith('-auth-token')) ??
+      cookiesList.find((c) => c.name.includes('-auth-token'))
     if (authCookie?.value) {
       const parsed = parseSupabaseAuthCookie(authCookie.value)
       if (parsed) {
@@ -232,7 +216,7 @@ export async function deskAction(action: string, payload: unknown) {
     throw new Error('Not authenticated; please sign in again')
   }
 
-  const res = await fetch(`${getBaseUrl()}/functions/v1/desk_controls`, {
+  const res = await fetch(`${getServiceRoleBaseUrl()}/functions/v1/desk_controls`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -258,7 +242,7 @@ export async function approveBooking(params: {
   windowEnd: string | null
   issueNow?: boolean
 }) {
-  return callRpc('fn_approve_booking', {
+  return serviceRoleRpc('fn_approve_booking', {
     _booking_id: params.bookingId,
     _window_start: params.windowStart,
     _window_end: params.windowEnd,
@@ -267,7 +251,7 @@ export async function approveBooking(params: {
 }
 
 export async function declineBooking(params: { bookingId: string; reason?: string | null }) {
-  return callRpc('fn_decline_booking', {
+  return serviceRoleRpc('fn_decline_booking', {
     _booking_id: params.bookingId,
     _reason: params.reason ?? null,
     _idem_key: null,
@@ -275,13 +259,13 @@ export async function declineBooking(params: { bookingId: string; reason?: strin
 }
 
 export async function undoDeclineBooking(params: { bookingId: string }) {
-  return callRpc('fn_restore_declined_booking', {
+  return serviceRoleRpc('fn_restore_declined_booking', {
     _booking_id: params.bookingId,
   })
 }
 
 export async function redeemBooking(params: { qrJti: string; serverName?: string | null; tableRef?: string | null }) {
-  return callRpc('fn_redeem', {
+  return serviceRoleRpc('fn_redeem', {
     _qr_jti: params.qrJti,
     _server_name: params.serverName ?? null,
     _table_ref: params.tableRef ?? null,
@@ -297,21 +281,21 @@ export type PassInventory = {
 }
 
 export async function fetchBookingsByDateRange(startDate: string, endDate: string) {
-  const res = await callSupabase(
+  const res = await serviceRoleFetch(
     `/rest/v1/bookings?date=gte.${startDate}&date=lte.${endDate}&order=date.asc&select=${encodeURIComponent(BOOKING_SELECT)}`
   )
   return (await res.json()) as DeskBooking[]
 }
 
 export async function fetchPassInventoryByDateRange(startDate: string, endDate: string) {
-  const res = await callSupabase(
+  const res = await serviceRoleFetch(
     `/rest/v1/pass_inventory?date=gte.${startDate}&date=lte.${endDate}&select=id,pass_id,date,cap,paused`
   )
   return (await res.json()) as PassInventory[]
 }
 
 export async function fetchBookingsByDate(date: string) {
-  const res = await callSupabase(
+  const res = await serviceRoleFetch(
     `/rest/v1/bookings?date=eq.${date}&order=created_at.desc&select=${encodeURIComponent(BOOKING_SELECT)}`
   )
   return (await res.json()) as DeskBooking[]

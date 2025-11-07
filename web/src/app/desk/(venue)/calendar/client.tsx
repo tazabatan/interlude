@@ -12,6 +12,7 @@ type DayData = {
   isToday: boolean
   capacitySet: boolean
   cap: number
+  capacitySource: 'manual' | 'default' | null
   paused: boolean
   requested: number
   issued: number
@@ -45,6 +46,7 @@ function getDaysInMonth(year: number, month: number): DayData[] {
       isToday: date === today,
       capacitySet: false,
       cap: 0,
+      capacitySource: null,
       paused: false,
       requested: 0,
       issued: 0,
@@ -66,6 +68,7 @@ function getDaysInMonth(year: number, month: number): DayData[] {
       isToday: date === today,
       capacitySet: false,
       cap: 0,
+      capacitySource: null,
       paused: false,
       requested: 0,
       issued: 0,
@@ -88,6 +91,7 @@ function getDaysInMonth(year: number, month: number): DayData[] {
       isToday: date === today,
       capacitySet: false,
       cap: 0,
+      capacitySource: null,
       paused: false,
       requested: 0,
       issued: 0,
@@ -109,8 +113,8 @@ export function CalendarClient({
 }: {
   bookings: DeskBooking[]
   inventory: PassInventory[]
-  passes: DeskPass[]
-}) {
+    passes: DeskPass[]
+  }) {
   const now = new Date()
   const [currentYear, setCurrentYear] = useState(now.getFullYear())
   const [currentMonth, setCurrentMonth] = useState(now.getMonth())
@@ -140,10 +144,14 @@ export function CalendarClient({
       bookingsByDate.set(booking.date, existing)
     })
 
-    const fallbackPassIds = new Set<string>()
+    const passesMap = new Map<string, DeskPass>()
     passes.forEach((p) => {
-      if (p.id) fallbackPassIds.add(p.id)
+      if (p.id) {
+        passesMap.set(p.id, p)
+      }
     })
+    const fallbackPassIds = new Set<string>()
+    passesMap.forEach((_, id) => fallbackPassIds.add(id))
     inventory.forEach((inv) => {
       if (inv.pass_id) fallbackPassIds.add(inv.pass_id)
     })
@@ -156,8 +164,32 @@ export function CalendarClient({
       const dayInventory = inventoryMap.get(day.date) ?? []
       const dayBookings = bookingsByDate.get(day.date) ?? []
 
-      const capacitySet = dayInventory.length > 0
-      const cap = dayInventory.reduce((sum, inv) => sum + inv.cap, 0)
+      const dayPassIds = new Set<string>()
+      dayInventory.forEach((inv) => {
+        if (inv.pass_id) dayPassIds.add(inv.pass_id)
+      })
+      dayBookings.forEach((booking) => {
+        if (booking.pass_id) dayPassIds.add(booking.pass_id)
+      })
+      const passIdsForDefaults = dayPassIds.size > 0 ? Array.from(dayPassIds) : Array.from(fallbackPassIds)
+
+      let cap = 0
+      let capacitySource: 'manual' | 'default' | null = null
+      if (dayInventory.length > 0) {
+        cap = dayInventory.reduce((sum, inv) => sum + inv.cap, 0)
+        if (cap > 0) capacitySource = 'manual'
+      } else {
+        const defaultCap = passIdsForDefaults.reduce((sum, passId) => {
+          const pass = passesMap.get(passId)
+          return sum + (pass?.default_daily_cap ?? 0)
+        }, 0)
+        if (defaultCap > 0) {
+          cap = defaultCap
+          capacitySource = 'default'
+        }
+      }
+
+      const capacitySet = cap > 0
       const paused = pausedDates.has(day.date)
       const requested = dayBookings.filter((b) => b.status === 'requested').length
       const issued = dayBookings.filter((b) => b.status === 'issued').length
@@ -170,18 +202,11 @@ export function CalendarClient({
         .filter((b) => b.status === 'issued')
         .reduce((sum, b) => sum + b.party_size, 0)
 
-       const dayPassIds = new Set<string>()
-       dayInventory.forEach((inv) => {
-         if (inv.pass_id) dayPassIds.add(inv.pass_id)
-       })
-       dayBookings.forEach((booking) => {
-         if (booking.pass_id) dayPassIds.add(booking.pass_id)
-       })
-
       return {
         ...day,
         capacitySet,
         cap,
+        capacitySource,
         paused,
         requested,
         issued,
@@ -474,6 +499,9 @@ function DayCell({
                 className={`text-[0.7rem] font-bold ${isAtCapacity ? 'text-[#B4231F]' : 'text-[#02374D]'}`}
               >
                 {day.issued}/{day.cap}
+                {day.capacitySource === 'default' && (
+                  <span className="ml-1 text-[0.55rem] font-semibold uppercase text-[#6F716D]">default</span>
+                )}
               </div>
             )}
             <div className="flex flex-wrap gap-0.5">
@@ -529,6 +557,7 @@ function DateDetailPanel({
   const capacityDisabled = isUpdatingCapacity || day.passIds.length === 0 || isPaused
   const displayCapacity = isPaused ? 0 : localCapacity
   const hasCap = !isPaused && displayCapacity > 0
+  const usingDefault = day.capacitySource === 'default' && !isPaused
   const effectiveCap = hasCap ? displayCapacity : 0
   const remaining = hasCap ? Math.max(0, effectiveCap - day.issued) : 0
 
@@ -609,6 +638,9 @@ function DateDetailPanel({
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-[#02374D]">{day.issued}</span>
                   <span className="text-xl text-[#6F716D]">/ {effectiveCap}</span>
+                </div>
+                <div className="text-xs uppercase tracking-[0.15em] text-[#6F716D]">
+                  {usingDefault ? 'Default cap' : 'Manual cap'}
                 </div>
                 {remaining > 0 && (
                   <div className="text-sm text-[#4F514D]">

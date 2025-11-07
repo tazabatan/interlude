@@ -16,6 +16,8 @@ export type GuestBookingRow = {
   } | null
 }
 
+const CANCELLABLE_STATUSES = new Set(['requested', 'approved', 'issued', 'pending_verification'])
+
 type BaseDerivedFields = {
   can_cancel: boolean
   is_upcoming: boolean
@@ -50,12 +52,12 @@ function safeDate(input: string | null) {
   return Number.isNaN(value.getTime()) ? null : value
 }
 
-function computeDerivedFields(startIso: string | null, endIso: string | null) {
+function computeDerivedFields(startIso: string | null, endIso: string | null, status: string) {
   const now = new Date()
   const start = safeDate(startIso)
   const end = safeDate(endIso)
 
-  const canCancel = start ? now < start : true
+  const canCancel = CANCELLABLE_STATUSES.has(status)
   const isUpcoming = start ? now < start : true
   const isPast = end ? now > end : false
 
@@ -69,7 +71,7 @@ function holdAuthorizesBanner(date: string | null, venueTz: string | null) {
 }
 
 export function buildGuestBookingView(row: GuestBookingRow): GuestBookingView {
-  const derived = computeDerivedFields(row.arrival_window_start, row.arrival_window_end)
+  const derived = computeDerivedFields(row.arrival_window_start, row.arrival_window_end, row.status)
   const hold_banner = holdAuthorizesBanner(row.date, row.venue?.tz ?? null)
 
   return {
@@ -82,7 +84,7 @@ export function buildGuestBookingView(row: GuestBookingRow): GuestBookingView {
 }
 
 export function buildVenueBookingView(row: VenueBookingRow): VenueBookingView {
-  const derived = computeDerivedFields(row.arrival_window_start, row.arrival_window_end)
+  const derived = computeDerivedFields(row.arrival_window_start, row.arrival_window_end, row.status)
   return {
     ...row,
     ...derived,

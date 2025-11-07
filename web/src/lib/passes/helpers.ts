@@ -1,0 +1,66 @@
+const PASS_PLACEHOLDER_IMAGES = [
+  '/venue-photos/4655308-beachfront-five-bedroom-pool-villa-belmond-cap-juluca.jpg',
+  '/venue-photos/Fb-2.png',
+  '/venue-photos/Screenshot 2025-10-29 at 17.48.44.png',
+  '/venue-photos/Screenshot 2025-10-29 at 17.48.52.png',
+  '/venue-photos/Screenshot 2025-10-29 at 17.49.28.png',
+  '/venue-photos/Screenshot 2025-11-07 at 13.25.25.png',
+  '/venue-photos/belmond-cap-juluca.jpg',
+] as const
+
+type LabelOptions = {
+  detail?: boolean
+}
+
+export function formatPassLabel(kind: string | null, options: LabelOptions = {}) {
+  const detail = options.detail ?? false
+  if (kind === 'MIN_SPEND') return detail ? 'Beach Pass — Min-spend' : 'Beach Pass'
+  if (kind === 'DAY_PASS') return detail ? 'Day Pass — Hotel' : 'Day Pass'
+  return 'Private Pass'
+}
+
+export function formatPassPrice(displayText: string | null, amountCents: number | null, currency: string | null, options: { prefix?: string } = {}) {
+  const prefix = options.prefix ?? ''
+
+  // When using a prefix (like "From "), always use the amount calculation instead of displayText
+  if (prefix && typeof amountCents === 'number') {
+    try {
+      const value = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: (currency ?? 'USD').toUpperCase(),
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amountCents / 100)
+      return `${prefix}${value}`
+    } catch {
+      return '$—'
+    }
+  }
+
+  if (displayText) return `${prefix}${displayText}`
+  if (typeof amountCents === 'number') {
+    try {
+      const value = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: (currency ?? 'USD').toUpperCase(),
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amountCents / 100)
+      return `${prefix}${value}`
+    } catch {
+      return '$—'
+    }
+  }
+  return '$—'
+}
+
+export function pickPassImage(seed: string) {
+  if (PASS_PLACEHOLDER_IMAGES.length === 0) return ''
+  let hash = 0
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i)
+    hash |= 0
+  }
+  const index = Math.abs(hash) % PASS_PLACEHOLDER_IMAGES.length
+  return PASS_PLACEHOLDER_IMAGES[index]
+}

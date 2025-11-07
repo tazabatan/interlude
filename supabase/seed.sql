@@ -182,7 +182,8 @@ insert into public.passes (
   visibility,
   auto_approve_enabled,
   default_arrival_window_minutes,
-  default_arrival_start_local
+  default_arrival_start_local,
+  default_daily_cap
 )
 values (
   '5d0ba2c3-e1f2-42c2-9d77-c6a13d90e517',
@@ -198,7 +199,8 @@ values (
   'members',
   true,
   90,
-  '11:00'
+  '11:00',
+  30
 )
 on conflict (id) do update set
   venue_id = excluded.venue_id,
@@ -213,7 +215,8 @@ on conflict (id) do update set
   visibility = excluded.visibility,
   auto_approve_enabled = excluded.auto_approve_enabled,
   default_arrival_window_minutes = excluded.default_arrival_window_minutes,
-  default_arrival_start_local = excluded.default_arrival_start_local;
+  default_arrival_start_local = excluded.default_arrival_start_local,
+  default_daily_cap = excluded.default_daily_cap;
 
 insert into public.pass_inventory (id, pass_id, date, cap, paused)
 select

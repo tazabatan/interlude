@@ -97,7 +97,8 @@ function mapBooking(booking: DeskBooking, todayIso: string) {
   )
   const isToday = booking.date === todayIso
   const isDeclined = booking.status === 'declined'
-  const segment = isDeclined
+  const isCancelled = booking.status === 'cancelled'
+  const segment = isDeclined || isCancelled
     ? 'cancelled'
     : isToday
       ? 'today'
@@ -121,6 +122,7 @@ function mapBooking(booking: DeskBooking, todayIso: string) {
     statusLabel: formatStatusLabel(booking.status),
     partySize: booking.party_size,
     isDeclined,
+    isCancelled,
     isToday,
     ctaLabel,
     segment,
@@ -150,7 +152,7 @@ export type BookingCardPayload = ReturnType<typeof mapBooking>
 export default async function DeskBookingsPage() {
   const todayIso = new Date().toISOString().slice(0, 10)
   const [primaryRaw, pendingRaw] = await Promise.all([
-    fetchDeskBookingsByStatuses(['approved', 'issued', 'redeemed', 'redeemed_late', 'declined']),
+    fetchDeskBookingsByStatuses(['approved', 'issued', 'redeemed', 'redeemed_late', 'declined', 'cancelled']),
     fetchDeskBookings('pending_verification'),
   ])
 

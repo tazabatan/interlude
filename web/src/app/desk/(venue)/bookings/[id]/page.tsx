@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { fetchDeskBookingById } from '@/lib/desk'
-import { forceAuthorizeAction, markArrivedAction, undoDeclineAction } from '../../actions'
+import { cancelDeskBookingAction, forceAuthorizeAction, markArrivedAction, undoDeclineAction } from '../../actions'
 
 type Params = Promise<{ id: string }>
 type SearchParams = Promise<{ from?: string; date?: string }>
@@ -115,6 +115,7 @@ export default async function BookingDetailPage({
   const canMarkArrived = booking.status === 'issued' && Boolean(booking.qr_jti)
   const canForceAuthorize = booking.hold_status !== 'authorized' && booking.status !== 'cancelled'
   const canUndoDecline = booking.status === 'declined'
+  const canDeskCancel = ['approved', 'issued', 'pending_verification'].includes(booking.status)
 
   const progressIndex = STATUS_PROGRESS[booking.status] ?? 0
   const timeline = TIMELINE_STEPS.map((step, index) => ({
@@ -204,14 +205,26 @@ export default async function BookingDetailPage({
           </dl>
 
           <div className="space-y-4">
-            {canMarkArrived && (
-              <form action={markArrivedAction} className="flex flex-wrap gap-3">
-                <input type="hidden" name="bookingId" value={booking.id} />
-                <input type="hidden" name="qrJti" value={booking.qr_jti ?? ''} />
-                <button className="rounded-full bg-[#02374D] px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-[#02486A]">
-                  Mark guest arrived
-                </button>
-              </form>
+            {(canMarkArrived || canDeskCancel) && (
+              <div className="flex flex-wrap gap-3">
+                {canMarkArrived && (
+                  <form action={markArrivedAction}>
+                    <input type="hidden" name="bookingId" value={booking.id} />
+                    <input type="hidden" name="qrJti" value={booking.qr_jti ?? ''} />
+                    <button className="rounded-full bg-[#02374D] px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-[#02486A]">
+                      Mark guest arrived
+                    </button>
+                  </form>
+                )}
+                {canDeskCancel && (
+                  <form action={cancelDeskBookingAction}>
+                    <input type="hidden" name="bookingId" value={booking.id} />
+                    <button className="rounded-full border border-[#B4231F] px-5 py-2 text-sm font-semibold uppercase tracking-wide text-[#B4231F] transition hover:border-[#F5B8B8] hover:bg-[#FCE1E1]/30">
+                      Cancel booking
+                    </button>
+                  </form>
+                )}
+              </div>
             )}
 
             {canUndoDecline && (

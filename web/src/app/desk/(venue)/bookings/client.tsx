@@ -44,7 +44,7 @@ const STATUS_BADGE_CLASSES: Record<string, string> = {
   redeemed: 'bg-[#DCFCE7] text-[#166534]',
   redeemed_late: 'bg-[#BDEBD9] text-[#0B5B48]',
   pending_verification: 'bg-[#EDE9FE] text-[#5B21B6]',
-  cancelled: 'bg-[#DBD8C9] text-[#4A4C48]',
+  cancelled: 'bg-[#FCE1E1] text-[#B4231F]',
   no_show: 'bg-[#FDE6D5] text-[#B45309]',
 }
 
