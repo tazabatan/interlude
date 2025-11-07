@@ -245,3 +245,32 @@ export async function declineBooking(params: { bookingId: string; reason?: strin
     _idem_key: null,
   })
 }
+
+export type PassInventory = {
+  id: string
+  pass_id: string
+  date: string
+  cap: number
+  paused: boolean
+}
+
+export async function fetchBookingsByDateRange(startDate: string, endDate: string) {
+  const res = await callSupabase(
+    `/rest/v1/bookings?date=gte.${startDate}&date=lte.${endDate}&order=date.asc&select=${encodeURIComponent(BOOKING_SELECT)}`
+  )
+  return (await res.json()) as DeskBooking[]
+}
+
+export async function fetchPassInventoryByDateRange(startDate: string, endDate: string) {
+  const res = await callSupabase(
+    `/rest/v1/pass_inventory?date=gte.${startDate}&date=lte.${endDate}&select=id,pass_id,date,cap,paused`
+  )
+  return (await res.json()) as PassInventory[]
+}
+
+export async function fetchBookingsByDate(date: string) {
+  const res = await callSupabase(
+    `/rest/v1/bookings?date=eq.${date}&order=created_at.desc&select=${encodeURIComponent(BOOKING_SELECT)}`
+  )
+  return (await res.json()) as DeskBooking[]
+}

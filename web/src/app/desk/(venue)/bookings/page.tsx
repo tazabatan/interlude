@@ -72,6 +72,19 @@ function formatStatusLabel(status: string) {
   return status === 'issued' ? 'Pass issued' : status.replace(/_/g, ' ')
 }
 
+function mapCategory(kind: string | null) {
+  if (kind === 'MIN_SPEND') return 'beach'
+  if (kind === 'DAY_PASS') return 'pool'
+  return 'beach'
+}
+
+function mapPaymentState(holdStatus: string | null) {
+  if (holdStatus === 'authorized') return { key: 'active', label: 'Hold active' }
+  if (holdStatus === 'captured') return { key: 'charged', label: 'No-show charged' }
+  if (holdStatus === 'canceled') return { key: 'released', label: 'Hold released' }
+  return { key: 'unknown', label: 'Payment pending' }
+}
+
 function mapBooking(booking: DeskBooking, todayIso: string) {
   const tz = booking.pass?.venue?.tz ?? 'UTC'
   const dateLabel = formatDateLabel(booking.date)
@@ -92,9 +105,11 @@ function mapBooking(booking: DeskBooking, todayIso: string) {
         ? 'upcoming'
         : 'past'
 
-  const ctaLabel = isDeclined ? 'Undo Decline' : isToday ? 'Mark Arrived' : 'View Booking'
+  const ctaLabel = isDeclined ? 'Undo Decline' : isToday ? 'Mark Arrived' : null
   const guestLabel = `TBD Name's group of ${booking.party_size}`
   const imageSrc = pickGuestImage(booking.id)
+  const paymentState = mapPaymentState(booking.hold_status)
+  const category = mapCategory(booking.pass?.kind ?? null)
 
   return {
     id: booking.id,
@@ -111,6 +126,10 @@ function mapBooking(booking: DeskBooking, todayIso: string) {
     guestLabel,
     imageSrc,
     detailHref: `/desk/requests/${booking.id}`,
+    status: booking.status,
+    category,
+    paymentStateKey: paymentState.key,
+    paymentStateLabel: paymentState.label,
   }
 }
 
