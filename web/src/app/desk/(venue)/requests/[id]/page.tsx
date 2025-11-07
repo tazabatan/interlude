@@ -36,6 +36,10 @@ const FINAL_STATUS_LABEL: Record<string, string> = {
   pending_verification: 'Awaiting verification',
 }
 
+function formatStatusLabel(status: string) {
+  return status === 'issued' ? 'Pass issued' : status.replace(/_/g, ' ')
+}
+
 function formatDisplayDate(dateIso: string | null) {
   if (!dateIso) return 'Date to be confirmed'
   const parsed = new Date(dateIso)
@@ -117,6 +121,7 @@ export default async function DeskRequestDetailPage({ params }: { params: Params
   const passLabelBase = formatPassType(booking.pass?.kind ?? null)
   const passBadgeLabel = booking.pass?.kind === 'MIN_SPEND' ? 'Beach Pass' : passLabelBase
   const passDetailLabel = booking.pass?.kind === 'MIN_SPEND' ? 'Beach Pass — Min Spend' : passLabelBase
+  const statusLabelDisplay = formatStatusLabel(booking.status)
   const passVenue = booking.pass?.venue?.name ?? 'Venue TBD'
   const guestLabel = `TBD Name's group of ${booking.party_size}`
   const defaultStartValue = toDateTimeLocal(booking.arrival_window_start)
@@ -149,7 +154,7 @@ export default async function DeskRequestDetailPage({ params }: { params: Params
             <h1 className="text-3xl font-semibold uppercase tracking-wide">{passVenue}</h1>
             <div className="flex flex-wrap gap-2">
               <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                {booking.status.replace(/_/g, ' ').toUpperCase()}
+                {statusLabelDisplay.toUpperCase()}
               </span>
               <span className="rounded-full bg-[#02374D] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
                 {passBadgeLabel}

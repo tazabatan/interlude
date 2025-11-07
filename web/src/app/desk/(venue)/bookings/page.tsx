@@ -68,6 +68,10 @@ function pickGuestImage(seed: string) {
   return placeholders[index]
 }
 
+function formatStatusLabel(status: string) {
+  return status === 'issued' ? 'Pass issued' : status.replace(/_/g, ' ')
+}
+
 function mapBooking(booking: DeskBooking, todayIso: string) {
   const tz = booking.pass?.venue?.tz ?? 'UTC'
   const dateLabel = formatDateLabel(booking.date)
@@ -98,7 +102,7 @@ function mapBooking(booking: DeskBooking, todayIso: string) {
     arrivalWindow,
     passLabel,
     priceLabel,
-    statusLabel: booking.status.replace(/_/g, ' '),
+    statusLabel: formatStatusLabel(booking.status),
     partySize: booking.party_size,
     isDeclined,
     isToday,

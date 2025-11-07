@@ -54,12 +54,16 @@ function mapCategory(kind: string | null): PassCategory {
   return 'beach'
 }
 
+function formatStatusLabel(status: string) {
+  return status === 'issued' ? 'Pass issued' : status.replace(/_/g, ' ')
+}
+
 function mapBookingToPayload(booking: DeskBooking): RequestCardPayload {
   const tz = booking.pass?.venue?.tz ?? 'UTC'
   return {
     id: booking.id,
     status: booking.status,
-    statusLabel: booking.status.replace(/_/g, ' '),
+    statusLabel: formatStatusLabel(booking.status),
     dateLabel: formatDateLabel(booking.date),
     partySize: booking.party_size,
     arrivalWindow: formatArrival(booking.arrival_window_start, booking.arrival_window_end, tz),
