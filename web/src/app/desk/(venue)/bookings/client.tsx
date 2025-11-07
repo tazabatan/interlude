@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { BookingCardPayload } from './page'
+import { markArrivedAction, undoDeclineAction } from '../actions'
 
 const SEGMENT_OPTIONS = [
   { value: 'today', label: 'Today' },
@@ -36,6 +37,16 @@ const PAYMENT_OPTIONS = [
   { value: 'charged', label: 'No-show charged' },
   { value: 'released', label: 'Hold released' },
 ] as const
+
+const STATUS_BADGE_CLASSES: Record<string, string> = {
+  issued: 'bg-[#D0F3EA] text-[#0D6B56]',
+  approved: 'bg-[#D0F3EA] text-[#0D6B56]',
+  redeemed: 'bg-[#DCFCE7] text-[#166534]',
+  redeemed_late: 'bg-[#BDEBD9] text-[#0B5B48]',
+  pending_verification: 'bg-[#EDE9FE] text-[#5B21B6]',
+  cancelled: 'bg-[#DBD8C9] text-[#4A4C48]',
+  no_show: 'bg-[#FDE6D5] text-[#B45309]',
+}
 
 type Segment = (typeof SEGMENT_OPTIONS)[number]['value']
 
@@ -135,9 +146,8 @@ function BookingCard({ booking }: { booking: BookingCardPayload }) {
 
   const statusClass = booking.isDeclined
     ? 'bg-[#FCE1E1] text-[#B4231F]'
-    : booking.isToday
-      ? 'bg-[#D0F3EA] text-[#0D6B56]'
-      : 'bg-[#DBD8C9] text-[#5F6059]'
+    : STATUS_BADGE_CLASSES[booking.status] ??
+      (booking.isToday ? 'bg-[#D0F3EA] text-[#0D6B56]' : 'bg-[#DBD8C9] text-[#5F6059]')
 
   return (
     <div className="flex min-h-[20rem] flex-col gap-6 rounded-[32px] border border-[#E8E4D7] bg-[#F9F6ED] px-7 py-8 text-center shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
@@ -175,12 +185,35 @@ function BookingCard({ booking }: { booking: BookingCardPayload }) {
       {booking.ctaLabel && (
         <div className="flex flex-col gap-3 text-xs text-[#6F716D]">
           <div className="flex justify-center">
-            <Link
-              href={booking.detailHref}
-              className={`w-full max-w-[12rem] rounded-full px-3 py-2 text-sm font-semibold transition ${buttonClass}`}
-            >
-              {booking.ctaLabel}
-            </Link>
+            {booking.ctaLabel === 'Mark Arrived' && booking.qrJti ? (
+              <form action={markArrivedAction} className="w-full max-w-[12rem]">
+                <input type="hidden" name="bookingId" value={booking.id} />
+                <input type="hidden" name="qrJti" value={booking.qrJti} />
+                <button
+                  type="submit"
+                  className={`w-full rounded-full px-3 py-2 text-sm font-semibold transition ${buttonClass}`}
+                >
+                  {booking.ctaLabel}
+                </button>
+              </form>
+            ) : booking.ctaLabel === 'Undo Decline' ? (
+              <form action={undoDeclineAction} className="w-full max-w-[12rem]">
+                <input type="hidden" name="bookingId" value={booking.id} />
+                <button
+                  type="submit"
+                  className={`w-full rounded-full px-3 py-2 text-sm font-semibold transition ${buttonClass}`}
+                >
+                  {booking.ctaLabel}
+                </button>
+              </form>
+            ) : (
+              <Link
+                href={booking.detailHref}
+                className={`w-full max-w-[12rem] rounded-full px-3 py-2 text-sm font-semibold transition ${buttonClass}`}
+              >
+                {booking.ctaLabel}
+              </Link>
+            )}
           </div>
         </div>
       )}

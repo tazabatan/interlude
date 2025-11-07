@@ -1,4 +1,5 @@
-import { fetchDeskBookings } from '@/lib/desk'
+import { fetchDeskBookings, fetchVenuePasses } from '@/lib/desk'
+import { supabaseServer } from '@/lib/supabase/server'
 import { autoApproveAction, dailyCapAction, pauseAction } from '../actions'
 
 type PassControl = {
@@ -29,7 +30,27 @@ function formatPassControls(passRows: Awaited<ReturnType<typeof fetchDeskBooking
 
 export default async function DeskPassesPage() {
   const data = await Promise.all([fetchDeskBookings('requested'), fetchDeskBookings('pending_verification')])
-  const passControls = formatPassControls(data)
+  let passControls = formatPassControls(data)
+
+  if (passControls.length === 0) {
+    const supabase = await supabaseServer()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    const venueId = user?.user_metadata?.venue_id as string | undefined
+    if (venueId) {
+      const passes = await fetchVenuePasses(venueId)
+      passControls = passes.map((pass) => ({
+        passId: pass.id,
+        name: pass.venue?.name ?? pass.kind ?? pass.id,
+        tz: pass.venue?.tz ?? 'UTC',
+        autoApprove: pass.auto_approve_enabled,
+        defaultStart: pass.default_arrival_start_local ?? '12:00',
+        defaultMinutes: pass.default_arrival_window_minutes ?? 60,
+      }))
+    }
+  }
+
   const today = new Date().toISOString().slice(0, 10)
 
   return (

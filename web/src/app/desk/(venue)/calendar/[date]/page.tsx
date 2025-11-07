@@ -108,6 +108,7 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
     const imageSrc = pickGuestImage(booking.id)
     const paymentState = mapPaymentState(booking.hold_status)
     const category = mapCategory(booking.pass?.kind ?? null)
+    const isRequest = booking.status === 'requested'
 
     return {
       id: booking.id,
@@ -119,11 +120,12 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
       partySize: booking.party_size,
       guestLabel,
       imageSrc,
-      detailHref: `/desk/requests/${booking.id}`,
+      detailHref: isRequest ? `/desk/requests/${booking.id}` : `/desk/bookings/${booking.id}`,
       status: booking.status,
       category,
       paymentStateKey: paymentState.key,
       paymentStateLabel: paymentState.label,
+      qrJti: booking.qr_jti,
     }
   })
 

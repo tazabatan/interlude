@@ -1,8 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
-import type { DeskBooking, PassInventory } from '@/lib/desk'
+import type { DeskBooking, PassInventory, DeskPass } from '@/lib/desk'
+import { pauseDayAction, setDayCapacityAction } from '../actions'
 
 type DayData = {
   date: string
@@ -19,6 +20,7 @@ type DayData = {
   cancelled: number
   declined: number
   totalGuests: number
+  passIds: string[]
 }
 
 function getDaysInMonth(year: number, month: number): DayData[] {
@@ -103,9 +105,11 @@ function getDaysInMonth(year: number, month: number): DayData[] {
 export function CalendarClient({
   bookings,
   inventory,
+  passes,
 }: {
   bookings: DeskBooking[]
   inventory: PassInventory[]
+  passes: DeskPass[]
 }) {
   const now = new Date()
   const [currentYear, setCurrentYear] = useState(now.getFullYear())
@@ -136,6 +140,17 @@ export function CalendarClient({
       bookingsByDate.set(booking.date, existing)
     })
 
+    const fallbackPassIds = new Set<string>()
+    passes.forEach((p) => {
+      if (p.id) fallbackPassIds.add(p.id)
+    })
+    inventory.forEach((inv) => {
+      if (inv.pass_id) fallbackPassIds.add(inv.pass_id)
+    })
+    bookings.forEach((booking) => {
+      if (booking.pass_id) fallbackPassIds.add(booking.pass_id)
+    })
+
     // Enrich days with data
     return days.map((day) => {
       const dayInventory = inventoryMap.get(day.date) ?? []
@@ -144,7 +159,6 @@ export function CalendarClient({
       const capacitySet = dayInventory.length > 0
       const cap = dayInventory.reduce((sum, inv) => sum + inv.cap, 0)
       const paused = pausedDates.has(day.date)
-
       const requested = dayBookings.filter((b) => b.status === 'requested').length
       const issued = dayBookings.filter((b) => b.status === 'issued').length
       const redeemed = dayBookings.filter((b) => b.status === 'redeemed').length
@@ -155,6 +169,14 @@ export function CalendarClient({
       const totalGuests = dayBookings
         .filter((b) => b.status === 'issued')
         .reduce((sum, b) => sum + b.party_size, 0)
+
+       const dayPassIds = new Set<string>()
+       dayInventory.forEach((inv) => {
+         if (inv.pass_id) dayPassIds.add(inv.pass_id)
+       })
+       dayBookings.forEach((booking) => {
+         if (booking.pass_id) dayPassIds.add(booking.pass_id)
+       })
 
       return {
         ...day,
@@ -168,9 +190,10 @@ export function CalendarClient({
         cancelled,
         declined,
         totalGuests,
+        passIds: dayPassIds.size > 0 ? Array.from(dayPassIds) : Array.from(fallbackPassIds),
       }
     })
-  }, [bookings, inventory, currentYear, currentMonth, pausedDates])
+  }, [bookings, inventory, passes, currentYear, currentMonth, pausedDates])
 
   const monthName = new Date(currentYear, currentMonth).toLocaleString('en-US', { month: 'long' })
 
@@ -196,30 +219,58 @@ export function CalendarClient({
     ? daysWithData.find((day) => day.date === selectedDate)
     : null
 
-  const handleTogglePause = (date: string) => {
-    const isPaused = pausedDates.has(date)
+  const [isUpdatingPause, startPauseTransition] = useTransition()
+  const [isUpdatingCapacity, startCapacityTransition] = useTransition()
+
+  const handleTogglePause = (day: DayData) => {
+    const isPaused = pausedDates.has(day.date)
 
     // If trying to pause (not unpause), check for active bookings
     if (!isPaused) {
-      const dayData = daysWithData.find((day) => day.date === date)
-      if (dayData && (dayData.requested > 0 || dayData.issued > 0)) {
-        setWarningMessage({ requested: dayData.requested, issued: dayData.issued })
+      if (day.requested > 0 || day.issued > 0) {
+        setWarningMessage({ requested: day.requested, issued: day.issued })
         setShowWarning(true)
         return
       }
     }
 
+    const nextPaused = !isPaused
+
     setPausedDates((prev) => {
       const newSet = new Set(prev)
-      if (newSet.has(date)) {
-        newSet.delete(date)
+      if (nextPaused) {
+        newSet.add(day.date)
       } else {
-        newSet.add(date)
+        newSet.delete(day.date)
       }
       return newSet
     })
-    // TODO: Wire up API call to update pause status in database
-    // await updatePassInventoryPause(date, !pausedDates.has(date))
+
+    if (day.passIds.length === 0) {
+      return
+    }
+
+    startPauseTransition(async () => {
+      await pauseDayAction({
+        date: day.date,
+        paused: nextPaused,
+        passIds: day.passIds,
+      })
+    })
+  }
+
+  const handleSetCapacity = (day: DayData, nextCapRaw: number) => {
+    if (day.passIds.length === 0) return
+    const safeValue = Math.max(0, Math.floor(Number.isFinite(nextCapRaw) ? nextCapRaw : 0))
+    if (safeValue === (day.cap ?? 0)) return
+    startCapacityTransition(async () => {
+      // Only set capacity for the first pass to avoid multiplying
+      await setDayCapacityAction({
+        date: day.date,
+        cap: safeValue,
+        passIds: [day.passIds[0]], // Use only the first pass
+      })
+    })
   }
 
   return (
@@ -234,7 +285,7 @@ export function CalendarClient({
           >
             ← Previous
           </button>
-          <h2 className="text-2xl font-semibold uppercase tracking-[0.08em]">
+          <h2 className="text-3xl font-medium uppercase tracking-[0.02em] text-black">
             {monthName} {currentYear}
           </h2>
           <button
@@ -271,7 +322,14 @@ export function CalendarClient({
       <div className="w-[420px] flex-shrink-0">
         <div className="sticky top-8">
           {selectedDayData ? (
-            <DateDetailPanel day={selectedDayData} onTogglePause={handleTogglePause} />
+            <DateDetailPanel
+              key={`${selectedDayData.date}-${selectedDayData.cap ?? 0}`}
+              day={selectedDayData}
+              onTogglePause={handleTogglePause}
+              isUpdatingPause={isUpdatingPause}
+              onSetCapacity={handleSetCapacity}
+              isUpdatingCapacity={isUpdatingCapacity}
+            />
           ) : (
             <div className="rounded-[32px] border border-[#E8E4D7] bg-[#F9F6ED] p-8 text-center shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
               <p className="text-sm text-[#6F716D]">
@@ -359,6 +417,32 @@ function DayCell({
 }) {
   const hasActivity = day.requested + day.issued + day.redeemed + day.pendingVerification > 0
   const isAtCapacity = day.capacitySet && day.issued >= day.cap
+  const hasRequests = day.requested > 0
+  const hasBookings = day.issued + day.redeemed + day.pendingVerification > 0
+
+  let priorityState: 'request' | 'booking' | 'pause' | null = null
+  if (hasRequests) priorityState = 'request'
+  else if (hasBookings) priorityState = 'booking'
+  else if (day.paused) priorityState = 'pause'
+
+  const colorClasses = (() => {
+    if (isSelected) {
+      return 'border-2 border-[#0F766E] bg-[#BAE6E3] ring-2 ring-[#0F766E]'
+    }
+    if (priorityState === 'request') {
+      return 'border border-transparent bg-[#FEF3C7] hover:border-transparent hover:bg-[#FDE68A]'
+    }
+    if (priorityState === 'booking') {
+      return 'border border-transparent bg-[#BAE6E3] hover:border-transparent hover:bg-[#A4DCD5]'
+    }
+    if (priorityState === 'pause') {
+      return 'border border-[#F5B8B8] bg-[#FCE1E1] hover:border-[#F29C9C] hover:bg-[#FCD4D4]'
+    }
+    if (day.isToday) {
+      return 'border border-[#02374D] bg-white hover:bg-[#F4F1E7]'
+    }
+    return 'border border-[#E8E4D7] bg-[#F9F6ED] hover:border-[#DBD8C9] hover:bg-white'
+  })()
 
   return (
     <button
@@ -367,15 +451,8 @@ function DayCell({
       className={`
         relative w-full rounded-[24px] border p-3 text-left transition shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]
         focus:outline-none focus-visible:ring-2 focus-visible:ring-[#02374D] focus-visible:ring-offset-2
-        ${
-          isSelected
-            ? 'border-[#02374D] bg-[#D0F3EA] ring-2 ring-[#02374D]'
-            : day.isToday
-              ? 'border-[#02374D] border-2 bg-white hover:bg-[#F4F1E7]'
-              : 'border-[#E8E4D7] bg-[#F9F6ED] hover:border-[#DBD8C9] hover:bg-white'
-        }
+        ${colorClasses}
         ${!day.isCurrentMonth && 'opacity-30'}
-        ${day.paused && !isSelected && 'bg-[#FCE1E1] border-[#F5B8B8]'}
       `}
       style={{ aspectRatio: '1' }}
     >
@@ -414,7 +491,33 @@ function DayCell({
   )
 }
 
-function DateDetailPanel({ day, onTogglePause }: { day: DayData; onTogglePause: (date: string) => void }) {
+function DateDetailPanel({
+  day,
+  onTogglePause,
+  isUpdatingPause,
+  onSetCapacity,
+  isUpdatingCapacity,
+}: {
+  day: DayData
+  onTogglePause: (day: DayData) => void
+  isUpdatingPause: boolean
+  onSetCapacity: (day: DayData, cap: number) => void
+  isUpdatingCapacity: boolean
+}) {
+  const [localCapacity, setLocalCapacity] = useState(() => day.cap ?? 0)
+  const debounceRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Cleanup timeout on unmount
+  useEffect(
+    () => () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+        debounceRef.current = null
+      }
+    },
+    []
+  )
+
   const dateLabel = new Date(day.date).toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -422,7 +525,33 @@ function DateDetailPanel({ day, onTogglePause }: { day: DayData; onTogglePause: 
     year: 'numeric',
   })
 
-  const remaining = day.capacitySet ? Math.max(0, day.cap - day.issued) : 0
+  const isPaused = day.paused
+  const capacityDisabled = isUpdatingCapacity || day.passIds.length === 0 || isPaused
+  const displayCapacity = isPaused ? 0 : localCapacity
+  const hasCap = !isPaused && displayCapacity > 0
+  const effectiveCap = hasCap ? displayCapacity : 0
+  const remaining = hasCap ? Math.max(0, effectiveCap - day.issued) : 0
+
+  const handleCapacityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (capacityDisabled) return
+    const rawValue = e.target.value
+    // Allow empty string for easier editing
+    if (rawValue === '') {
+      setLocalCapacity(0)
+      return
+    }
+    const numValue = parseInt(rawValue, 10)
+    if (!Number.isNaN(numValue) && numValue >= 0) {
+      setLocalCapacity(numValue)
+      // Debounce the API call
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        if (!capacityDisabled) {
+          onSetCapacity(day, numValue)
+        }
+      }, 500)
+    }
+  }
 
   return (
     <div className="rounded-[32px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
@@ -437,10 +566,11 @@ function DateDetailPanel({ day, onTogglePause }: { day: DayData; onTogglePause: 
         <span className="text-sm font-medium text-[#02374D]">Pause passes</span>
         <button
           type="button"
-          onClick={() => onTogglePause(day.date)}
+          onClick={() => onTogglePause(day)}
+          disabled={isUpdatingPause || day.passIds.length === 0}
           className={`relative h-7 w-12 rounded-full transition-colors ${
             day.paused ? 'bg-[#B4231F]' : 'bg-[#DBD8C9]'
-          }`}
+          } ${isUpdatingPause || day.passIds.length === 0 ? 'opacity-50' : ''}`}
         >
           <span
             className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-md transition-transform ${
@@ -450,6 +580,23 @@ function DateDetailPanel({ day, onTogglePause }: { day: DayData; onTogglePause: 
         </button>
       </div>
 
+      {/* Capacity Editor */}
+      <div className="mb-6 flex items-center justify-between">
+        <span className="text-sm font-medium text-[#02374D]">Set capacity</span>
+        <input
+          type="number"
+          min="0"
+          value={displayCapacity}
+          onChange={handleCapacityChange}
+          disabled={capacityDisabled}
+          className={`w-20 rounded-full border px-4 py-1.5 text-center text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#02374D] ${
+            day.paused
+              ? 'border-[#B4231F] bg-[#FCE1E1] text-[#B4231F]'
+              : 'border-[#DBD8C9] bg-white text-[#02374D]'
+          } ${capacityDisabled ? 'cursor-not-allowed opacity-50' : ''}`}
+        />
+      </div>
+
       <div className="space-y-6">
         {/* Capacity Snapshot */}
         <section className="space-y-3">
@@ -457,11 +604,11 @@ function DateDetailPanel({ day, onTogglePause }: { day: DayData; onTogglePause: 
             Capacity Snapshot
           </h4>
           <div className="rounded-2xl bg-white/70 p-4">
-            {day.capacitySet && day.cap > 0 ? (
+            {hasCap ? (
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-[#02374D]">{day.issued}</span>
-                  <span className="text-xl text-[#6F716D]">/ {day.cap}</span>
+                  <span className="text-xl text-[#6F716D]">/ {effectiveCap}</span>
                 </div>
                 {remaining > 0 && (
                   <div className="text-sm text-[#4F514D]">

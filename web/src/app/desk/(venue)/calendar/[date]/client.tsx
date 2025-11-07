@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { markArrivedAction, undoDeclineAction } from '../../actions'
 
 const SEGMENT_OPTIONS = [
   { value: 'all', label: 'All' },
@@ -35,6 +36,16 @@ const PAYMENT_OPTIONS = [
   { value: 'released', label: 'Hold released' },
 ] as const
 
+const STATUS_BADGE_CLASSES: Record<string, string> = {
+  issued: 'bg-[#D0F3EA] text-[#0D6B56]',
+  approved: 'bg-[#D0F3EA] text-[#0D6B56]',
+  redeemed: 'bg-[#DCFCE7] text-[#166534]',
+  redeemed_late: 'bg-[#BDEBD9] text-[#0B5B48]',
+  pending_verification: 'bg-[#EDE9FE] text-[#5B21B6]',
+  cancelled: 'bg-[#DBD8C9] text-[#4A4C48]',
+  no_show: 'bg-[#FDE6D5] text-[#B45309]',
+}
+
 type Segment = (typeof SEGMENT_OPTIONS)[number]['value']
 
 type BookingCardPayload = {
@@ -52,6 +63,7 @@ type BookingCardPayload = {
   category: string
   paymentStateKey: string
   paymentStateLabel: string
+  qrJti: string | null
 }
 
 function formatDateLabel(value: string) {
@@ -158,7 +170,7 @@ export function DayDetailClient({ date, bookings }: { date: string; bookings: Bo
       {filtered.length > 0 && (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((booking) => (
-            <BookingCard key={booking.id} booking={booking} isToday={isToday} />
+            <BookingCard key={booking.id} booking={booking} isToday={isToday} dayIso={date} />
           ))}
         </div>
       )}
@@ -166,11 +178,12 @@ export function DayDetailClient({ date, bookings }: { date: string; bookings: Bo
   )
 }
 
-function BookingCard({ booking, isToday }: { booking: BookingCardPayload; isToday: boolean }) {
+function BookingCard({ booking, isToday, dayIso }: { booking: BookingCardPayload; isToday: boolean; dayIso: string }) {
   const isDeclined = booking.status === 'declined'
   const isRequest = booking.status === 'requested'
+  const isIssued = booking.status === 'issued'
 
-  const ctaLabel = isDeclined ? 'Undo Decline' : isToday ? 'Mark Arrived' : null
+  const ctaLabel = isDeclined ? 'Undo Decline' : isToday && isIssued ? 'Mark Arrived' : null
 
   const buttonClass = isDeclined
     ? 'border border-[#B4231F] text-[#B4231F] hover:border-[#F5B8B8] hover:bg-[#F5B8B8]/20'
@@ -182,12 +195,12 @@ function BookingCard({ booking, isToday }: { booking: BookingCardPayload; isToda
     ? 'bg-[#FCE1E1] text-[#B4231F]'
     : isRequest
       ? 'bg-[#FFF3CD] text-[#92400E]'
-      : 'bg-[#D0F3EA] text-[#0D6B56]'
+      : STATUS_BADGE_CLASSES[booking.status] ?? 'bg-[#D0F3EA] text-[#0D6B56]'
 
   return (
     <div className="flex min-h-[20rem] flex-col gap-6 rounded-[32px] border border-[#E8E4D7] bg-[#F9F6ED] px-7 py-8 text-center shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
       <Link
-        href={booking.detailHref}
+        href={`${booking.detailHref}?from=calendar&date=${dayIso}`}
         className="flex flex-col gap-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#02374D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F1E7]"
       >
         <div className="space-y-3">
@@ -216,18 +229,58 @@ function BookingCard({ booking, isToday }: { booking: BookingCardPayload; isToda
         </div>
       </Link>
 
-      {ctaLabel && (
-        <div className="flex flex-col gap-3 text-xs text-[#6F716D]">
-          <div className="flex justify-center">
+      {isRequest ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-center gap-2">
             <Link
-              href={booking.detailHref}
-              className={`w-full max-w-[12rem] rounded-full px-3 py-2 text-sm font-semibold transition ${buttonClass}`}
+              href={`${booking.detailHref}?from=calendar&date=${dayIso}`}
+              className="rounded-full bg-[#02374D] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#02486A]"
             >
-              {ctaLabel}
+              Approve
+            </Link>
+            <Link
+              href={`${booking.detailHref}?from=calendar&date=${dayIso}`}
+              className="rounded-full border border-[#B4231F] px-4 py-2 text-sm font-semibold text-[#B4231F] transition hover:border-[#F5B8B8] hover:bg-[#F5B8B8]/20"
+            >
+              Decline
             </Link>
           </div>
         </div>
-      )}
+      ) : ctaLabel ? (
+        <div className="flex flex-col gap-3 text-xs text-[#6F716D]">
+          <div className="flex justify-center">
+            {ctaLabel === 'Mark Arrived' && booking.qrJti ? (
+              <form action={markArrivedAction} className="w-full max-w-[12rem]">
+                <input type="hidden" name="bookingId" value={booking.id} />
+                <input type="hidden" name="qrJti" value={booking.qrJti} />
+                <button
+                  type="submit"
+                  className={`w-full rounded-full px-3 py-2 text-sm font-semibold transition ${buttonClass}`}
+                >
+                  {ctaLabel}
+                </button>
+              </form>
+            ) : ctaLabel === 'Undo Decline' ? (
+              <form action={undoDeclineAction} className="w-full max-w-[12rem]">
+                <input type="hidden" name="bookingId" value={booking.id} />
+                <button
+                  type="submit"
+                  className={`w-full rounded-full px-3 py-2 text-sm font-semibold transition ${buttonClass}`}
+                >
+                  {ctaLabel}
+                </button>
+              </form>
+            ) : (
+              <Link
+                href={`${booking.detailHref}?from=calendar&date=${dayIso}`}
+                className={`w-full max-w-[12rem] rounded-full px-3 py-2 text-sm font-semibold transition ${buttonClass}`}
+              >
+                {ctaLabel}
+              </Link>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -9,6 +9,7 @@ import {
 } from '../../actions'
 
 type Params = Promise<{ id: string }>
+type SearchParams = Promise<{ from?: string; date?: string }>
 
 const TIMELINE_STEPS = [
   { key: 'requested', label: 'Requested' },
@@ -94,8 +95,15 @@ function formatCurrency(amount: number | null | undefined, currency: string | nu
   }
 }
 
-export default async function DeskRequestDetailPage({ params }: { params: Params }) {
+export default async function DeskRequestDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Params
+  searchParams: SearchParams
+}) {
   const { id } = await params
+  const search = await searchParams
   const booking = await fetchDeskBookingById(id)
 
   if (!booking) {
@@ -127,6 +135,11 @@ export default async function DeskRequestDetailPage({ params }: { params: Params
   const defaultStartValue = toDateTimeLocal(booking.arrival_window_start)
   const defaultEndValue = toDateTimeLocal(booking.arrival_window_end)
 
+  const backLink =
+    search.from === 'calendar' && search.date
+      ? { href: `/desk/calendar/${search.date}`, label: '← Back to calendar' }
+      : { href: '/desk/requests', label: '← Back to requests' }
+
   const detailRows = [
     { label: 'Venue', value: passVenue },
     { label: 'Pass', value: passDetailLabel },
@@ -143,8 +156,8 @@ export default async function DeskRequestDetailPage({ params }: { params: Params
 
   return (
     <div className="space-y-10 pb-16 text-[#02374D]">
-      <Link href="/desk/requests" className="text-sm text-[#02374D] hover:underline">
-        ← Back to requests
+      <Link href={backLink.href} className="text-sm text-[#02374D] hover:underline">
+        {backLink.label}
       </Link>
 
       <div className="grid gap-10 lg:grid-cols-[2fr,1fr]">

@@ -38,7 +38,9 @@ Deno.serve(async (req: Request) => {
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData?.user) return json({ ok:false, error:"Not authenticated" }, 401);
 
-    const role = (userData.user.app_metadata as any)?.role;
+    const role =
+      (userData.user.user_metadata as any)?.app_role ??
+      (userData.user.app_metadata as any)?.role;
     if (role !== "venue_manager") return json({ ok:false, error:"Forbidden (role must be venue_manager)" }, 403);
 
     // Service-role client for RPCs

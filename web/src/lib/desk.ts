@@ -112,6 +112,18 @@ export type DeskBooking = {
   } | null
 }
 
+export type DeskPass = {
+  id: string
+  kind: string | null
+  auto_approve_enabled: boolean
+  default_arrival_start_local: string | null
+  default_arrival_window_minutes: number | null
+  venue: {
+    name: string | null
+    tz: string | null
+  } | null
+}
+
 const BOOKING_SELECT = [
   'id',
   'pass_id',
@@ -137,6 +149,15 @@ const BOOKING_SELECT = [
     'venue:venues(name,tz)',
     ')',
   ].join(''),
+].join(',')
+
+const PASS_SELECT = [
+  'id',
+  'kind',
+  'auto_approve_enabled',
+  'default_arrival_start_local',
+  'default_arrival_window_minutes',
+  'venue:venues(name,tz)',
 ].join(',')
 
 function buildStatusFilter(statuses: string[]) {
@@ -168,6 +189,13 @@ export async function fetchDeskBookingById(bookingId: string) {
 export async function fetchDeskBookingsByStatuses(statuses: string[]) {
   if (statuses.length === 0) return []
   return fetchBookingsWithFilter(buildStatusFilter(statuses))
+}
+
+export async function fetchVenuePasses(venueId: string) {
+  const res = await callSupabase(
+    `/rest/v1/passes?venue_id=eq.${venueId}&order=created_at.asc&select=${encodeURIComponent(PASS_SELECT)}`
+  )
+  return (await res.json()) as DeskPass[]
 }
 
 export async function deskAction(action: string, payload: unknown) {
@@ -243,6 +271,20 @@ export async function declineBooking(params: { bookingId: string; reason?: strin
     _booking_id: params.bookingId,
     _reason: params.reason ?? null,
     _idem_key: null,
+  })
+}
+
+export async function undoDeclineBooking(params: { bookingId: string }) {
+  return callRpc('fn_restore_declined_booking', {
+    _booking_id: params.bookingId,
+  })
+}
+
+export async function redeemBooking(params: { qrJti: string; serverName?: string | null; tableRef?: string | null }) {
+  return callRpc('fn_redeem', {
+    _qr_jti: params.qrJti,
+    _server_name: params.serverName ?? null,
+    _table_ref: params.tableRef ?? null,
   })
 }
 

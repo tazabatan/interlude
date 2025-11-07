@@ -105,7 +105,8 @@ function mapBooking(booking: DeskBooking, todayIso: string) {
         ? 'upcoming'
         : 'past'
 
-  const ctaLabel = isDeclined ? 'Undo Decline' : isToday ? 'Mark Arrived' : null
+  const canMarkArrived = isToday && booking.status === 'issued'
+  const ctaLabel = isDeclined ? 'Undo Decline' : canMarkArrived ? 'Mark Arrived' : null
   const guestLabel = `TBD Name's group of ${booking.party_size}`
   const imageSrc = pickGuestImage(booking.id)
   const paymentState = mapPaymentState(booking.hold_status)
@@ -125,11 +126,12 @@ function mapBooking(booking: DeskBooking, todayIso: string) {
     segment,
     guestLabel,
     imageSrc,
-    detailHref: `/desk/requests/${booking.id}`,
+    detailHref: `/desk/bookings/${booking.id}`,
     status: booking.status,
     category,
     paymentStateKey: paymentState.key,
     paymentStateLabel: paymentState.label,
+    qrJti: booking.qr_jti,
   }
 }
 
@@ -148,7 +150,7 @@ export type BookingCardPayload = ReturnType<typeof mapBooking>
 export default async function DeskBookingsPage() {
   const todayIso = new Date().toISOString().slice(0, 10)
   const [primaryRaw, pendingRaw] = await Promise.all([
-    fetchDeskBookingsByStatuses(['approved', 'issued', 'declined']),
+    fetchDeskBookingsByStatuses(['approved', 'issued', 'redeemed', 'redeemed_late', 'declined']),
     fetchDeskBookings('pending_verification'),
   ])
 

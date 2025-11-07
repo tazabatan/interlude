@@ -5,7 +5,10 @@ import {
   approveBooking,
   declineBooking,
   deskAction,
+  redeemBooking,
+  undoDeclineBooking,
 } from '@/lib/desk'
+import { getUserRole } from '@/lib/get-user-role'
 
 export async function approveDefaultAction(formData: FormData) {
   const bookingId = formData.get('bookingId')?.toString()
@@ -30,6 +33,20 @@ export async function declineAction(formData: FormData) {
   if (!bookingId) throw new Error('bookingId missing')
   const reason = formData.get('reason')?.toString().trim() || null
   await declineBooking({ bookingId, reason })
+  revalidatePath('/desk')
+}
+
+export async function markArrivedAction(formData: FormData) {
+  const bookingId = formData.get('bookingId')?.toString()
+  const qrJti = formData.get('qrJti')?.toString()
+  if (!bookingId || !qrJti) throw new Error('bookingId and qrJti are required')
+  const { user } = await getUserRole()
+  const serverName =
+    (user?.user_metadata?.full_name as string | undefined) ??
+    (user?.user_metadata?.name as string | undefined) ??
+    user?.email ??
+    'Desk staff'
+  await redeemBooking({ qrJti, serverName, tableRef: null })
   revalidatePath('/desk')
 }
 
@@ -61,6 +78,39 @@ export async function pauseAction(formData: FormData) {
   const paused = pausedValue === 'true'
   await deskAction('set_paused', { p_pass_id: passId, p_date: date, p_paused: paused })
   revalidatePath('/desk')
+}
+
+export async function pauseDayAction(params: { date: string; paused: boolean; passIds: string[] }) {
+  const { date, paused, passIds } = params
+  if (!date) throw new Error('date missing')
+  if (!Array.isArray(passIds) || passIds.length === 0) return
+  const uniquePassIds = Array.from(new Set(passIds.filter(Boolean)))
+  await Promise.all(
+    uniquePassIds.map((passId) => deskAction('set_paused', { p_pass_id: passId, p_date: date, p_paused: paused }))
+  )
+  revalidatePath('/desk/calendar')
+}
+
+export async function undoDeclineAction(formData: FormData) {
+  const bookingId = formData.get('bookingId')?.toString()
+  if (!bookingId) throw new Error('bookingId missing')
+  await undoDeclineBooking({ bookingId })
+  revalidatePath('/desk')
+  revalidatePath('/desk/requests')
+  revalidatePath('/desk/calendar')
+}
+
+export async function setDayCapacityAction(params: { date: string; cap: number; passIds: string[] }) {
+  const { date, cap, passIds } = params
+  if (!date) throw new Error('date missing')
+  if (!Number.isFinite(cap) || cap < 0) throw new Error('cap must be a non-negative number')
+  if (!Array.isArray(passIds) || passIds.length === 0) return
+  const safeCap = Math.floor(cap)
+  const uniquePassIds = Array.from(new Set(passIds.filter(Boolean)))
+  await Promise.all(
+    uniquePassIds.map((passId) => deskAction('set_daily_cap', { p_pass_id: passId, p_date: date, p_cap: safeCap }))
+  )
+  revalidatePath('/desk/calendar')
 }
 
 export async function forceAuthorizeAction(formData: FormData) {
