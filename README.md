@@ -29,3 +29,17 @@ Permanent password credentials seeded locally:
 - Guests create free member accounts from `/auth?mode=signup` (magic links + password) which stamps `app_role = member` metadata automatically.
 - Admins can invite venue managers or staff from `/admin` (requires `SUPABASE_SERVICE_ROLE_KEY` in the environment). The form uses the Supabase Admin API to send the email link and binds the selected venue.
 - Venue managers get a `/desk/team` surface to invite additional managers or staff for their own venue. Desk staff see a read-only notice instead of the form.
+
+## Reseeding local data
+
+The smoke fixtures wipe the local Supabase schema. To restore the default “Seed Venue” pass and inventory for desk testing, run:
+
+```bash
+bash scripts/dev/seed-demo-data.sh
+```
+
+The script simply `docker exec`s into the `supabase_db_interlude` container, so it requires Docker access (see below).
+
+## Docker permissions
+
+Most project scripts (smoke, seeding, etc.) talk directly to `supabase_db_interlude` via `docker exec`. If you hit `permission denied while trying to connect to the Docker daemon socket`, either run the command with `sudo` or add your user to the Docker group so you can access `/Users/<you>/.docker/run/docker.sock` without elevation.
