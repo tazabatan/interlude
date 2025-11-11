@@ -7,6 +7,13 @@ const guestRoles = ['member', 'admin']
 const deskRoles = ['venue_manager', 'venue_staff', 'admin']
 const adminRoles = ['admin']
 
+function isPublicAppPath(pathname: string) {
+  if (pathname === '/app' || pathname === '/app/') return true
+  if (pathname.startsWith('/app/explore')) return true
+  if (pathname.startsWith('/app/venue')) return true
+  return false
+}
+
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
 
@@ -53,9 +60,12 @@ export async function middleware(req: NextRequest) {
     if (!user) return buildRedirect('/auth')
     if (!adminRoles.includes(role)) return buildRedirect('/app')
   } else if (path.startsWith('/app')) {
-    if (!user) return buildRedirect('/auth')
-    if (deskRoles.includes(role) && !guestRoles.includes(role)) return buildRedirect('/desk')
-    if (!guestRoles.includes(role)) return buildRedirect('/auth')
+    const publicAppPath = isPublicAppPath(path)
+    if (!user && !publicAppPath) return buildRedirect('/auth')
+    if (user) {
+      if (deskRoles.includes(role) && !guestRoles.includes(role)) return buildRedirect('/desk')
+      if (!guestRoles.includes(role)) return buildRedirect('/auth')
+    }
   }
 
   return res

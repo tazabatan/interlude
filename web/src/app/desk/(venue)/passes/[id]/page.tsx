@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { fetchPassById } from '@/lib/desk'
+import { getUserRole } from '@/lib/get-user-role'
 import {
   autoApproveAction,
   dailyCapAction,
@@ -75,6 +76,14 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
 
   const pass = await fetchPassById(passId)
   if (!pass) notFound()
+  const { role } = await getUserRole()
+  const controlsReadOnly = role !== 'venue_manager'
+  const controlPanelTone = controlsReadOnly
+    ? 'border-[#D5D0C0] border-dashed bg-[#EEEADF]'
+    : 'border-[#E8E4D7] bg-[#F9F6ED]'
+  const innerCardTone = controlsReadOnly ? 'border-[#D9D4C6] bg-[#F7F4EA]' : 'border-[#F0EBDC] bg-[#FFFCF5]'
+  const staffFillButtonTone = 'border-[#DBD8C9] bg-[#DBD8C9] text-[#5F6059] cursor-not-allowed opacity-90'
+  const staffOutlineButtonTone = 'border-[#DBD8C9] text-[#5F6059] bg-[#F1EEE2] cursor-not-allowed opacity-90'
 
   const guestPrice =
     pass.kind === 'MIN_SPEND'
@@ -161,9 +170,11 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
             </section>
           </div>
 
-          <section className="space-y-4 rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
+          <section
+            className={`space-y-4 rounded-[28px] border p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] ${controlPanelTone}`}
+          >
             <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">Guest copy preview</h2>
-            <div className="rounded-[20px] border border-[#F0EBDC] bg-[#FFFCF5] p-6 text-sm leading-6 text-[#4F514D] shadow-inner">
+            <div className={`rounded-[20px] border p-6 text-sm leading-6 text-[#4F514D] shadow-inner ${innerCardTone}`}>
               <p className="font-semibold uppercase tracking-[0.08em] text-black">{pass.venue?.name ?? 'Pass'}</p>
               <p className="text-2xl font-semibold text-black">{guestPrice}</p>
               <p className="pt-4 text-[#4F514D]">Escape for the day with an exclusive {pass.venue?.name ?? 'TBD Venue'} day pass, offering you full access to our secluded beach front.</p>
@@ -176,38 +187,52 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
         </div>
 
         <div className="space-y-6">
-          <section className="space-y-4 rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
+          {controlsReadOnly && (
+            <div className="rounded-[20px] border border-[#E8E4D7] bg-white/80 p-4 text-sm text-[#4F514D]">
+              Desk staff can view these settings but only venue managers can update pass controls.
+            </div>
+          )}
+          <section
+            className={`space-y-4 rounded-[28px] border p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] ${controlPanelTone}`}
+          >
             <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">Pass status & visibility</h2>
             <div className="space-y-4">
               <form action={updatePassStatusVisibilityAction} className="space-y-2">
-                <input type="hidden" name="passId" value={pass.id} />
-                <p className="text-xs uppercase tracking-[0.15em] text-[#6F716D]">Pass status</p>
-                <div className="mt-2 flex gap-2">
-                  {statusOptions.map((option) => {
-                    return (
-                      <button
-                        key={option.value}
-                        type="submit"
-                        name="status"
-                        value={option.value}
-                    className={`w-1/2 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] transition ${
-                      option.value === 'active'
-                        ? 'border-[#CDEEDF] bg-[#CDEEDF] text-[#0D6B56] hover:bg-[#B7E2CF]'
+                <fieldset disabled={controlsReadOnly} className="space-y-2">
+                  <input type="hidden" name="passId" value={pass.id} />
+                  <p className="text-xs uppercase tracking-[0.15em] text-[#6F716D]">Pass status</p>
+                  <div className="mt-2 flex gap-2">
+                    {statusOptions.map((option) => {
+                      const activeTone = controlsReadOnly
+                        ? staffOutlineButtonTone
+                        : 'border-[#CDEEDF] bg-[#CDEEDF] text-[#0D6B56] hover:bg-[#B7E2CF]'
+                      const pausedTone = controlsReadOnly
+                        ? staffOutlineButtonTone
                         : 'border-[#B4231F] text-[#B4231F] hover:border-[#F5B8B8] hover:bg-[#F5B8B8]/20'
-                    }`}
-                      >
-                        {option.label}
-                      </button>
-                    )
-                  })}
-                </div>
+                      return (
+                        <button
+                          key={option.value}
+                          type="submit"
+                          name="status"
+                          value={option.value}
+                          className={`w-1/2 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] transition ${
+                            option.value === 'active' ? activeTone : pausedTone
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </fieldset>
               </form>
 
               <form action={updatePassStatusVisibilityAction} className="space-y-2">
-                <input type="hidden" name="passId" value={pass.id} />
-                <label className="text-xs uppercase tracking-[0.15em] text-[#6F716D]" htmlFor="visibility-select">
-                  Visibility
-                </label>
+                <fieldset disabled={controlsReadOnly} className="space-y-2">
+                  <input type="hidden" name="passId" value={pass.id} />
+                  <label className="text-xs uppercase tracking-[0.15em] text-[#6F716D]" htmlFor="visibility-select">
+                    Visibility
+                  </label>
                 <div className="flex gap-2">
                   <DropdownField
                     name="visibility"
@@ -217,122 +242,166 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
                   />
                   <button
                     type="submit"
-                    className="rounded-full border border-[#02374D] bg-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#02486A]"
+                    className={
+                      controlsReadOnly
+                        ? `rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] ${staffFillButtonTone}`
+                        : 'rounded-full border border-[#02374D] bg-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#02486A]'
+                    }
                   >
                     Save
                   </button>
                 </div>
-              </form>
+              </fieldset>
+            </form>
             </div>
           </section>
 
-          <section className="space-y-4 rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
+          <section
+            className={`space-y-4 rounded-[28px] border p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] ${controlPanelTone}`}
+          >
             <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">Auto-approve</h2>
             <form action={autoApproveAction} className="space-y-3">
-              <input type="hidden" name="passId" value={pass.id} />
-              <input type="hidden" name="enabled" value={String(!pass.auto_approve_enabled)} />
-              <button
-                type="submit"
-                className={`flex w-full items-center justify-between rounded-[20px] border px-4 py-3 text-left text-xs uppercase tracking-[0.15em] transition-colors ${
-                  pass.auto_approve_enabled ? 'border-[#0D9488] bg-[#BAE6E3]' : 'border-[#B4231F] bg-[#FCE1E1]'
-                }`}
-              >
-                <span className="text-[#6F716D]">Auto-approve</span>
-                <span
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-                    pass.auto_approve_enabled ? 'bg-[#0D9488]' : 'bg-[#B4231F]'
-                  }`}
-                  aria-hidden
-                >
-                  <span
-                    className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-md transition-all ${
-                      pass.auto_approve_enabled ? 'left-[22px]' : 'left-0.5'
-                    }`}
-                  />
-                </span>
-              </button>
-              <p className="rounded-[20px] border border-[#F0EBDC] bg-[#FFFCF5] p-4 text-xs text-[#4F514D]">
-                Auto-approve respects cap & pause. If cap is full or a date is paused, requests queue automatically.
-              </p>
-            </form>
-            <form action={setDefaultCapAction} className="space-y-3 rounded-[20px] border border-[#E8E4D7] bg-[#F9F6ED] p-4 text-sm text-[#4F514D]">
-              <input type="hidden" name="passId" value={pass.id} />
-              <label className="space-y-1">
-                <span className="text-xs uppercase tracking-[0.15em] text-[#6F716D]">Default daily cap</span>
-                <input
-                  type="number"
-                  name="defaultCap"
-                  min={0}
-                  defaultValue={String(pass.default_daily_cap ?? 0)}
-                  className="w-full rounded border border-[#DBD8C9] bg-white px-3 py-2 text-sm text-black"
-                />
-              </label>
-              <p className="text-xs text-[#4F514D]">Used automatically for dates without a manual cap. Calendar overrides win.</p>
-              <div className="flex justify-end">
+              <fieldset disabled={controlsReadOnly} className="space-y-3">
+                <input type="hidden" name="passId" value={pass.id} />
+                <input type="hidden" name="enabled" value={String(!pass.auto_approve_enabled)} />
                 <button
                   type="submit"
-                  className="rounded-full border border-[#02374D] bg-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#02486A]"
+                  className={`flex w-full items-center justify-between rounded-[20px] border px-4 py-3 text-left text-xs uppercase tracking-[0.15em] transition-colors ${
+                    controlsReadOnly
+                      ? staffOutlineButtonTone
+                      : pass.auto_approve_enabled
+                        ? 'border-[#0D9488] bg-[#BAE6E3]'
+                        : 'border-[#B4231F] bg-[#FCE1E1]'
+                  }`}
                 >
-                  Save default cap
+                  <span className="text-[#6F716D]">Auto-approve</span>
+                  <span
+                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                      controlsReadOnly
+                        ? 'bg-[#D5D0C0]'
+                        : pass.auto_approve_enabled
+                          ? 'bg-[#0D9488]'
+                          : 'bg-[#B4231F]'
+                    }`}
+                    aria-hidden
+                  >
+                    <span
+                      className={`absolute top-0.5 h-6 w-6 rounded-full ${
+                        controlsReadOnly ? 'bg-[#FDFBF3]' : 'bg-white'
+                      } shadow-md transition-all ${
+                        pass.auto_approve_enabled ? 'left-[22px]' : 'left-0.5'
+                      }`}
+                    />
+                  </span>
                 </button>
-              </div>
+                <p className={`rounded-[20px] border p-4 text-xs text-[#4F514D] ${innerCardTone}`}>
+                  Auto-approve respects cap & pause. If cap is full or a date is paused, requests queue automatically.
+                </p>
+              </fieldset>
+            </form>
+            <form
+              action={setDefaultCapAction}
+              className={`space-y-3 rounded-[20px] border p-4 text-sm text-[#4F514D] ${innerCardTone}`}
+            >
+              <fieldset disabled={controlsReadOnly} className="space-y-3">
+                <input type="hidden" name="passId" value={pass.id} />
+                <label className="space-y-1">
+                  <span className="text-xs uppercase tracking-[0.15em] text-[#6F716D]">Default daily cap</span>
+                  <input
+                    type="number"
+                    name="defaultCap"
+                    min={0}
+                    defaultValue={String(pass.default_daily_cap ?? 0)}
+                    className="w-full rounded border border-[#DBD8C9] bg-white px-3 py-2 text-sm text-black"
+                  />
+                </label>
+                <p className="text-xs text-[#4F514D]">Used automatically for dates without a manual cap. Calendar overrides win.</p>
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className={
+                      controlsReadOnly
+                        ? `rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] ${staffFillButtonTone}`
+                        : 'rounded-full border border-[#02374D] bg-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#02486A]'
+                    }
+                  >
+                    Save default cap
+                  </button>
+                </div>
+              </fieldset>
             </form>
           </section>
 
-          <section className="space-y-4 rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
+          <section
+            className={`space-y-4 rounded-[28px] border p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] ${controlPanelTone}`}
+          >
             <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">Service hours (local)</h2>
             <form action={updatePassServiceHoursAction} className="space-y-3">
-              <input type="hidden" name="passId" value={pass.id} />
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
-                  Open
-                  <input
-                    type="time"
-                    name="open"
-                    defaultValue={serviceOpen}
-                    className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
-                  />
-                </label>
-                <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
-                  Close
-                  <input
-                    type="time"
-                    name="close"
-                    defaultValue={serviceClose}
-                    className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
-                  />
-                </label>
-              </div>
-              <p className="text-xs text-[#4F514D]">Windows must sit inside these hours. Used for &ldquo;All day&rdquo; and no-show timing.</p>
+              <fieldset disabled={controlsReadOnly} className="space-y-3">
+                <input type="hidden" name="passId" value={pass.id} />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
+                    Open
+                    <input
+                      type="time"
+                      name="open"
+                      defaultValue={serviceOpen}
+                      className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
+                    />
+                  </label>
+                  <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
+                    Close
+                    <input
+                      type="time"
+                      name="close"
+                      defaultValue={serviceClose}
+                      className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
+                    />
+                  </label>
+                </div>
+                <p className="text-xs text-[#4F514D]">Windows must sit inside these hours. Used for &ldquo;All day&rdquo; and no-show timing.</p>
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="rounded-full border border-[#02374D] bg-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#02486A]"
+                  className={
+                    controlsReadOnly
+                      ? `rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] ${staffFillButtonTone}`
+                      : 'rounded-full border border-[#02374D] bg-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#02486A]'
+                  }
                 >
                   Save service hours
                 </button>
               </div>
+              </fieldset>
             </form>
           </section>
 
-          <section className="space-y-4 rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
+          <section
+            className={`space-y-4 rounded-[28px] border p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] ${controlPanelTone}`}
+          >
             <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">Arrival window presets</h2>
             <div className="flex flex-wrap gap-2">
               {arrivalPresets.map((preset) => {
                 const isActive = inferredPreset === preset.value
                 return (
                   <form key={preset.value} action={updatePassArrivalWindowAction}>
-                    <input type="hidden" name="passId" value={pass.id} />
-                    <input type="hidden" name="preset" value={preset.value} />
-                    <input type="hidden" name="graceMinutes" value={String(graceMinutes)} />
-                    <button
-                      type="submit"
-                      className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] transition ${
-                        isActive ? 'border-[#02374D] bg-[#02374D] text-white' : 'border-[#DBD8C9] text-[#4F514D]'
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
+                    <fieldset disabled={controlsReadOnly}>
+                      <input type="hidden" name="passId" value={pass.id} />
+                      <input type="hidden" name="preset" value={preset.value} />
+                      <input type="hidden" name="graceMinutes" value={String(graceMinutes)} />
+                      <button
+                        type="submit"
+                        className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] transition ${
+                          controlsReadOnly
+                            ? staffOutlineButtonTone
+                            : isActive
+                              ? 'border-[#02374D] bg-[#02374D] text-white'
+                              : 'border-[#DBD8C9] text-[#4F514D]'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    </fieldset>
                   </form>
                 )
               })}
@@ -348,128 +417,144 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
             </div>
 
             <form action={updatePassArrivalWindowAction} className="space-y-3">
-              <input type="hidden" name="passId" value={pass.id} />
-              <input type="hidden" name="preset" value="custom" />
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
-                  Custom start
-                  <input
-                    type="time"
-                    name="start"
-                    defaultValue={arrivalStart}
-                    className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
-                  />
-                </label>
-                <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
-                  Custom end
-                  <input
-                    type="time"
-                    name="end"
-                    defaultValue={arrivalEnd}
-                    className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
-                  />
-                </label>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs uppercase tracking-[0.15em] text-[#6F716D]">
-                  Grace period
-                  <div className="mt-1">
-                    <DropdownField
-                      name="graceMinutes"
-                      options={[
-                        { value: '0', label: '0 min' },
-                        { value: '15', label: '15 min' },
-                        { value: '30', label: '30 min' },
-                      ]}
-                      defaultValue={String(graceMinutes)}
+              <fieldset disabled={controlsReadOnly} className="space-y-3">
+                <input type="hidden" name="passId" value={pass.id} />
+                <input type="hidden" name="preset" value="custom" />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
+                    Custom start
+                    <input
+                      type="time"
+                      name="start"
+                      defaultValue={arrivalStart}
+                      className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
                     />
-                  </div>
-                </label>
-                <p className="text-xs text-[#4F514D]">Scanner accepts passes within the window plus this grace.</p>
-              </div>
+                  </label>
+                  <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
+                    Custom end
+                    <input
+                      type="time"
+                      name="end"
+                      defaultValue={arrivalEnd}
+                      className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
+                    />
+                  </label>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs uppercase tracking-[0.15em] text-[#6F716D]">
+                    Grace period
+                    <div className="mt-1">
+                      <DropdownField
+                        name="graceMinutes"
+                        options={[
+                          { value: '0', label: '0 min' },
+                          { value: '15', label: '15 min' },
+                          { value: '30', label: '30 min' },
+                        ]}
+                        defaultValue={String(graceMinutes)}
+                      />
+                    </div>
+                  </label>
+                  <p className="text-xs text-[#4F514D]">Scanner accepts passes within the window plus this grace.</p>
+                </div>
 
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="rounded-full border border-[#02374D] bg-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#02486A]"
+                  className={
+                    controlsReadOnly
+                      ? `rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] ${staffFillButtonTone}`
+                      : 'rounded-full border border-[#02374D] bg-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#02486A]'
+                  }
                 >
                   Save custom window
                 </button>
               </div>
+              </fieldset>
             </form>
           </section>
 
-          <section className="space-y-4 rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
+          <section
+            className={`space-y-4 rounded-[28px] border p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] ${controlPanelTone}`}
+          >
             <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">Hold & pricing copy</h2>
             <form action={updatePassPricingAction} className="space-y-4 text-sm text-[#4F514D]">
-              <input type="hidden" name="passId" value={pass.id} />
-              <input type="hidden" name="kind" value={pass.kind ?? 'DAY_PASS'} />
-              {pass.kind === 'MIN_SPEND' ? (
-                <div className="grid gap-3 md:grid-cols-2">
-                  <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
-                    Min spend per person (USD)
-                    <input
-                      type="text"
-                      name="minSpend"
-                      inputMode="decimal"
-                      defaultValue={centsToInput(pass.min_spend_amount)}
-                      placeholder="250"
-                      className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
-                    />
-                  </label>
-                  <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
-                    No-show hold per person (USD)
-                    <input
-                      type="text"
-                      name="hold"
-                      inputMode="decimal"
-                      defaultValue={centsToInput(pass.no_show_amount_per_person)}
-                      placeholder="100"
-                      className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
-                    />
-                  </label>
+              <fieldset disabled={controlsReadOnly} className="space-y-4">
+                <input type="hidden" name="passId" value={pass.id} />
+                <input type="hidden" name="kind" value={pass.kind ?? 'DAY_PASS'} />
+                {pass.kind === 'MIN_SPEND' ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
+                      Min spend per person (USD)
+                      <input
+                        type="text"
+                        name="minSpend"
+                        inputMode="decimal"
+                        defaultValue={centsToInput(pass.min_spend_amount)}
+                        placeholder="250"
+                        className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
+                      />
+                    </label>
+                    <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
+                      No-show hold per person (USD)
+                      <input
+                        type="text"
+                        name="hold"
+                        inputMode="decimal"
+                        defaultValue={centsToInput(pass.no_show_amount_per_person)}
+                        placeholder="100"
+                        className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
+                      Display price text
+                      <input
+                        type="text"
+                        name="displayText"
+                        defaultValue={pass.display_price_text ?? ''}
+                        placeholder="From $250 per guest"
+                        className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
+                      />
+                    </label>
+                    <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
+                      No-show hold per person (USD)
+                      <input
+                        type="text"
+                        name="hold"
+                        inputMode="decimal"
+                        defaultValue={centsToInput(pass.no_show_amount_per_person)}
+                        placeholder="100"
+                        className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
+                      />
+                    </label>
+                  </div>
+                )}
+                <p className="text-xs italic text-[#6F716D]">
+                  Guardrail: changes apply to new approvals only. Issued bookings keep their original snapshot.
+                </p>
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className={
+                      controlsReadOnly
+                        ? `rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] ${staffFillButtonTone}`
+                        : 'rounded-full border border-[#02374D] bg-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#02486A]'
+                    }
+                  >
+                    Save pricing
+                  </button>
                 </div>
-              ) : (
-                <div className="grid gap-3">
-                  <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
-                    Display price text
-                    <input
-                      type="text"
-                      name="displayText"
-                      defaultValue={pass.display_price_text ?? ''}
-                      placeholder="From $250 per guest"
-                      className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
-                    />
-                  </label>
-                  <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
-                    No-show hold per person (USD)
-                    <input
-                      type="text"
-                      name="hold"
-                      inputMode="decimal"
-                      defaultValue={centsToInput(pass.no_show_amount_per_person)}
-                      placeholder="100"
-                      className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
-                    />
-                  </label>
-                </div>
-              )}
-              <p className="text-xs italic text-[#6F716D]">
-                Guardrail: changes apply to new approvals only. Issued bookings keep their original snapshot.
-              </p>
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="rounded-full border border-[#02374D] bg-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#02486A]"
-                >
-                  Save pricing
-                </button>
-              </div>
+              </fieldset>
             </form>
           </section>
 
-          <section className="space-y-4 rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
+          <section
+            className={`space-y-4 rounded-[28px] border p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] ${controlPanelTone}`}
+          >
             <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">Inventory controls</h2>
             <div className="flex flex-wrap gap-2">
               {shortcutOptions.map((label) => (
@@ -483,6 +568,7 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
               ))}
             </div>
             <form action={dailyCapAction} className="space-y-3 text-sm text-[#4F514D]">
+              <fieldset disabled={controlsReadOnly} className="space-y-3">
               <input type="hidden" name="passId" value={pass.id} />
               <div className="grid gap-2 md:grid-cols-2">
                 <label className="space-y-1">
@@ -509,13 +595,19 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="submit"
-                  className="flex-1 rounded-full border border-[#02374D] bg-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#02486A]"
+                  className={
+                    controlsReadOnly
+                      ? `flex-1 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] ${staffFillButtonTone}`
+                      : 'flex-1 rounded-full border border-[#02374D] bg-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#02486A]'
+                  }
                 >
                   Save cap
                 </button>
               </div>
+            </fieldset>
             </form>
             <form action={pauseAction} className="space-y-3 text-sm text-[#4F514D]">
+              <fieldset disabled={controlsReadOnly} className="space-y-3">
               <input type="hidden" name="passId" value={pass.id} />
               <label className="space-y-1">
                 <span className="text-xs uppercase tracking-[0.15em] text-[#6F716D]">Date</span>
@@ -531,7 +623,11 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
                   type="submit"
                   name="paused"
                   value="true"
-                  className="flex-1 rounded-full border border-[#B4231F] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-[#B4231F] transition hover:border-[#F5B8B8] hover:bg-[#F5B8B8]/20"
+                  className={
+                    controlsReadOnly
+                      ? `flex-1 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] ${staffOutlineButtonTone}`
+                      : 'flex-1 rounded-full border border-[#B4231F] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-[#B4231F] transition hover:border-[#F5B8B8] hover:bg-[#F5B8B8]/20'
+                  }
                 >
                   Pause date
                 </button>
@@ -539,11 +635,16 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
                   type="submit"
                   name="paused"
                   value="false"
-                  className="flex-1 rounded-full border border-[#7FCFC2] bg-[#7FCFC2] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#6AC4B6]"
+                  className={
+                    controlsReadOnly
+                      ? `flex-1 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] ${staffFillButtonTone}`
+                      : 'flex-1 rounded-full border border-[#7FCFC2] bg-[#7FCFC2] px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-[#6AC4B6]'
+                  }
                 >
                   Resume date
                 </button>
               </div>
+              </fieldset>
             </form>
           </section>
         </div>

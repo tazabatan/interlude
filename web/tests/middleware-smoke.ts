@@ -47,7 +47,9 @@ function expectRedirect(response: any, expectedPath: string) {
 async function runMiddlewareTests() {
   // Unauthenticated redirects
   setSupabaseMock({ response: { data: { user: null } } })
-  expectRedirect(await middleware(createRequest('/app')), '/auth?next=/app')
+  const guestApp = await middleware(createRequest('/app'))
+  assert.equal(guestApp.type, 'next', 'Guests should be able to view /app landing without signing in')
+  expectRedirect(await middleware(createRequest('/app/booking/demo')), '/auth?next=/app/booking/demo')
   expectRedirect(await middleware(createRequest('/desk')), '/auth?next=/desk')
   expectRedirect(await middleware(createRequest('/admin')), '/auth?next=/admin')
 
@@ -81,8 +83,8 @@ async function runMiddlewareTests() {
       return { data: { user: null } }
     },
   })
-  const cookieRedirect = await middleware(createRequest('/app'))
-  expectRedirect(cookieRedirect, '/auth?next=/app')
+  const cookieRedirect = await middleware(createRequest('/app/booking/demo'))
+  expectRedirect(cookieRedirect, '/auth?next=/app/booking/demo')
   const refreshed = cookieRedirect.cookies.get('sb-access-token')
   assert.ok(refreshed, 'Expected refreshed cookie to be forwarded')
   assert.equal(refreshed.value, 'fresh-token')

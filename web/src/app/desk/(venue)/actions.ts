@@ -50,6 +50,13 @@ function clampToServiceHours(target: ParsedTime, open: ParsedTime, close: Parsed
   return target
 }
 
+async function requireVenueManager() {
+  const { role } = await getUserRole()
+  if (role !== 'venue_manager') {
+    throw new Error('Only venue managers can update pass controls')
+  }
+}
+
 export async function approveDefaultAction(formData: FormData) {
   const bookingId = formData.get('bookingId')?.toString()
   if (!bookingId) throw new Error('bookingId missing')
@@ -128,6 +135,7 @@ export async function cancelDeskBookingAction(formData: FormData) {
 }
 
 export async function autoApproveAction(formData: FormData) {
+  await requireVenueManager()
   const passId = formData.get('passId')?.toString()
   const enabledValue = formData.get('enabled')?.toString()
   if (!passId || enabledValue === undefined) throw new Error('auto approve payload missing')
@@ -139,6 +147,7 @@ export async function autoApproveAction(formData: FormData) {
 }
 
 export async function dailyCapAction(formData: FormData) {
+  await requireVenueManager()
   const passId = formData.get('passId')?.toString()
   const capValue = formData.get('cap')?.toString()
   const date = formData.get('date')?.toString()
@@ -152,6 +161,7 @@ export async function dailyCapAction(formData: FormData) {
 }
 
 export async function setDefaultCapAction(formData: FormData) {
+  await requireVenueManager()
   const passId = formData.get('passId')?.toString()
   const capValue = formData.get('defaultCap')?.toString()
   if (!passId || capValue === undefined) throw new Error('passId and defaultCap required')
@@ -164,6 +174,7 @@ export async function setDefaultCapAction(formData: FormData) {
 }
 
 export async function pauseAction(formData: FormData) {
+  await requireVenueManager()
   const passId = formData.get('passId')?.toString()
   const date = formData.get('date')?.toString()
   const pausedValue = formData.get('paused')?.toString()
@@ -176,6 +187,7 @@ export async function pauseAction(formData: FormData) {
 }
 
 export async function updatePassStatusVisibilityAction(formData: FormData) {
+  await requireVenueManager()
   const passId = formData.get('passId')?.toString()
   if (!passId) throw new Error('passId missing')
   const status = formData.get('status')?.toString() ?? undefined
@@ -196,6 +208,7 @@ export async function updatePassStatusVisibilityAction(formData: FormData) {
 }
 
 export async function updatePassServiceHoursAction(formData: FormData) {
+  await requireVenueManager()
   const passId = formData.get('passId')?.toString()
   const openRaw = formData.get('open')?.toString()
   const closeRaw = formData.get('close')?.toString()
@@ -214,6 +227,7 @@ export async function updatePassServiceHoursAction(formData: FormData) {
 }
 
 export async function updatePassArrivalWindowAction(formData: FormData) {
+  await requireVenueManager()
   const passId = formData.get('passId')?.toString()
   if (!passId) throw new Error('passId missing')
   const preset = formData.get('preset')?.toString()
@@ -273,6 +287,7 @@ export async function updatePassArrivalWindowAction(formData: FormData) {
 }
 
 export async function updatePassPricingAction(formData: FormData) {
+  await requireVenueManager()
   const passId = formData.get('passId')?.toString()
   const kind = formData.get('kind')?.toString()
   if (!passId || !kind) throw new Error('passId and kind required')
@@ -298,6 +313,7 @@ export async function updatePassPricingAction(formData: FormData) {
 }
 
 export async function pauseDayAction(params: { date: string; paused: boolean; passIds: string[] }) {
+  await requireVenueManager()
   const { date, paused, passIds } = params
   if (!date) throw new Error('date missing')
   if (!Array.isArray(passIds) || passIds.length === 0) return
@@ -318,6 +334,7 @@ export async function undoDeclineAction(formData: FormData) {
 }
 
 export async function setDayCapacityAction(params: { date: string; cap: number; passIds: string[] }) {
+  await requireVenueManager()
   const { date, cap, passIds } = params
   if (!date) throw new Error('date missing')
   if (!Number.isFinite(cap) || cap < 0) throw new Error('cap must be a non-negative number')
@@ -331,6 +348,7 @@ export async function setDayCapacityAction(params: { date: string; cap: number; 
 }
 
 export async function forceAuthorizeAction(formData: FormData) {
+  await requireVenueManager()
   const bookingId = formData.get('bookingId')?.toString()
   if (!bookingId) throw new Error('bookingId missing')
   await deskAction('force_authorize_now', { p_booking_id: bookingId })

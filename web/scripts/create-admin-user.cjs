@@ -35,6 +35,7 @@ const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE, {
 })
 
 const email = process.argv[2] ?? 'admin@test.com'
+const password = process.argv[3] ?? null
 
 async function main() {
   const { data: existing } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 })
@@ -42,19 +43,26 @@ async function main() {
   if (already) {
     console.log(`User ${email} already exists; ensuring metadata`)
     const newMetadata = { ...(already.user_metadata ?? {}), app_role: 'admin' }
-    const { error: updateError } = await adminClient.auth.admin.updateUserById(already.id, {
-      user_metadata: newMetadata,
-    })
+    const payload = { user_metadata: newMetadata }
+    if (password) {
+      payload.password = password
+    }
+    const { error: updateError } = await adminClient.auth.admin.updateUserById(already.id, payload)
     if (updateError) {
       console.error('Failed to update metadata:', updateError.message)
       process.exit(1)
     }
-    console.log(`Updated ${email} → admin`)
+    if (password) {
+      console.log(`Updated ${email} → admin (password reset + metadata)`)
+    } else {
+      console.log(`Updated ${email} → admin metadata (password unchanged)`)
+    }
     return
   }
 
   const { error } = await adminClient.auth.admin.createUser({
     email,
+    password: password ?? undefined,
     email_confirm: true,
     user_metadata: { app_role: 'admin' },
     app_metadata: { provider: 'email' },
@@ -65,7 +73,7 @@ async function main() {
     process.exit(1)
   }
 
-  console.log(`Created admin user ${email}`)
+  console.log(`Created admin user ${email}${password ? ' with password' : ''}`)
 }
 
 main().catch((err) => {

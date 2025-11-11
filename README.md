@@ -22,3 +22,10 @@ Permanent password credentials seeded locally:
 - Member (guest): `d.o.abatan@gmail.com` / `1Westbourne!`
 - Desk staff: `dev-desk@interlude.local` / `DeskPass123!`
 - Admin: `dev-admin@interlude.local` / `AdminPass123!`
+
+## Guests, members, and invites
+
+- `/app` is now guest-friendly. Visitors can browse Explore and see the wallet landing without signing in; members still access their bookings once authenticated.
+- Guests create free member accounts from `/auth?mode=signup` (magic links + password) which stamps `app_role = member` metadata automatically.
+- Admins can invite venue managers or staff from `/admin` (requires `SUPABASE_SERVICE_ROLE_KEY` in the environment). The form uses the Supabase Admin API to send the email link and binds the selected venue.
+- Venue managers get a `/desk/team` surface to invite additional managers or staff for their own venue. Desk staff see a read-only notice instead of the form.

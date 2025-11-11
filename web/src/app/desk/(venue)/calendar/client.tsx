@@ -110,11 +110,13 @@ export function CalendarClient({
   bookings,
   inventory,
   passes,
+  readOnly,
 }: {
   bookings: DeskBooking[]
   inventory: PassInventory[]
-    passes: DeskPass[]
-  }) {
+  passes: DeskPass[]
+  readOnly: boolean
+}) {
   const now = new Date()
   const [currentYear, setCurrentYear] = useState(now.getFullYear())
   const [currentMonth, setCurrentMonth] = useState(now.getMonth())
@@ -248,6 +250,7 @@ export function CalendarClient({
   const [isUpdatingCapacity, startCapacityTransition] = useTransition()
 
   const handleTogglePause = (day: DayData) => {
+    if (readOnly) return
     const isPaused = pausedDates.has(day.date)
 
     // If trying to pause (not unpause), check for active bookings
@@ -285,6 +288,7 @@ export function CalendarClient({
   }
 
   const handleSetCapacity = (day: DayData, nextCapRaw: number) => {
+    if (readOnly) return
     if (day.passIds.length === 0) return
     const safeValue = Math.max(0, Math.floor(Number.isFinite(nextCapRaw) ? nextCapRaw : 0))
     if (safeValue === (day.cap ?? 0)) return
@@ -354,6 +358,7 @@ export function CalendarClient({
               isUpdatingPause={isUpdatingPause}
               onSetCapacity={handleSetCapacity}
               isUpdatingCapacity={isUpdatingCapacity}
+              readOnly={readOnly}
             />
           ) : (
             <div className="rounded-[32px] border border-[#E8E4D7] bg-[#F9F6ED] p-8 text-center shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
@@ -525,12 +530,14 @@ function DateDetailPanel({
   isUpdatingPause,
   onSetCapacity,
   isUpdatingCapacity,
+  readOnly,
 }: {
   day: DayData
   onTogglePause: (day: DayData) => void
   isUpdatingPause: boolean
   onSetCapacity: (day: DayData, cap: number) => void
   isUpdatingCapacity: boolean
+  readOnly: boolean
 }) {
   const [localCapacity, setLocalCapacity] = useState(() => day.cap ?? 0)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
@@ -554,12 +561,29 @@ function DateDetailPanel({
   })
 
   const isPaused = day.paused
-  const capacityDisabled = isUpdatingCapacity || day.passIds.length === 0 || isPaused
+  const pauseDisabled = readOnly || isUpdatingPause || day.passIds.length === 0
+  const capacityDisabled = readOnly || isUpdatingCapacity || day.passIds.length === 0 || isPaused
   const displayCapacity = isPaused ? 0 : localCapacity
   const hasCap = !isPaused && displayCapacity > 0
   const usingDefault = day.capacitySource === 'default' && !isPaused
   const effectiveCap = hasCap ? displayCapacity : 0
   const remaining = hasCap ? Math.max(0, effectiveCap - day.issued) : 0
+  const panelTone = readOnly
+    ? 'border-[#D5D0C0] border-dashed bg-[#EEEADF]'
+    : 'border-[#E8E4D7] bg-[#F9F6ED]'
+  const toggleColor = readOnly
+    ? isPaused
+      ? 'bg-[#D9C8C5]'
+      : 'bg-[#D5D2C4]'
+    : isPaused
+      ? 'bg-[#B4231F]'
+      : 'bg-[#DBD8C9]'
+  const capacityInputTone = readOnly
+    ? 'border-[#D3D0C3] bg-[#EFECE2] text-[#6F716D]'
+    : isPaused
+      ? 'border-[#B4231F] bg-[#FCE1E1] text-[#B4231F]'
+      : 'border-[#DBD8C9] bg-white text-[#02374D]'
+  const summaryCardTone = readOnly ? 'bg-[#F1EEE2]' : 'bg-white/70'
 
   const handleCapacityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (capacityDisabled) return
@@ -583,11 +607,18 @@ function DateDetailPanel({
   }
 
   return (
-    <div className="rounded-[32px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
+    <div
+      className={`rounded-[32px] border p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] ${panelTone}`}
+    >
       <div className="mb-6">
         <h3 className="text-xl font-semibold uppercase tracking-[0.08em] text-[#02374D]">
           {dateLabel}
         </h3>
+        {readOnly && (
+          <p className="mt-2 text-xs text-[#6F716D]">
+            Desk staff can view day details. Ask a venue manager to update caps or pause inventory.
+          </p>
+        )}
       </div>
 
       {/* Pause Toggle */}
@@ -596,13 +627,15 @@ function DateDetailPanel({
         <button
           type="button"
           onClick={() => onTogglePause(day)}
-          disabled={isUpdatingPause || day.passIds.length === 0}
-          className={`relative h-7 w-12 rounded-full transition-colors ${
-            day.paused ? 'bg-[#B4231F]' : 'bg-[#DBD8C9]'
-          } ${isUpdatingPause || day.passIds.length === 0 ? 'opacity-50' : ''}`}
+          disabled={pauseDisabled}
+          className={`relative h-7 w-12 rounded-full transition-colors ${toggleColor} ${
+            pauseDisabled ? 'opacity-60 cursor-not-allowed' : ''
+          }`}
         >
           <span
-            className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-md transition-transform ${
+            className={`absolute top-0.5 h-6 w-6 rounded-full ${
+              readOnly ? 'bg-[#FDFBF3]' : 'bg-white'
+            } shadow-md transition-transform ${
               day.paused ? 'left-[22px]' : 'left-0.5'
             }`}
           ></span>
@@ -618,11 +651,9 @@ function DateDetailPanel({
           value={displayCapacity}
           onChange={handleCapacityChange}
           disabled={capacityDisabled}
-          className={`w-20 rounded-full border px-4 py-1.5 text-center text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#02374D] ${
-            day.paused
-              ? 'border-[#B4231F] bg-[#FCE1E1] text-[#B4231F]'
-              : 'border-[#DBD8C9] bg-white text-[#02374D]'
-          } ${capacityDisabled ? 'cursor-not-allowed opacity-50' : ''}`}
+          className={`w-20 rounded-full px-4 py-1.5 text-center text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#02374D] ${capacityInputTone} ${
+            capacityDisabled ? 'cursor-not-allowed opacity-60' : ''
+          }`}
         />
       </div>
 
@@ -632,7 +663,7 @@ function DateDetailPanel({
           <h4 className="text-xs font-semibold uppercase tracking-[0.1em] text-[#6F716D]">
             Capacity Snapshot
           </h4>
-          <div className="rounded-2xl bg-white/70 p-4">
+          <div className={`rounded-2xl p-4 ${summaryCardTone}`}>
             {hasCap ? (
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
@@ -674,7 +705,7 @@ function DateDetailPanel({
           <h4 className="text-xs font-semibold uppercase tracking-[0.1em] text-[#6F716D]">
             Guest Count
           </h4>
-          <div className="rounded-2xl bg-white/70 p-4">
+          <div className={`rounded-2xl p-4 ${summaryCardTone}`}>
             <div className="text-xl font-semibold uppercase tracking-[0.08em] text-[#02374D]">
               {day.totalGuests} {day.totalGuests === 1 ? 'guest' : 'guests'} expected
             </div>

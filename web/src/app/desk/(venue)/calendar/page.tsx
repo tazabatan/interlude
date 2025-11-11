@@ -1,5 +1,5 @@
 import { fetchBookingsByDateRange, fetchPassInventoryByDateRange, fetchVenuePasses } from '@/lib/desk'
-import { supabaseServer } from '@/lib/supabase/server'
+import { getUserRole } from '@/lib/get-user-role'
 import { CalendarClient } from './client'
 
 function getMonthRange() {
@@ -19,11 +19,9 @@ function getMonthRange() {
 export default async function DeskCalendarPage() {
   const { startDate, endDate } = getMonthRange()
 
-  const supabase = await supabaseServer()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { user, role } = await getUserRole()
   const venueId = user?.user_metadata?.venue_id as string | undefined
+  const readOnly = role !== 'venue_manager'
 
   const [bookings, inventory, passes] = await Promise.all([
     fetchBookingsByDateRange(startDate, endDate),
@@ -33,7 +31,7 @@ export default async function DeskCalendarPage() {
 
   return (
     <div className="w-full text-[#02374D]">
-      <CalendarClient bookings={bookings} inventory={inventory} passes={passes} />
+      <CalendarClient bookings={bookings} inventory={inventory} passes={passes} readOnly={readOnly} />
     </div>
   )
 }
