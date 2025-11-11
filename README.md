@@ -40,6 +40,10 @@ bash scripts/dev/seed-demo-data.sh
 
 The script simply `docker exec`s into the `supabase_db_interlude` container, so it requires Docker access (see below).
 
+## Profile photos
+
+Member profile photos use a Supabase Storage bucket named `profile-photos`. Create the bucket in Supabase Studio and allow `authenticated` uploads + public read access. The account settings page will upload to paths like `user-id/filename`.
+
 ## Docker permissions
 
 Most project scripts (smoke, seeding, etc.) talk directly to `supabase_db_interlude` via `docker exec`. If you hit `permission denied while trying to connect to the Docker daemon socket`, either run the command with `sudo` or add your user to the Docker group so you can access `/Users/<you>/.docker/run/docker.sock` without elevation.

@@ -66,11 +66,13 @@ export async function middleware(req: NextRequest) {
       if (deskRoles.includes(role) && !guestRoles.includes(role)) return buildRedirect('/desk')
       if (!guestRoles.includes(role)) return buildRedirect('/auth')
     }
+  } else if (path.startsWith('/account')) {
+    if (!user) return buildRedirect('/auth')
   }
 
   return res
 }
 
 export const config = {
-  matcher: ['/app/:path*', '/desk/:path*', '/admin/:path*'],
+  matcher: ['/app/:path*', '/desk/:path*', '/admin/:path*', '/account/:path*'],
 }
