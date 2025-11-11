@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { fetchDeskBookingById } from '@/lib/desk'
@@ -7,6 +8,8 @@ import {
   declineAction,
   forceAuthorizeAction,
 } from '../../actions'
+import { buildGuestProfile, fetchGuestProfileById } from '@/lib/guest-profile'
+import { buildArrivalDisplay } from '@/lib/arrival'
 
 type Params = Promise<{ id: string }>
 type SearchParams = Promise<{ from?: string; date?: string }>
@@ -37,6 +40,16 @@ const FINAL_STATUS_LABEL: Record<string, string> = {
   pending_verification: 'Awaiting verification',
 }
 
+const GUEST_PLACEHOLDER_IMAGES = [
+  '/guest-photos/guest-1.jpg',
+  '/guest-photos/guest-2.jpg',
+  '/guest-photos/guest-3.jpg',
+  '/guest-photos/guest-4.png',
+  '/guest-photos/guest-5.png',
+  '/guest-photos/guest-6.png',
+  '/guest-photos/guest-7.png',
+] as const
+
 function formatStatusLabel(status: string) {
   return status === 'issued' ? 'Pass issued' : status.replace(/_/g, ' ')
 }
@@ -51,20 +64,6 @@ function formatDisplayDate(dateIso: string | null) {
     day: 'numeric',
     year: 'numeric',
   }).format(parsed)
-}
-
-function formatArrivalWindow(startIso: string | null, endIso: string | null, tzHint?: string | null) {
-  if (!startIso || !endIso) return 'Arrival window to be confirmed'
-  const start = new Date(startIso)
-  const end = new Date(endIso)
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    return 'Arrival window to be confirmed'
-  }
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-  return `${formatter.format(start)} – ${formatter.format(end)}${tzHint ? ` ${tzHint}` : ''}`
 }
 
 function toDateTimeLocal(value: string | null) {
@@ -95,6 +94,13 @@ function formatCurrency(amount: number | null | undefined, currency: string | nu
   }
 }
 
+function formatContactPreferenceLabel(value: string | null) {
+  if (!value) return 'No contact preference set'
+  if (value === 'whatsapp') return 'Prefers WhatsApp'
+  if (value === 'phone') return 'Prefers a phone call'
+  return 'Prefers email'
+}
+
 export default async function DeskRequestDetailPage({
   params,
   searchParams,
@@ -118,20 +124,33 @@ export default async function DeskRequestDetailPage({
   }))
 
   const finalStatus = FINAL_STATUS_LABEL[booking.status] ?? null
-  const arrivalWindow = formatArrivalWindow(
+  const arrivalDisplay = buildArrivalDisplay(
+    booking.requested_arrival_time,
     booking.arrival_window_start,
-    booking.arrival_window_end,
-    booking.pass?.venue?.tz ?? null
+    booking.arrival_window_end
   )
+  const arrivalValue = arrivalDisplay.value
   const bookingDate = formatDisplayDate(booking.date)
   const holdAmount = formatCurrency(booking.hold_amount ?? null, booking.hold_currency ?? 'USD')
   const holdStatus = booking.hold_status ? booking.hold_status.replace(/_/g, ' ') : 'not authorized'
+  const guestProfile = (await fetchGuestProfileById(booking.user_id)) ?? buildGuestProfile()
+  const guestLabel = `${guestProfile.name}'s group of ${booking.party_size}`
+  const guestAvatarSrc = guestProfile.avatarUrl ?? pickGuestImage(booking.id)
+  const guestAvatarUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
+  const guestContactRows = [
+    { label: 'Email', value: guestProfile.email ?? 'No email on file' },
+    { label: 'Mobile', value: guestProfile.phone ?? 'No mobile number on file' },
+    { label: 'Contact preference', value: formatContactPreferenceLabel(guestProfile.contactPreference) },
+  ]
+  const guestNotes = [
+    { label: 'Dietary requirements', value: guestProfile.dietaryNotes || 'No dietary notes added' },
+    { label: 'Personal preferences', value: guestProfile.loungePreferences || 'No preferences noted' },
+  ]
   const passLabelBase = formatPassType(booking.pass?.kind ?? null)
   const passBadgeLabel = booking.pass?.kind === 'MIN_SPEND' ? 'Beach Pass' : passLabelBase
   const passDetailLabel = booking.pass?.kind === 'MIN_SPEND' ? 'Beach Pass — Min Spend' : passLabelBase
   const statusLabelDisplay = formatStatusLabel(booking.status)
   const passVenue = booking.pass?.venue?.name ?? 'Venue TBD'
-  const guestLabel = `TBD Name's group of ${booking.party_size}`
   const defaultStartValue = toDateTimeLocal(booking.arrival_window_start)
   const defaultEndValue = toDateTimeLocal(booking.arrival_window_end)
 
@@ -145,7 +164,7 @@ export default async function DeskRequestDetailPage({
     { label: 'Pass', value: passDetailLabel },
     { label: 'Date', value: bookingDate },
     { label: 'Guests', value: `Party of ${booking.party_size}` },
-    { label: 'Arrival window', value: arrivalWindow },
+    { label: arrivalDisplay.label, value: arrivalValue },
     { label: 'Hold amount', value: holdAmount },
     { label: 'Hold status', value: holdStatus },
     {
@@ -212,6 +231,46 @@ export default async function DeskRequestDetailPage({
               </div>
             ))}
           </dl>
+
+          <div className="rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 text-[#02374D]">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="h-20 w-20 overflow-hidden rounded-full border-4 border-[#DBD8C9] bg-white shadow-[0px_10px_22px_rgba(0,0,0,0.12)]">
+                <Image
+                  src={guestAvatarSrc}
+                  alt={guestProfile.name}
+                  width={160}
+                  height={160}
+                  unoptimized={guestAvatarUnoptimized}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div>
+                <p className="text-lg font-semibold">{guestProfile.name}</p>
+                <p className="text-xs uppercase tracking-[0.25em] text-[#6F716D]">
+                  {formatContactPreferenceLabel(guestProfile.contactPreference)}
+                </p>
+                <p className="text-sm text-[#4F514D]">Party of {booking.party_size}</p>
+              </div>
+            </div>
+
+            <dl className="mt-5 grid gap-4 md:grid-cols-2">
+              {guestContactRows.map((row) => (
+                <div key={row.label}>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">{row.label}</dt>
+                  <dd className="mt-1 text-sm text-[#02374D]">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {guestNotes.map((note) => (
+                <div key={note.label}>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">{note.label}</p>
+                  <p className="mt-1 text-sm text-[#02374D]">{note.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div className="space-y-6">
             <form action={approveDefaultAction} className="flex flex-wrap gap-3">
@@ -286,7 +345,7 @@ export default async function DeskRequestDetailPage({
             <p className="mt-6 text-sm">
               {passDetailLabel} · {guestLabel}
               <br />
-              {arrivalWindow}
+              {arrivalValue}
             </p>
           </div>
 

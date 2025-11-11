@@ -33,7 +33,10 @@ export default function AccountMenu({ userName, email, role, subtitle }: Account
   const displayName = userName || email
   const firstNameSource = (userName?.trim() || email || "").split(/\s+|@/)[0] || "Guest"
   const firstName = firstNameSource.charAt(0).toUpperCase() + firstNameSource.slice(1)
-  const roleLabel = subtitle ?? (role ? role.replace("_", " ") : "Account")
+  const trimmedSubtitle = subtitle?.trim() || null
+  const fallbackLabel = role ? role.replace("_", " ") : "Account"
+  const secondaryLabel = trimmedSubtitle ?? fallbackLabel
+  const subtitleIsVenue = Boolean(trimmedSubtitle)
 
   const handleLogout = async () => {
     setSigningOut(true)
@@ -67,19 +70,23 @@ export default function AccountMenu({ userName, email, role, subtitle }: Account
         >
           <div className="pb-3 text-xs uppercase tracking-[0.3em] text-[#6F716D]">Signed in</div>
           <div className="pb-2 text-base font-semibold text-black">{displayName}</div>
-          <div className="pb-4 text-xs uppercase tracking-[0.2em] text-[#6F716D]">{roleLabel}</div>
-          <div className="space-y-3 border-t border-dashed border-[#E8E4D7] pt-4">
-            <Link
-              href="/account"
-              className="block text-base text-[#02374D] transition hover:text-black"
-              onClick={() => setOpen(false)}
-            >
+          <div
+            className={
+              subtitleIsVenue
+                ? "pb-4 text-sm text-[#4F514D]"
+                : "pb-4 text-xs uppercase tracking-[0.2em] text-[#6F716D]"
+            }
+          >
+            {secondaryLabel}
+          </div>
+          <div className="space-y-3 border-t border-dashed border-[#E8E4D7] pt-4 text-base text-black">
+            <Link href="/account" onClick={() => setOpen(false)} className="block hover:text-[#02374D]">
               Account settings
             </Link>
             <button
               type="button"
               onClick={handleLogout}
-              className="block w-full text-left text-base text-[#B4231F] transition hover:text-[#7C1717]"
+              className="block w-full text-left hover:text-[#02374D]"
               disabled={signingOut}
             >
               {signingOut ? "Signing out…" : "Sign out"}

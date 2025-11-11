@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { GuestBookingView } from '@/lib/bookings/view-model'
+import { formatArrivalValue } from '@/lib/arrival'
 
 type Segment = 'today' | 'upcoming' | 'past' | 'cancelled'
 
@@ -114,8 +115,14 @@ function BookingCard({ booking }: { booking: GuestBookingView }) {
   const segment = computeSegment(booking)
   const statusLabel = STATUS_LABELS[booking.status] ?? booking.status
   const badgeStyle = STATUS_VARIANTS[booking.status] ?? 'bg-gray-200 text-gray-700'
-  const dateToShow =
+  const arrivalSummary = formatArrivalValue(
+    booking.requested_arrival_time ?? null,
+    booking.arrival_window_start,
+    booking.arrival_window_end
+  )
+  const dateSuffix =
     segment === 'today' && booking.arrival_window_start ? 'Today' : formatDisplayDate(booking.date)
+  const headingLine = `${arrivalSummary} · ${dateSuffix}`
   const imageSrc = pickImage(booking.id)
 
   const showPrimaryCta = booking.status === 'issued' || booking.status === 'approved'
@@ -132,7 +139,7 @@ function BookingCard({ booking }: { booking: GuestBookingView }) {
     >
       <div className="flex min-h-[22rem] w-full flex-col items-center justify-center gap-4 rounded-[32px] border border-[#E8E4D7] bg-[#F9F6ED] px-7 py-5 text-center shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] lg:min-h-[24rem] xl:min-h-[26rem]">
         <div className="flex flex-col items-center text-[0.62rem] uppercase tracking-[0.22em] text-[#6F716D]">
-          <span className="tracking-[0.25em] text-[#6F716D]">{dateToShow}</span>
+          <span className="tracking-[0.25em] text-[#6F716D]">{headingLine}</span>
           <span
             className={`mt-1 inline-flex rounded-full px-3 py-1 text-[0.65rem] font-semibold tracking-tight ${badgeStyle}`}
           >

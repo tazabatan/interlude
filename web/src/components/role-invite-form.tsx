@@ -2,8 +2,8 @@
 
 import { useActionState } from "react"
 import { useFormStatus } from "react-dom"
-import type { InviteFormState } from "@/app/(actions)/role-invite-action"
-import { initialInviteFormState, sendRoleInviteAction } from "@/app/(actions)/role-invite-action"
+import { initialInviteFormState, type InviteFormState } from "@/app/(actions)/role-invite-action.types"
+import { sendRoleInviteAction } from "@/app/(actions)/role-invite-action"
 
 type OptionRole = "venue_manager" | "venue_staff"
 

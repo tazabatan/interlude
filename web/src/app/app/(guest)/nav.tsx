@@ -7,7 +7,6 @@ import clsx from 'clsx'
 const links = [
   { href: '/app', label: 'Wallet' },
   { href: '/app/explore', label: 'Explore' },
-  { href: '/auth', label: 'Account' },
 ]
 
 export default function GuestNav() {
@@ -32,6 +31,9 @@ export default function GuestNav() {
           </Link>
         )
       })}
+      <span className="pb-1 text-[#777] opacity-50 cursor-not-allowed">
+        Rewards
+      </span>
     </nav>
   )
 }

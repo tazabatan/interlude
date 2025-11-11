@@ -1,5 +1,7 @@
 import { fetchDeskBookings, type DeskBooking } from '@/lib/desk'
+import { buildGuestProfile, fetchGuestProfilesByIds, type GuestProfile } from '@/lib/guest-profile'
 import { RequestsClient, type RequestCardPayload, type PassCategory } from './client'
+import { formatArrivalValue } from '@/lib/arrival'
 
 function formatDateLabel(value: string) {
   const date = new Date(value)
@@ -8,20 +10,6 @@ function formatDateLabel(value: string) {
     day: 'numeric',
     year: 'numeric',
   }).format(date)
-}
-
-function formatArrival(start: string | null, end: string | null, tz: string | null) {
-  if (!start || !end) return 'Arrival window TBD'
-  const startDate = new Date(start)
-  const endDate = new Date(end)
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-    return 'Arrival window TBD'
-  }
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-  return `${formatter.format(startDate)} – ${formatter.format(endDate)} ${tz ?? ''}`.trim()
 }
 
 function formatPassLabel(kind: string | null) {
@@ -54,19 +42,42 @@ function mapCategory(kind: string | null): PassCategory {
   return 'beach'
 }
 
+function pickGuestImage(seed: string) {
+  const placeholders = [
+    '/guest-photos/guest-1.jpg',
+    '/guest-photos/guest-2.jpg',
+    '/guest-photos/guest-3.jpg',
+    '/guest-photos/guest-4.png',
+    '/guest-photos/guest-5.png',
+    '/guest-photos/guest-6.png',
+    '/guest-photos/guest-7.png',
+  ] as const
+  if (placeholders.length === 0) return ''
+  let hash = 0
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i)
+    hash |= 0
+  }
+  const index = Math.abs(hash) % placeholders.length
+  return placeholders[index]
+}
+
 function formatStatusLabel(status: string) {
   return status === 'issued' ? 'Pass issued' : status.replace(/_/g, ' ')
 }
 
-function mapBookingToPayload(booking: DeskBooking): RequestCardPayload {
-  const tz = booking.pass?.venue?.tz ?? 'UTC'
+function mapBookingToPayload(booking: DeskBooking, profileMap: Record<string, GuestProfile>): RequestCardPayload {
+  const guestProfile = profileMap[booking.user_id] ?? buildGuestProfile()
+  const guestLabel = `${guestProfile.name}'s group of ${booking.party_size}`
+  const imageSrc = guestProfile.avatarUrl ?? pickGuestImage(booking.id)
+  const imageUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
   return {
     id: booking.id,
     status: booking.status,
     statusLabel: formatStatusLabel(booking.status),
     dateLabel: formatDateLabel(booking.date),
     partySize: booking.party_size,
-    arrivalWindow: formatArrival(booking.arrival_window_start, booking.arrival_window_end, tz),
+    arrivalWindow: formatArrivalValue(booking.requested_arrival_time, booking.arrival_window_start, booking.arrival_window_end),
     passLabel: formatPassLabel(booking.pass?.kind ?? null),
     priceLabel: formatPassPrice(
       booking.pass?.display_price_text ?? null,
@@ -74,12 +85,16 @@ function mapBookingToPayload(booking: DeskBooking): RequestCardPayload {
       booking.pass?.currency ?? 'USD'
     ),
     category: mapCategory(booking.pass?.kind ?? null),
+    guestLabel,
+    imageSrc,
+    imageUnoptimized,
   }
 }
 
 export default async function DeskRequestsPage() {
   const requestedRaw = await fetchDeskBookings('requested')
-  const requested = requestedRaw.map(mapBookingToPayload)
+  const guestProfiles = await fetchGuestProfilesByIds(requestedRaw.map((booking) => booking.user_id))
+  const requested = requestedRaw.map((booking) => mapBookingToPayload(booking, guestProfiles))
   const totalRequests = requested.length
   const heading = `YOU HAVE ${totalRequests} REQUEST${totalRequests === 1 ? '' : 'S'} TO REVIEW`
 

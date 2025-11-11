@@ -40,12 +40,14 @@ type SupabaseAuthState = {
 
 export type DeskBooking = {
   id: string
+  user_id: string
   pass_id: string
   date: string
   party_size: number
   status: string
   arrival_window_start: string | null
   arrival_window_end: string | null
+  requested_arrival_time: string | null
   hold_amount: number | null
   hold_currency: string | null
   hold_status: string | null
@@ -90,12 +92,14 @@ export type DeskPass = {
 
 const BOOKING_SELECT = [
   'id',
+  'user_id',
   'pass_id',
   'date',
   'party_size',
   'status',
   'arrival_window_start',
   'arrival_window_end',
+  'requested_arrival_time',
   'created_at',
   'hold_amount',
   'hold_currency',

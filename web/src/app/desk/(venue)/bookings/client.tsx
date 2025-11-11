@@ -56,10 +56,15 @@ export function BookingsClient({ bookings }: { bookings: BookingCardPayload[] })
   const [passFilter, setPassFilter] = useState<string>('all')
   const [paymentFilter, setPaymentFilter] = useState<string>('all')
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [guestDetail, setGuestDetail] = useState<BookingCardPayload | null>(null)
 
   const filtered = useMemo(() => {
     return bookings.filter((booking) => {
-      if (booking.segment !== segment) return false
+      const matchesSegment =
+        segment === 'upcoming'
+          ? booking.segment === 'upcoming' || booking.segment === 'today'
+          : booking.segment === segment
+      if (!matchesSegment) return false
       if (statusFilter !== 'all' && booking.status !== statusFilter) return false
       if (passFilter !== 'all' && booking.category !== passFilter) return false
       if (paymentFilter !== 'all' && booking.paymentStateKey !== paymentFilter) return false
@@ -129,15 +134,32 @@ export function BookingsClient({ bookings }: { bookings: BookingCardPayload[] })
       {filtered.length > 0 && (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((booking) => (
-            <BookingCard key={booking.id} booking={booking} />
+            <BookingCard
+              key={booking.id}
+              booking={booking}
+              showGuestDetailsCta={booking.isToday}
+              onShowGuestDetails={() => setGuestDetail(booking)}
+            />
           ))}
         </div>
+      )}
+
+      {guestDetail && (
+        <GuestDetailDialog booking={guestDetail} onClose={() => setGuestDetail(null)} />
       )}
     </div>
   )
 }
 
-function BookingCard({ booking }: { booking: BookingCardPayload }) {
+function BookingCard({
+  booking,
+  showGuestDetailsCta,
+  onShowGuestDetails,
+}: {
+  booking: BookingCardPayload
+  showGuestDetailsCta: boolean
+  onShowGuestDetails: () => void
+}) {
   const buttonClass = booking.isDeclined
     ? 'border border-[#B4231F] text-[#B4231F] hover:border-[#F5B8B8] hover:bg-[#F5B8B8]/20'
     : booking.isToday
@@ -170,6 +192,7 @@ function BookingCard({ booking }: { booking: BookingCardPayload }) {
               alt={booking.guestLabel}
               width={180}
               height={180}
+              unoptimized={booking.imageUnoptimized}
               className="h-full w-full -translate-y-1 scale-110 object-cover object-top"
             />
           </div>
@@ -182,37 +205,50 @@ function BookingCard({ booking }: { booking: BookingCardPayload }) {
         </div>
       </Link>
 
-      {booking.ctaLabel && (
+      {(booking.ctaLabel || showGuestDetailsCta) && (
         <div className="flex flex-col gap-3 text-xs text-[#6F716D]">
-          <div className="flex justify-center">
-            {booking.ctaLabel === 'Mark Arrived' && booking.qrJti ? (
-              <form action={markArrivedAction} className="w-full max-w-[12rem]">
-                <input type="hidden" name="bookingId" value={booking.id} />
-                <input type="hidden" name="qrJti" value={booking.qrJti} />
-                <button
-                  type="submit"
-                  className={`w-full rounded-full px-3 py-2 text-sm font-semibold transition ${buttonClass}`}
-                >
-                  {booking.ctaLabel}
-                </button>
-              </form>
-            ) : booking.ctaLabel === 'Undo Decline' ? (
-              <form action={undoDeclineAction} className="w-full max-w-[12rem]">
-                <input type="hidden" name="bookingId" value={booking.id} />
-                <button
-                  type="submit"
-                  className={`w-full rounded-full px-3 py-2 text-sm font-semibold transition ${buttonClass}`}
-                >
-                  {booking.ctaLabel}
-                </button>
-              </form>
-            ) : (
-              <Link
-                href={booking.detailHref}
-                className={`w-full max-w-[12rem] rounded-full px-3 py-2 text-sm font-semibold transition ${buttonClass}`}
+          <div className="flex justify-center gap-2">
+            {booking.ctaLabel && (
+              <>
+                {booking.ctaLabel === 'Mark Arrived' && booking.qrJti ? (
+                  <form action={markArrivedAction} className="w-full max-w-[12rem]">
+                    <input type="hidden" name="bookingId" value={booking.id} />
+                    <input type="hidden" name="qrJti" value={booking.qrJti} />
+                    <button
+                      type="submit"
+                      className={`w-full rounded-full px-3 py-2 text-sm font-semibold transition ${buttonClass}`}
+                    >
+                      {booking.ctaLabel}
+                    </button>
+                  </form>
+                ) : booking.ctaLabel === 'Undo Decline' ? (
+                  <form action={undoDeclineAction} className="w-full max-w-[12rem]">
+                    <input type="hidden" name="bookingId" value={booking.id} />
+                    <button
+                      type="submit"
+                      className={`w-full rounded-full px-3 py-2 text-sm font-semibold transition ${buttonClass}`}
+                    >
+                      {booking.ctaLabel}
+                    </button>
+                  </form>
+                ) : (
+                  <Link
+                    href={booking.detailHref}
+                    className={`w-full max-w-[12rem] rounded-full px-3 py-2 text-sm font-semibold transition ${buttonClass}`}
+                  >
+                    {booking.ctaLabel}
+                  </Link>
+                )}
+              </>
+            )}
+            {showGuestDetailsCta && (
+              <button
+                type="button"
+                onClick={onShowGuestDetails}
+                className="w-full max-w-[12rem] whitespace-nowrap rounded-full border border-[#02374D] px-3 py-2 text-sm font-semibold text-[#02374D] transition hover:bg-[#02374D] hover:text-white"
               >
-                {booking.ctaLabel}
-              </Link>
+                Guest details
+              </button>
             )}
           </div>
         </div>
@@ -273,4 +309,74 @@ function FilterPill({
       )}
     </div>
   )
+}
+
+function GuestDetailDialog({ booking, onClose }: { booking: BookingCardPayload; onClose: () => void }) {
+  const details = booking.guestDetails
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4 py-6">
+      <div className="w-full max-w-lg rounded-[32px] bg-[#F9F6ED] p-6 text-[#02374D] shadow-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6F716D]">Guest details</p>
+            <h3 className="text-2xl font-semibold">{details.name}</h3>
+            <p className="text-sm text-[#4F514D]">Party of {details.partySize}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-[#02374D] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#02374D] transition hover:bg-[#02374D] hover:text-white"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="mt-6 flex gap-4">
+          <div className="h-20 w-20 overflow-hidden rounded-full border-4 border-[#DBD8C9] bg-white shadow-[0px_10px_22px_rgba(0,0,0,0.12)]">
+            <Image
+              src={details.avatarUrl}
+              alt={details.name}
+              width={160}
+              height={160}
+              unoptimized={details.avatarUnoptimized}
+              className="h-full w-full object-cover"
+            />
+          </div>
+          <div className="flex-1 space-y-3">
+            <DetailRow label="Email" value={details.email ?? 'No email on file'} />
+            <DetailRow label="Mobile" value={details.phone ?? 'No mobile number on file'} />
+            <DetailRow
+              label="Contact preference"
+              value={formatContactPreference(details.contactPreference)}
+            />
+            <DetailRow label="Arrival time" value={details.arrival ?? 'Arrival time TBD'} />
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <DetailRow label="Dietary requirements" value={details.dietaryNotes || 'No notes added'} />
+          <DetailRow
+            label="Personal preferences"
+            value={details.loungePreferences || 'No preferences noted'}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">{label}</p>
+      <p className="mt-1 text-sm text-[#02374D]">{value}</p>
+    </div>
+  )
+}
+
+function formatContactPreference(value: string | null | undefined) {
+  if (!value) return 'No preference set'
+  if (value === 'whatsapp') return 'Prefers WhatsApp'
+  if (value === 'phone') return 'Prefers phone call'
+  return 'Prefers email'
 }

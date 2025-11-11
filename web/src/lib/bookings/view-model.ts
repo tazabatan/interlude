@@ -5,6 +5,7 @@ export type GuestBookingRow = {
   status: string
   arrival_window_start: string | null
   arrival_window_end: string | null
+  requested_arrival_time: string | null
   qr_jti: string | null
   hold_status: string
   pass: {

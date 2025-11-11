@@ -24,6 +24,7 @@ export async function GET() {
         status,
         arrival_window_start,
         arrival_window_end,
+        requested_arrival_time,
         qr_jti,
         hold_status,
         pass:passes(kind),

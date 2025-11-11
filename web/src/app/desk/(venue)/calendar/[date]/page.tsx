@@ -1,4 +1,6 @@
 import { fetchBookingsByDate } from '@/lib/desk'
+import { buildGuestProfile, fetchGuestProfilesByIds } from '@/lib/guest-profile'
+import { formatArrivalValue } from '@/lib/arrival'
 import { DayDetailClient } from './client'
 
 type DayDetailPageProps = {
@@ -13,20 +15,6 @@ function formatDateLabel(value: string) {
     day: 'numeric',
     year: 'numeric',
   }).format(date)
-}
-
-function formatArrival(start: string | null, end: string | null, tz: string | null) {
-  if (!start || !end) return 'Arrival window TBD'
-  const startDate = new Date(start)
-  const endDate = new Date(end)
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-    return 'Arrival window TBD'
-  }
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-  return `${formatter.format(startDate)} – ${formatter.format(endDate)} ${tz ?? ''}`.trim()
 }
 
 function formatPassLabel(kind: string | null) {
@@ -93,19 +81,25 @@ function mapPaymentState(holdStatus: string | null) {
 export default async function DayDetailPage({ params }: DayDetailPageProps) {
   const { date } = await params
   const bookingsRaw = await fetchBookingsByDate(date)
+  const guestProfiles = await fetchGuestProfilesByIds(bookingsRaw.map((booking) => booking.user_id))
 
   const bookings = bookingsRaw.map((booking) => {
-    const tz = booking.pass?.venue?.tz ?? 'UTC'
     const dateLabel = formatDateLabel(booking.date)
-    const arrivalWindow = formatArrival(booking.arrival_window_start, booking.arrival_window_end, tz)
+    const arrivalWindow = formatArrivalValue(
+      booking.requested_arrival_time,
+      booking.arrival_window_start,
+      booking.arrival_window_end
+    )
     const passLabel = formatPassLabel(booking.pass?.kind ?? null)
     const priceLabel = formatPassPrice(
       booking.pass?.display_price_text ?? null,
       booking.pass?.min_spend_amount ?? null,
       booking.pass?.currency ?? 'USD'
     )
-    const guestLabel = `TBD Name's group of ${booking.party_size}`
-    const imageSrc = pickGuestImage(booking.id)
+    const guestProfile = guestProfiles[booking.user_id] ?? buildGuestProfile()
+    const guestLabel = `${guestProfile.name}'s group of ${booking.party_size}`
+    const imageSrc = guestProfile.avatarUrl ?? pickGuestImage(booking.id)
+    const imageUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
     const paymentState = mapPaymentState(booking.hold_status)
     const category = mapCategory(booking.pass?.kind ?? null)
     const isRequest = booking.status === 'requested'
@@ -120,6 +114,7 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
       partySize: booking.party_size,
       guestLabel,
       imageSrc,
+      imageUnoptimized,
       detailHref: isRequest ? `/desk/requests/${booking.id}` : `/desk/bookings/${booking.id}`,
       status: booking.status,
       category,

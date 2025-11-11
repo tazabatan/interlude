@@ -58,6 +58,7 @@ type BookingCardPayload = {
   partySize: number
   guestLabel: string
   imageSrc: string
+  imageUnoptimized: boolean
   detailHref: string
   status: string
   category: string
@@ -217,6 +218,7 @@ function BookingCard({ booking, isToday, dayIso }: { booking: BookingCardPayload
               alt={booking.guestLabel}
               width={180}
               height={180}
+              unoptimized={booking.imageUnoptimized}
               className="h-full w-full -translate-y-1 scale-110 object-cover object-top"
             />
           </div>

@@ -43,7 +43,7 @@ export default async function GuestLayout({ children }: { children: ReactNode })
           )}
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl px-6 py-10 lg:max-w-7xl 2xl:max-w-[105rem]">{children}</main>
+      <main className="mx-auto w-full max-w-6xl px-8 py-10 md:px-12 lg:max-w-7xl lg:px-16 xl:px-20 2xl:max-w-[105rem] 2xl:px-24">{children}</main>
     </div>
   )
 }

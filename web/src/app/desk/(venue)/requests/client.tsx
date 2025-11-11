@@ -5,16 +5,6 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { approveDefaultAction, declineAction } from '../actions'
 
-const GUEST_PLACEHOLDER_IMAGES = [
-  '/guest-photos/guest-1.jpg',
-  '/guest-photos/guest-2.jpg',
-  '/guest-photos/guest-3.jpg',
-  '/guest-photos/guest-4.png',
-  '/guest-photos/guest-5.png',
-  '/guest-photos/guest-6.png',
-  '/guest-photos/guest-7.png',
-] as const
-
 export type PassCategory = 'all' | 'beach' | 'pool' | 'spa' | 'gym'
 
 export type RequestCardPayload = {
@@ -27,6 +17,9 @@ export type RequestCardPayload = {
   passLabel: string
   priceLabel: string
   category: PassCategory
+  guestLabel: string
+  imageSrc: string
+  imageUnoptimized: boolean
 }
 
 const FILTER_OPTIONS: { value: PassCategory; label: string }[] = [
@@ -36,17 +29,6 @@ const FILTER_OPTIONS: { value: PassCategory; label: string }[] = [
   { value: 'spa', label: 'Spa' },
   { value: 'gym', label: 'Gym' },
 ]
-
-function pickGuestImage(seed: string) {
-  if (GUEST_PLACEHOLDER_IMAGES.length === 0) return ''
-  let hash = 0
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash << 5) - hash + seed.charCodeAt(i)
-    hash |= 0
-  }
-  const index = Math.abs(hash) % GUEST_PLACEHOLDER_IMAGES.length
-  return GUEST_PLACEHOLDER_IMAGES[index]
-}
 
 export function RequestsClient({ bookings, heading }: { bookings: RequestCardPayload[]; heading: string }) {
   const [filter, setFilter] = useState<PassCategory>('all')
@@ -95,9 +77,6 @@ export function RequestsClient({ bookings, heading }: { bookings: RequestCardPay
 }
 
 function RequestCard({ booking }: { booking: RequestCardPayload }) {
-  const guestName = 'TBD Name'
-  const guestLabel = `${guestName}'s group of ${booking.partySize}`
-  const imageSrc = pickGuestImage(booking.id)
   const detailHref = `/desk/requests/${booking.id}`
 
   return (
@@ -113,21 +92,20 @@ function RequestCard({ booking }: { booking: RequestCardPayload }) {
 
         <div className="flex flex-col items-center gap-4">
           <div className="h-32 w-32 overflow-hidden rounded-full border-4 border-[#DBD8C9] bg-white shadow-[0px_10px_22px_rgba(0,0,0,0.12)]">
-            {imageSrc ? (
-              <Image
-                src={imageSrc}
-                alt={`${guestLabel} placeholder`}
-                width={200}
-                height={200}
-                className="h-full w-full -translate-y-1 scale-110 object-cover object-top"
-              />
-            ) : (
-              <div className="h-full w-full bg-[#DBD8C9]" />
-            )}
+            <Image
+              src={booking.imageSrc}
+              alt={booking.guestLabel}
+              width={200}
+              height={200}
+              unoptimized={booking.imageUnoptimized}
+              className="h-full w-full -translate-y-1 scale-110 object-cover object-top"
+            />
           </div>
 
           <div className="space-y-1">
-            <div className="text-lg font-semibold uppercase tracking-[0.08em] text-black">{guestLabel}</div>
+            <div className="text-lg font-semibold uppercase tracking-[0.08em] text-black">
+              {booking.guestLabel}
+            </div>
             <div className="text-sm text-[#31332f]">
               {booking.passLabel} · {booking.priceLabel}
             </div>

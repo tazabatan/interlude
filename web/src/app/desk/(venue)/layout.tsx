@@ -19,18 +19,20 @@ export default async function DeskLayout({ children }: { children: ReactNode }) 
     (user?.user_metadata?.full_name as string | undefined) ??
     (user?.user_metadata?.name as string | undefined) ??
     user?.email
-  let subtitle: string | null = role ? role.replace("_", " ") : null
-  if (role === "venue_manager" || role === "venue_staff") {
-    const venueId = user?.user_metadata?.venue_id as string | undefined
+  const metadataVenueName =
+    ((user?.user_metadata?.venue_name as string | undefined) ?? "").trim() || null
+  let subtitle: string | null = metadataVenueName ?? (role ? role.replace("_", " ") : null)
+  if (!metadataVenueName && (role === "venue_manager" || role === "venue_staff")) {
+    const venueId = (user?.user_metadata?.venue_id as string | undefined) ?? null
     if (venueId) {
       try {
         const res = await serviceRoleFetch(
           `/rest/v1/venues?id=eq.${venueId}&select=${encodeURIComponent("name")}&limit=1`
         )
         const [row] = (await res.json()) as Array<{ name: string | null }>
-        subtitle = row?.name ?? subtitle
+        subtitle = (row?.name ?? subtitle)?.trim() || subtitle
       } catch {
-        subtitle = subtitle
+        // ignore and keep fallback subtitle
       }
     }
   }

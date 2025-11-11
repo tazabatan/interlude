@@ -2,16 +2,7 @@
 
 import { getUserRole } from '@/lib/get-user-role'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
-
-export type InviteFormState = {
-  status: 'idle' | 'success' | 'error'
-  message: string
-}
-
-export const initialInviteFormState: InviteFormState = {
-  status: 'idle',
-  message: '',
-}
+import type { InviteFormState } from './role-invite-action.types'
 
 const ALLOWED_TARGET_ROLES = new Set(['venue_manager', 'venue_staff'])
 

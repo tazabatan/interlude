@@ -159,6 +159,8 @@ export default async function VenuePassPage({ params }: VenuePassPageProps) {
           maxDate={maxDateIso}
           defaultDate={defaultDate}
           pausedDates={pausedDates}
+          arrivalStart={arrivalStart}
+          arrivalEnd={arrivalEnd}
         />
 
         <section className="space-y-4 rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">

@@ -1,5 +1,7 @@
 import { fetchDeskBookings, fetchDeskBookingsByStatuses, type DeskBooking } from '@/lib/desk'
+import { buildGuestProfile, fetchGuestProfilesByIds, type GuestProfile } from '@/lib/guest-profile'
 import { BookingsClient } from './client'
+import { formatArrivalValue } from '@/lib/arrival'
 
 function formatDateLabel(value: string) {
   const date = new Date(value)
@@ -8,20 +10,6 @@ function formatDateLabel(value: string) {
     day: 'numeric',
     year: 'numeric',
   }).format(date)
-}
-
-function formatArrival(start: string | null, end: string | null, tz: string | null) {
-  if (!start || !end) return 'Arrival window TBD'
-  const startDate = new Date(start)
-  const endDate = new Date(end)
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-    return 'Arrival window TBD'
-  }
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-  return `${formatter.format(startDate)} – ${formatter.format(endDate)} ${tz ?? ''}`.trim()
 }
 
 function formatPassLabel(kind: string | null) {
@@ -85,10 +73,13 @@ function mapPaymentState(holdStatus: string | null) {
   return { key: 'unknown', label: 'Payment pending' }
 }
 
-function mapBooking(booking: DeskBooking, todayIso: string) {
-  const tz = booking.pass?.venue?.tz ?? 'UTC'
+function mapBooking(booking: DeskBooking, profileMap: Record<string, GuestProfile>, todayIso: string) {
   const dateLabel = formatDateLabel(booking.date)
-  const arrivalWindow = formatArrival(booking.arrival_window_start, booking.arrival_window_end, tz)
+  const arrivalWindow = formatArrivalValue(
+    booking.requested_arrival_time,
+    booking.arrival_window_start,
+    booking.arrival_window_end
+  )
   const passLabel = formatPassLabel(booking.pass?.kind ?? null)
   const priceLabel = formatPassPrice(
     booking.pass?.display_price_text ?? null,
@@ -108,8 +99,10 @@ function mapBooking(booking: DeskBooking, todayIso: string) {
 
   const canMarkArrived = isToday && booking.status === 'issued'
   const ctaLabel = isDeclined ? 'Undo Decline' : canMarkArrived ? 'Mark Arrived' : null
-  const guestLabel = `TBD Name's group of ${booking.party_size}`
-  const imageSrc = pickGuestImage(booking.id)
+  const guestProfile = profileMap[booking.user_id] ?? buildGuestProfile()
+  const guestLabel = `${guestProfile.name}'s group of ${booking.party_size}`
+  const imageSrc = guestProfile.avatarUrl ?? pickGuestImage(booking.id)
+  const imageUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
   const paymentState = mapPaymentState(booking.hold_status)
   const category = mapCategory(booking.pass?.kind ?? null)
 
@@ -128,12 +121,25 @@ function mapBooking(booking: DeskBooking, todayIso: string) {
     segment,
     guestLabel,
     imageSrc,
+    imageUnoptimized,
     detailHref: `/desk/bookings/${booking.id}`,
     status: booking.status,
     category,
     paymentStateKey: paymentState.key,
     paymentStateLabel: paymentState.label,
     qrJti: booking.qr_jti,
+    guestDetails: {
+      name: guestProfile.name,
+      email: guestProfile.email,
+      phone: guestProfile.phone,
+      contactPreference: guestProfile.contactPreference,
+      dietaryNotes: guestProfile.dietaryNotes,
+      loungePreferences: guestProfile.loungePreferences,
+      partySize: booking.party_size,
+      arrival: arrivalWindow,
+      avatarUrl: imageSrc,
+      avatarUnoptimized: imageUnoptimized,
+    },
   }
 }
 
@@ -141,7 +147,7 @@ function mapPending(booking: DeskBooking) {
   return {
     id: booking.id,
     dateLabel: formatDateLabel(booking.date),
-    arrivalWindow: formatArrival(booking.arrival_window_start, booking.arrival_window_end, booking.pass?.venue?.tz ?? 'UTC'),
+    arrivalWindow: formatArrivalValue(null, booking.arrival_window_start, booking.arrival_window_end),
     statusLabel: booking.status.replace(/_/g, ' '),
     partySize: booking.party_size,
   }
@@ -156,7 +162,8 @@ export default async function DeskBookingsPage() {
     fetchDeskBookings('pending_verification'),
   ])
 
-  const primaryBookings = primaryRaw.map((booking) => mapBooking(booking, todayIso))
+  const guestProfiles = await fetchGuestProfilesByIds(primaryRaw.map((booking) => booking.user_id))
+  const primaryBookings = primaryRaw.map((booking) => mapBooking(booking, guestProfiles, todayIso))
   const pending = pendingRaw.map(mapPending)
 
   return (
