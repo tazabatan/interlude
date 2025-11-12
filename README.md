@@ -49,6 +49,18 @@ The script simply `docker exec`s into the `supabase_db_interlude` container, so 
 
 Member profile photos use a Supabase Storage bucket named `profile-photos`. Create the bucket in Supabase Studio and allow `authenticated` uploads + public read access. The account settings page will upload to paths like `user-id/filename`.
 
+## Admin builder + venue media
+
+- The admin venue/pass builder persists directly to the local Supabase instance via service-role actions. Ensure `SUPABASE_SERVICE_ROLE_KEY` is set in `web/.env.local` before running `npm run dev`.
+- Hero + gallery assets are stored in a public bucket named `venue-media`. Create it once with:
+  ```bash
+  PATH=/opt/homebrew/opt/libpq/bin:$PATH \
+  psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' \
+    -c "insert into storage.buckets (id,name,public) values ('venue-media','venue-media',true) on conflict (id) do nothing;"
+  ```
+  or through Supabase Studio → Storage.
+- Desk surfaces now read the same hero images, so keep Supabase Storage reachable at `http://127.0.0.1:54321`. If thumbnails disappear, double-check that `supabase start` is running and the bucket contains the uploaded objects.
+
 ## Docker permissions
 
 Most project scripts (smoke, seeding, etc.) talk directly to `supabase_db_interlude` via `docker exec`. If you hit `permission denied while trying to connect to the Docker daemon socket`, either run the command with `sudo` or add your user to the Docker group so you can access `/Users/<you>/.docker/run/docker.sock` without elevation.
