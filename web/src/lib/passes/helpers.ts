@@ -12,11 +12,24 @@ type LabelOptions = {
   detail?: boolean
 }
 
+const PASS_KIND_LABELS: Record<string, { base: string; detail?: string }> = {
+  BEACH_PASS: { base: 'Beach Pass' },
+  POOL_PASS: { base: 'Pool Pass' },
+  GYM_PASS: { base: 'Gym Pass' },
+  SPA_PASS: { base: 'Spa Pass' },
+  MIN_SPEND: { base: 'Beach Pass', detail: 'Beach Pass — Min-spend' },
+  DAY_PASS: { base: 'Pool Pass', detail: 'Day Pass — Hotel' },
+}
+
 export function formatPassLabel(kind: string | null, options: LabelOptions = {}) {
   const detail = options.detail ?? false
-  if (kind === 'MIN_SPEND') return detail ? 'Beach Pass — Min-spend' : 'Beach Pass'
-  if (kind === 'DAY_PASS') return detail ? 'Day Pass — Hotel' : 'Day Pass'
-  return 'Private Pass'
+  if (kind) {
+    const entry = PASS_KIND_LABELS[kind]
+    if (entry) {
+      return detail ? entry.detail ?? entry.base : entry.base
+    }
+  }
+  return detail ? 'Private Pass' : 'Private Pass'
 }
 
 export function formatPassPrice(displayText: string | null, amountCents: number | null, currency: string | null, options: { prefix?: string } = {}) {
