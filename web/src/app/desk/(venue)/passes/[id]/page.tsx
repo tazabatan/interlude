@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { fetchPassById } from '@/lib/desk'
+import { fetchPassById, getPassHeroImageUrl } from '@/lib/desk'
 import { getUserRole } from '@/lib/get-user-role'
 import {
   autoApproveAction,
@@ -89,6 +89,17 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
     pass.kind === 'MIN_SPEND'
       ? formatPassPrice(null, pass.min_spend_amount ?? null, pass.currency ?? 'USD')
       : pass.display_price_text ?? formatPassPrice(null, pass.min_spend_amount ?? null, pass.currency ?? 'USD')
+  const heroImageUrl = getPassHeroImageUrl(pass)
+  const heroImageSrc = heroImageUrl ?? pickPassImage(pass.id)
+  const heroNeedsUnoptimized = Boolean(
+    heroImageUrl &&
+      (heroImageUrl.startsWith('data:') ||
+        heroImageUrl.startsWith('blob:') ||
+        heroImageUrl.startsWith('http://127.0.0.1') ||
+        heroImageUrl.startsWith('http://localhost') ||
+        heroImageUrl.startsWith('https://127.0.0.1') ||
+        heroImageUrl.startsWith('https://localhost'))
+  )
   const serviceOpen = normalizeTime(pass.service_hours_open_local, '09:00')
   const serviceClose = normalizeTime(pass.service_hours_close_local, '18:00')
   const arrivalStart = normalizeTime(pass.default_arrival_start_local, serviceOpen)
@@ -129,7 +140,13 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
     <div className="space-y-6">
       <div className="sticky top-0 space-y-6">
       <div className="relative h-96 w-full overflow-hidden rounded-[32px] border border-[#E8E4D7] bg-white shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
-        <Image src={pickPassImage(pass.id)} alt={pass.venue?.name ?? 'Pass'} fill className="object-cover" />
+        <Image
+          src={heroImageSrc}
+          alt={pass.venue?.name ?? 'Pass'}
+          fill
+          className="object-cover"
+          unoptimized={heroNeedsUnoptimized}
+        />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-end p-4">
           <span
             className={`rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-[0.1em] ${

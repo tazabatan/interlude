@@ -2,7 +2,12 @@
 
 ## Database migrations
 - Install the Supabase CLI and start the local stack with `supabase start`.
-- Apply the SQL migrations to the local database with `supabase db reset`.
+- This repo targets the **local Supabase instance** (connection string `postgresql://postgres:postgres@127.0.0.1:54322/postgres`). To apply migrations, run them locally:
+  ```bash
+  cd /Users/danielabatan/code/interlude   # repo root (supabase/config.toml lives here)
+  supabase db push --local                # pushes pending migrations into the local stack
+  ```
+  Codex: always prefer `supabase db push --local` for new migrations unless told otherwise.
 - When developing new migrations, use `supabase migration new <name>` and place the generated SQL alongside the existing files in `supabase/migrations/`.
 
 ## Smoke tests

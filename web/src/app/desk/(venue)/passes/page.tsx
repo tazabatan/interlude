@@ -1,5 +1,5 @@
 import PassCard from '@/components/pass-card'
-import { fetchDeskBookings, fetchVenuePasses, fetchPassInventoryByDateRange } from '@/lib/desk'
+import { fetchDeskBookings, fetchVenuePasses, fetchPassInventoryByDateRange, getPassHeroImageUrl } from '@/lib/desk'
 import { supabaseServer } from '@/lib/supabase/server'
 
 type PassControl = {
@@ -15,6 +15,7 @@ type PassControl = {
   defaultStart: string
   defaultMinutes: number
   isPaused: boolean
+  imageUrl: string | null
 }
 
 function formatPassControls(passRows: Awaited<ReturnType<typeof fetchDeskBookings>>[]) {
@@ -34,6 +35,7 @@ function formatPassControls(passRows: Awaited<ReturnType<typeof fetchDeskBooking
         defaultStart: booking.pass.default_arrival_start_local ?? '12:00',
         defaultMinutes: booking.pass.default_arrival_window_minutes ?? 60,
         isPaused: false,
+        imageUrl: getPassHeroImageUrl(booking.pass),
       })
     }
   })
@@ -66,6 +68,7 @@ export default async function DeskPassesPage() {
         defaultStart: pass.default_arrival_start_local ?? '12:00',
         defaultMinutes: pass.default_arrival_window_minutes ?? 60,
         isPaused: false,
+        imageUrl: getPassHeroImageUrl(pass),
       }))
     }
   }
@@ -117,6 +120,7 @@ function ControlsSection({ controls }: { controls: PassControl[] }) {
               srLabel={`View pass controls for ${control.name}`}
               showStatusBadge
               status={control.isPaused ? 'paused' : 'active'}
+              imageUrl={control.imageUrl ?? undefined}
             />
           ))}
       </div>

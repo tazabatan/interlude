@@ -38,6 +38,17 @@ type SupabaseAuthState = {
   accessToken?: string
 }
 
+type PassProfileAsset = {
+  id?: string
+  name?: string | null
+  storagePath?: string | null
+  url?: string | null
+}
+
+type PassProfilePayload = {
+  heroImage?: PassProfileAsset | null
+}
+
 export type DeskBooking = {
   id: string
   user_id: string
@@ -61,6 +72,7 @@ export type DeskBooking = {
     auto_approve_enabled: boolean
     default_arrival_start_local: string | null
     default_arrival_window_minutes: number | null
+    profile: PassProfilePayload | null
     venue: {
       name: string | null
       tz: string | null
@@ -84,10 +96,31 @@ export type DeskPass = {
   service_hours_close_local: string | null
   arrival_grace_minutes: number | null
   default_daily_cap: number
+  profile: PassProfilePayload | null
   venue: {
     name: string | null
     tz: string | null
   } | null
+}
+
+const STORAGE_BUCKET = 'venue-media'
+
+function getSupabaseUrl() {
+  return (process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321').replace(/\/$/, '')
+}
+
+function resolveStorageUrl(path?: string | null) {
+  if (!path) return null
+  const cleanPath = path.replace(/^\/+/, '')
+  return `${getSupabaseUrl()}/storage/v1/object/public/${STORAGE_BUCKET}/${cleanPath}`
+}
+
+export function getPassHeroImageUrl(source?: { profile?: PassProfilePayload | null } | null) {
+  const asset = source?.profile?.heroImage ?? null
+  if (!asset) return null
+  if (asset.storagePath) return resolveStorageUrl(asset.storagePath)
+  if (asset.url) return asset.url
+  return null
 }
 
 const BOOKING_SELECT = [
@@ -114,6 +147,7 @@ const BOOKING_SELECT = [
     'auto_approve_enabled,',
     'default_arrival_start_local,',
     'default_arrival_window_minutes,',
+    'profile,',
     'venue:venues(name,tz)',
     ')',
   ].join(''),
@@ -135,6 +169,7 @@ export const PASS_SELECT = [
   'service_hours_close_local',
   'arrival_grace_minutes',
   'default_daily_cap',
+  'profile',
   'venue:venues(name,tz)',
 ].join(',')
 
