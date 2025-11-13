@@ -1,3 +1,4 @@
+import { fetchPassById, fetchPassesByIds } from '@/lib/desk'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import { buildGuestBookingView, type GuestBookingRow } from './view-model'
 
@@ -16,6 +17,7 @@ export async function fetchMemberBookings() {
     .select(
       `
         id,
+        pass_id,
         date,
         party_size,
         status,
@@ -24,7 +26,7 @@ export async function fetchMemberBookings() {
         requested_arrival_time,
         qr_jti,
         hold_status,
-        pass:passes(kind),
+        pass:passes(kind,profile,display_price_text,min_spend_amount,currency),
         venue:venues(name,tz)
       `
     )
@@ -37,7 +39,9 @@ export async function fetchMemberBookings() {
   }
 
   const rows = (response.data ?? []) as GuestBookingRow[]
-  const bookings = rows.map((row) => buildGuestBookingView(row))
+  const passes = await fetchPassesByIds(rows.map((row) => row.pass_id))
+  const passMap = new Map(passes.map((pass) => [pass.id, pass]))
+  const bookings = rows.map((row) => buildGuestBookingView(row, passMap.get(row.pass_id)))
 
   return { bookings, user }
 }
@@ -57,6 +61,7 @@ export async function fetchMemberBookingById(bookingId: string) {
     .select(
       `
         id,
+        pass_id,
         date,
         party_size,
         status,
@@ -65,7 +70,7 @@ export async function fetchMemberBookingById(bookingId: string) {
         requested_arrival_time,
         qr_jti,
         hold_status,
-        pass:passes(kind),
+        pass:passes(kind,profile,display_price_text,min_spend_amount,currency),
         venue:venues(name,tz)
       `
     )
@@ -82,5 +87,7 @@ export async function fetchMemberBookingById(bookingId: string) {
     return null
   }
 
-  return buildGuestBookingView(response.data as GuestBookingRow)
+  const row = response.data as GuestBookingRow
+  const pass = row.pass_id ? await fetchPassById(row.pass_id) : null
+  return buildGuestBookingView(row, pass)
 }

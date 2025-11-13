@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { fetchPassById, fetchPassInventoryByDateRange } from '@/lib/desk'
+import { fetchPassById, fetchPassInventoryByDateRange, getPassHeroImageUrl } from '@/lib/desk'
 import { audienceFromRole, isPassActive, isVisibleForAudience } from '@/lib/explore'
 import { getUserRole } from '@/lib/get-user-role'
 import { formatPassLabel, formatPassPrice, pickPassImage } from '@/lib/passes/helpers'
@@ -67,12 +67,24 @@ export default async function VenuePassPage({ params }: VenuePassPageProps) {
   }
 
   const locationLabel = (pass.venue?.tz ?? 'America/Anguilla').toUpperCase()
-  const heroSrc = pickPassImage(pass.id)
+  const heroImageUrl = getPassHeroImageUrl(pass)
+  const heroSrc = heroImageUrl ?? pickPassImage(pass.id)
+  const heroNeedsUnoptimized = Boolean(
+    heroImageUrl &&
+      (heroImageUrl.startsWith('data:') ||
+        heroImageUrl.startsWith('blob:') ||
+        heroImageUrl.startsWith('http://127.0.0.1') ||
+        heroImageUrl.startsWith('http://localhost') ||
+        heroImageUrl.startsWith('https://127.0.0.1') ||
+        heroImageUrl.startsWith('https://localhost'))
+  )
   const passLabel = formatPassLabel(pass.kind, { detail: true })
-  const priceDisplay =
-    pass.kind === 'MIN_SPEND'
-      ? formatPassPrice(null, pass.min_spend_amount ?? null, pass.currency, { prefix: 'Min spend ' })
-      : pass.display_price_text ?? formatPassPrice(null, pass.min_spend_amount ?? null, pass.currency)
+  const simplePassLabel = formatPassLabel(pass.kind)
+  const isMinSpend = pass.kind === 'MIN_SPEND'
+  const formattedMinSpend = formatPassPrice(null, pass.min_spend_amount ?? null, pass.currency)
+  const priceDisplay = isMinSpend
+    ? `${simplePassLabel} included with minimum spend of ${formattedMinSpend} per person on food or beverages`
+    : pass.display_price_text ?? formatPassPrice(null, pass.min_spend_amount ?? null, pass.currency)
 
   const holdDisplay = formatPassPrice(null, pass.no_show_amount_per_person ?? null, pass.currency)
   const serviceOpen = normalizeTime(pass.service_hours_open_local, '09:00')
@@ -124,6 +136,7 @@ export default async function VenuePassPage({ params }: VenuePassPageProps) {
             priority
             className="object-cover object-center"
             sizes="(min-width: 1280px) 60vw, 100vw"
+            unoptimized={heroNeedsUnoptimized}
           />
         </div>
 

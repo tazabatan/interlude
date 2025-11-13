@@ -219,6 +219,17 @@ export async function fetchPassById(passId: string) {
   return rows[0] ?? null
 }
 
+export async function fetchPassesByIds(passIds: string[]) {
+  const uniqueIds = Array.from(new Set(passIds.filter(Boolean)))
+  if (uniqueIds.length === 0) return []
+  const sanitized = uniqueIds.map((id) => id.replace(/"/g, ''))
+  const quoted = sanitized.map((id) => `"${id}"`).join(',')
+  const res = await serviceRoleFetch(
+    `/rest/v1/passes?id=in.(${quoted})&select=${encodeURIComponent(PASS_SELECT)}`
+  )
+  return (await res.json()) as DeskPass[]
+}
+
 export async function deskAction(action: string, payload: unknown) {
   const cookieStore = await cookies()
   const cookiesList = cookieStore.getAll()

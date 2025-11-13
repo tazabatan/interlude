@@ -1,4 +1,5 @@
 import PassCard from '@/components/pass-card'
+import { getPassHeroImageUrl } from '@/lib/desk'
 import { audienceFromRole, fetchExplorePasses } from '@/lib/explore'
 import { getUserRole } from '@/lib/get-user-role'
 
@@ -24,6 +25,10 @@ export default async function ExplorePage() {
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {passes.map((pass) => {
               const displayName = pass.venue?.name ?? pass.kind ?? pass.id
+              const imageUrl = getPassHeroImageUrl(pass)
+              const isMinSpend = pass.kind === 'MIN_SPEND'
+              const pricePrefix = isMinSpend ? '' : undefined
+              const displayPriceText = isMinSpend ? 'Free with minimum spend' : pass.display_price_text
               return (
                 <PassCard
                   key={pass.id}
@@ -31,12 +36,14 @@ export default async function ExplorePage() {
                   name={displayName}
                   location="ANGUILLA"
                   kind={pass.kind}
-                  displayPriceText={pass.display_price_text}
+                  displayPriceText={displayPriceText}
                   minSpendAmount={pass.min_spend_amount}
                   currency={pass.currency}
                   href={`/app/venue/${pass.id}`}
                   srLabel={`View pass for ${displayName}`}
                   showStatusBadge={false}
+                  imageUrl={imageUrl}
+                  pricePrefix={pricePrefix}
                 />
               )
             })}

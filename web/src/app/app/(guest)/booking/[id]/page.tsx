@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import QRCode from 'react-qr-code'
 import { fetchMemberBookingById } from '@/lib/bookings/member'
+import { formatPassLabel, formatPassPrice } from '@/lib/passes/helpers'
 import CancelBookingForm from './cancel-booking-form'
 
 type Params = Promise<{ id: string }>
@@ -74,6 +75,12 @@ export default async function BookingDetailPage({ params }: { params: Params }) 
   }))
 
   const finalStatus = FINAL_STATUS_LABEL[booking.status] ?? null
+  const passLabel = formatPassLabel(booking.pass_kind)
+  const isMinSpend = booking.pass_kind === 'MIN_SPEND'
+  const formattedMinSpend = formatPassPrice(null, booking.pass_min_spend_amount ?? null, booking.pass_currency ?? null)
+  const priceDisplay = isMinSpend
+    ? `${passLabel} included with minimum spend of ${formattedMinSpend} per person on food or beverages`
+    : booking.price_display ?? 'Price to be confirmed'
   const showQr = booking.status === 'issued' && Boolean(booking.qr_jti)
   const arrivalWindow = formatArrivalWindow(booking.arrival_window_start, booking.arrival_window_end)
   const bookingDate = formatDisplayDate(booking.date)
@@ -81,7 +88,8 @@ export default async function BookingDetailPage({ params }: { params: Params }) 
 
   const detailRows = [
     { label: 'Destination', value: booking.venue_name ?? 'Venue to be confirmed' },
-    { label: 'Pass', value: booking.pass_kind ?? 'Pass' },
+    { label: 'Pass', value: passLabel },
+    { label: 'Price', value: priceDisplay },
     { label: 'Date', value: bookingDate },
     { label: 'Guests', value: `${booking.party_size} ${booking.party_size === 1 ? 'Guest' : 'Guests'}` },
     { label: 'Arrival window', value: arrivalWindow },
@@ -112,9 +120,7 @@ export default async function BookingDetailPage({ params }: { params: Params }) 
               <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
                 {booking.status.toUpperCase()}
               </span>
-              <span className="rounded-full bg-gray-900 px-3 py-1 text-xs font-semibold text-white">
-                {booking.pass_kind ?? 'Pass'}
-              </span>
+              <span className="rounded-full bg-gray-900 px-3 py-1 text-xs font-semibold text-white">{passLabel}</span>
             </div>
           </div>
 
@@ -170,9 +176,11 @@ export default async function BookingDetailPage({ params }: { params: Params }) 
             </p>
             <p className="mt-1 text-sm text-white/90">{bookingDate}</p>
             <p className="mt-6 text-sm">
-              {booking.pass_kind ?? 'Pass'} · Party {booking.party_size}
+              {passLabel} · Party {booking.party_size}
               <br />
               {arrivalWindow}
+              <br />
+              {priceDisplay}
             </p>
           </div>
 

@@ -90,7 +90,8 @@ function formatCurrency(amount: number | null | undefined, currency: string | nu
 }
 
 function formatPassType(kind: string | null) {
-  if (kind === 'MIN_SPEND') return 'Beach Pass — Min Spend'
+  if (kind === 'MIN_SPEND') return 'Beach Club Pass — Min Spend'
+  if (kind === 'BEACH_PASS') return 'Beach Club Pass'
   if (kind === 'DAY_PASS') return 'Day Pass'
   return 'Pass'
 }

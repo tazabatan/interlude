@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { fetchPassesByIds } from '@/lib/desk'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import { buildGuestBookingView, type GuestBookingRow } from '@/lib/bookings/view-model'
 
@@ -19,6 +20,7 @@ export async function GET() {
     .select(
       `
         id,
+        pass_id,
         date,
         party_size,
         status,
@@ -27,7 +29,7 @@ export async function GET() {
         requested_arrival_time,
         qr_jti,
         hold_status,
-        pass:passes(kind),
+        pass:passes(kind,profile,display_price_text,min_spend_amount,currency),
         venue:venues(name,tz)
       `
     )
@@ -40,7 +42,9 @@ export async function GET() {
   }
 
   const rows = (response.data ?? []) as GuestBookingRow[]
-  const bookings = rows.map((row) => buildGuestBookingView(row))
+  const passes = await fetchPassesByIds(rows.map((row) => row.pass_id))
+  const passMap = new Map(passes.map((pass) => [pass.id, pass]))
+  const bookings = rows.map((row) => buildGuestBookingView(row, passMap.get(row.pass_id)))
 
   return NextResponse.json({ bookings })
 }

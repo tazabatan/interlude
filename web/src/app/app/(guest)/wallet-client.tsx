@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { GuestBookingView } from '@/lib/bookings/view-model'
 import { formatArrivalValue } from '@/lib/arrival'
+import { formatPassLabel, pickPassImage } from '@/lib/passes/helpers'
 
 type Segment = 'today' | 'upcoming' | 'past' | 'cancelled'
 
@@ -38,26 +39,6 @@ const STATUS_VARIANTS: Record<string, string> = {
   no_show: 'bg-[#E2E0D7] text-[#5F6059]',
   redeemed: 'bg-[#D0F3EA] text-[#0D6B56]',
   redeemed_late: 'bg-[#BDEBD9] text-[#0B5B48]',
-}
-
-const PLACEHOLDER_IMAGES = [
-  '/wallet-photos/4655308-beachfront-five-bedroom-pool-villa-belmond-cap-juluca.jpg',
-  '/wallet-photos/belmond-cap-juluca.jpg',
-  '/wallet-photos/Fb-2.png',
-  '/wallet-photos/Screenshot 2025-10-29 at 17.48.44.png',
-  '/wallet-photos/Screenshot 2025-10-29 at 17.48.52.png',
-  '/wallet-photos/Screenshot 2025-10-29 at 17.49.28.png',
-] as const
-
-function pickImage(id: string) {
-  if (PLACEHOLDER_IMAGES.length === 0) return ''
-  let hash = 0
-  for (let i = 0; i < id.length; i += 1) {
-    hash = (hash << 5) - hash + id.charCodeAt(i)
-    hash |= 0
-  }
-  const index = Math.abs(hash) % PLACEHOLDER_IMAGES.length
-  return PLACEHOLDER_IMAGES[index]
 }
 
 function parse(dateIso: string | null) {
@@ -123,7 +104,19 @@ function BookingCard({ booking }: { booking: GuestBookingView }) {
   const dateSuffix =
     segment === 'today' && booking.arrival_window_start ? 'Today' : formatDisplayDate(booking.date)
   const headingLine = `${arrivalSummary} · ${dateSuffix}`
-  const imageSrc = pickImage(booking.id)
+  const fallbackSeed = booking.pass_id ?? booking.id
+  const fallbackImage = pickPassImage(fallbackSeed)
+  const imageSrc = booking.hero_image_url ?? fallbackImage
+  const heroUrl = booking.hero_image_url
+  const needsUnoptimized = Boolean(
+    heroUrl &&
+      (heroUrl.startsWith('data:') ||
+        heroUrl.startsWith('blob:') ||
+        heroUrl.startsWith('http://127.0.0.1') ||
+        heroUrl.startsWith('http://localhost') ||
+        heroUrl.startsWith('https://127.0.0.1') ||
+        heroUrl.startsWith('https://localhost'))
+  )
 
   const showPrimaryCta = booking.status === 'issued' || booking.status === 'approved'
   const primaryCta = booking.status === 'issued' ? 'Show pass' : 'View reservation'
@@ -156,6 +149,7 @@ function BookingCard({ booking }: { booking: GuestBookingView }) {
                 width={200}
                 height={200}
                 className="h-full w-full object-cover"
+                unoptimized={needsUnoptimized}
               />
             ) : (
               <div className="h-full w-full bg-[#DBD8C9]" />
@@ -167,8 +161,9 @@ function BookingCard({ booking }: { booking: GuestBookingView }) {
               {booking.venue_name ?? 'Venue TBD'}
             </div>
             <div className="text-sm text-[#31332f]">
-              {booking.pass_kind ?? 'Pass'} · Party {booking.party_size}
+              {formatPassLabel(booking.pass_kind)} · Party {booking.party_size}
             </div>
+            <div className="text-xs uppercase tracking-[0.2em] text-[#6F716D]">{booking.price_display}</div>
           </div>
         </div>
 

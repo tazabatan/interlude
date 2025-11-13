@@ -13,11 +13,11 @@ type LabelOptions = {
 }
 
 const PASS_KIND_LABELS: Record<string, { base: string; detail?: string }> = {
-  BEACH_PASS: { base: 'Beach Pass' },
+  BEACH_PASS: { base: 'Beach Club Pass' },
   POOL_PASS: { base: 'Pool Pass' },
   GYM_PASS: { base: 'Gym Pass' },
   SPA_PASS: { base: 'Spa Pass' },
-  MIN_SPEND: { base: 'Beach Pass', detail: 'Beach Pass — Min-spend' },
+  MIN_SPEND: { base: 'Beach Club Pass', detail: 'Beach Club Pass — Min-spend' },
   DAY_PASS: { base: 'Pool Pass', detail: 'Day Pass — Hotel' },
 }
 

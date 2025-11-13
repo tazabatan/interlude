@@ -13,8 +13,9 @@ function formatDateLabel(value: string) {
 }
 
 function formatPassLabel(kind: string | null) {
-  if (kind === 'MIN_SPEND') return 'Beach Pass'
+  if (kind === 'MIN_SPEND') return 'Beach Club Pass'
   if (kind === 'DAY_PASS') return 'Day Pass'
+  if (kind === 'BEACH_PASS') return 'Beach Club Pass'
   return 'Pass'
 }
 

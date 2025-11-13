@@ -75,7 +75,8 @@ function toDateTimeLocal(value: string | null) {
 }
 
 function formatPassType(kind: string | null) {
-  if (kind === 'MIN_SPEND') return 'Min-spend pass'
+  if (kind === 'MIN_SPEND') return 'Beach Club Pass — Min Spend'
+  if (kind === 'BEACH_PASS') return 'Beach Club Pass'
   if (kind === 'DAY_PASS') return 'Day pass'
   return 'Pass'
 }
@@ -147,8 +148,8 @@ export default async function DeskRequestDetailPage({
     { label: 'Personal preferences', value: guestProfile.loungePreferences || 'No preferences noted' },
   ]
   const passLabelBase = formatPassType(booking.pass?.kind ?? null)
-  const passBadgeLabel = booking.pass?.kind === 'MIN_SPEND' ? 'Beach Pass' : passLabelBase
-  const passDetailLabel = booking.pass?.kind === 'MIN_SPEND' ? 'Beach Pass — Min Spend' : passLabelBase
+  const passBadgeLabel = booking.pass?.kind === 'MIN_SPEND' ? 'Beach Club Pass' : passLabelBase
+  const passDetailLabel = booking.pass?.kind === 'MIN_SPEND' ? 'Beach Club Pass — Min Spend' : passLabelBase
   const statusLabelDisplay = formatStatusLabel(booking.status)
   const passVenue = booking.pass?.venue?.name ?? 'Venue TBD'
   const defaultStartValue = toDateTimeLocal(booking.arrival_window_start)
