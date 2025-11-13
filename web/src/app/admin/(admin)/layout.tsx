@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <div className={`${montserrat.className} min-h-screen bg-[#F4F1E7] text-[#02374D]`}>
-      <header className="bg-[#F4F1E7]/90 backdrop-blur">
+      <header className="relative z-[100] bg-[#F4F1E7]/90 backdrop-blur">
         <div className="flex w-full items-center gap-6 px-[5rem] py-6">
           <Link href="/admin" className="flex items-center">
             <Image src="/interlude-logo.png" alt="Interlude" width={180} height={28} priority />

@@ -1,7 +1,8 @@
 "use client"
 
-import { Dispatch, SetStateAction, useState } from "react"
+import { Dispatch, SetStateAction, useState, useEffect } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import clsx from "clsx"
 import PassCard from "@/components/pass-card"
 import type { PassCardStatus } from "@/components/pass-card"
@@ -34,7 +35,7 @@ const PASS_STATUS_OPTIONS: { value: PassCardStatus; label: string }[] = [
 ]
 
 const PASS_KIND_OPTIONS = [
-  { value: "BEACH_PASS", label: "Beach Pass" },
+  { value: "BEACH_PASS", label: "Beach Club Pass" },
   { value: "POOL_PASS", label: "Pool Pass" },
   { value: "GYM_PASS", label: "Gym Pass" },
   { value: "SPA_PASS", label: "Spa Pass" },
@@ -273,6 +274,17 @@ type AdminVenueExperienceProps = {
   initialVenues: VenueRecord[]
 }
 
+type TeamMember = {
+  id: string
+  email: string
+  raw_user_meta_data: {
+    full_name?: string
+    name?: string
+    app_role?: string
+    venue_id?: string
+  }
+}
+
 export default function AdminVenueExperience({ initialVenues }: AdminVenueExperienceProps) {
   const [venues, setVenues] = useState<VenueRecord[]>(() => initialVenues ?? [])
   const [isBuilderOpen, setBuilderOpen] = useState(false)
@@ -287,10 +299,33 @@ export default function AdminVenueExperience({ initialVenues }: AdminVenueExperi
   const [editingPassId, setEditingPassId] = useState<string | null>(null)
   const [isSavingVenue, setIsSavingVenue] = useState(false)
   const [isSavingPass, setIsSavingPass] = useState(false)
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
 
   const hasVenues = venues.length > 0
   const activeVenue = activeVenueId ? venues.find((venue) => venue.id === activeVenueId) : null
   const viewingPasses = activeView === "passes" && Boolean(activeVenue)
+
+  // Fetch team members when viewing a venue
+  useEffect(() => {
+    if (!activeVenueId) {
+      setTeamMembers([])
+      return
+    }
+
+    async function fetchTeamMembers(venueId: string) {
+      try {
+        const res = await fetch(`/api/admin/team-members?venue_id=${venueId}`)
+        if (!res.ok) return []
+        const data = await res.json()
+        return data.teamMembers || []
+      } catch (error) {
+        console.error('Error fetching team members:', error)
+        return []
+      }
+    }
+
+    fetchTeamMembers(activeVenueId).then(setTeamMembers)
+  }, [activeVenueId])
 
   const openForCreate = () => {
     setEditingVenueId(null)
@@ -432,32 +467,28 @@ export default function AdminVenueExperience({ initialVenues }: AdminVenueExperi
     <div className="space-y-10 text-[#02374D]">
       {viewingPasses && activeVenue ? (
         <>
-          <header className="mx-auto flex w-full max-w-5xl flex-col gap-4 py-6">
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={handleBackToVenues}
-                className="rounded-full border border-[#6F716D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D] transition hover:bg-[#F4F1E7]"
-              >
-                ← Venues
-              </button>
-              <div className="relative flex-1">
-                <h1 className="text-center text-3xl font-medium uppercase tracking-[0.05em] text-black">Passes</h1>
-                <button
-                  type="button"
-                  aria-label="Add pass"
-                  onClick={openPassBuilder}
-                  className="absolute right-0 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-[#DBD8C9] text-black transition hover:bg-[#d0ccba] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#02374D]"
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <p className="text-center text-sm text-[#6F716D]">
-              Manage passes for {activeVenue.displayName || "this venue"}
-            </p>
+          <div className="mx-auto w-full max-w-5xl">
+            <button
+              type="button"
+              onClick={handleBackToVenues}
+              className="mb-6 w-fit rounded-full border border-[#6F716D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D] transition hover:bg-[#F4F1E7]"
+            >
+              ← Venues
+            </button>
+          </div>
+
+          <header className="relative mx-auto w-full max-w-5xl py-8">
+            <h1 className="text-center text-3xl font-medium uppercase tracking-[0.05em] text-black">Passes</h1>
+            <button
+              type="button"
+              aria-label="Add pass"
+              onClick={openPassBuilder}
+              className="absolute right-0 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-[#DBD8C9] text-black transition hover:bg-[#d0ccba] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#02374D]"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
           </header>
 
           {activeVenue.passes.length === 0 ? (
@@ -489,9 +520,81 @@ export default function AdminVenueExperience({ initialVenues }: AdminVenueExperi
               </div>
             </section>
           )}
+
+          {/* Team Section */}
+          <header className="relative mx-auto w-full max-w-5xl py-8 mt-16">
+            <h1 className="text-center text-3xl font-medium uppercase tracking-[0.05em] text-black">Team</h1>
+            <Link
+              href="/admin"
+              aria-label="Invite team member"
+              className="absolute right-0 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-[#DBD8C9] text-black transition hover:bg-[#d0ccba] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#02374D]"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </Link>
+          </header>
+
+          {teamMembers.length === 0 ? (
+            <div className="rounded-[32px] border border-dashed border-[#DAD7C7] bg-[#F5F0E3] px-8 py-16 text-center text-sm text-[#4F514D]">
+              No team members yet for this venue. Use the invite button to add team members.
+            </div>
+          ) : (
+            <section className="space-y-6">
+              <div className="flex flex-wrap justify-center gap-6">
+                {teamMembers.map((member) => {
+                  const displayName =
+                    member.raw_user_meta_data?.full_name ||
+                    member.raw_user_meta_data?.name ||
+                    member.email.split('@')[0]
+                  const role = member.raw_user_meta_data?.app_role || 'staff'
+                  const roleLabel =
+                    role === 'venue_manager' ? 'Manager' : role === 'venue_staff' ? 'Staff' : role.replace('_', ' ')
+
+                  // Generate initials for avatar
+                  const initials = displayName
+                    .split(/\s+/)
+                    .map((word) => word[0]?.toUpperCase())
+                    .slice(0, 2)
+                    .join('')
+
+                  return (
+                    <div
+                      key={member.id}
+                      className="flex w-48 flex-col items-center rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 text-center shadow-[0px_4px_18px_rgba(0,0,0,0.08)]"
+                    >
+                      {/* Avatar */}
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#02374D] text-lg font-semibold text-white">
+                        {initials}
+                      </div>
+
+                      {/* Name */}
+                      <p className="mt-3 font-semibold text-[#02374D]">{displayName}</p>
+
+                      {/* Role */}
+                      <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[#6F716D]">{roleLabel}</p>
+
+                      {/* Email */}
+                      <p className="mt-2 text-xs text-[#4F514D]">{member.email}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
         </>
       ) : (
         <>
+          <div className="mx-auto w-full max-w-5xl">
+            <button
+              type="button"
+              className="invisible mb-6 w-fit rounded-full border border-[#6F716D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em]"
+              aria-hidden="true"
+            >
+              ← Venues
+            </button>
+          </div>
+
           <header className="relative mx-auto w-full max-w-5xl py-8">
             <h1 className="text-center text-3xl font-medium uppercase tracking-[0.05em] text-black">Venues</h1>
             <button
@@ -712,7 +815,7 @@ function VenueBuilderOverlay({
   const heroImagePreview = formState.heroImage?.url ?? ""
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 px-4 py-10">
+    <div className="fixed inset-0 z-[200] bg-black/40 px-4 py-10">
       <div
         role="dialog"
         aria-modal="true"
@@ -1356,7 +1459,7 @@ function PassBuilderOverlay({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 px-4 py-10">
+    <div className="fixed inset-0 z-[200] bg-black/40 px-4 py-10">
       <div className="mx-auto flex h-full max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[40px] border border-[#E8E4D7] bg-[#FBF7ED] shadow-[0_30px_60px_rgba(0,0,0,0.25)]">
         <header className="flex items-center justify-between border-b border-[#E8E4D7] px-8 py-6">
           <div>

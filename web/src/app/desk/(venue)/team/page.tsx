@@ -7,6 +7,17 @@ type VenueRow = {
   name: string | null
 }
 
+type TeamMember = {
+  id: string
+  email: string
+  raw_user_meta_data: {
+    full_name?: string
+    name?: string
+    app_role?: string
+    venue_id?: string
+  }
+}
+
 async function fetchVenue(venueId: string): Promise<VenueRow | null> {
   const params = new URLSearchParams({
     id: `eq.${venueId}`,
@@ -16,6 +27,27 @@ async function fetchVenue(venueId: string): Promise<VenueRow | null> {
   const res = await serviceRoleFetch(`/rest/v1/venues?${params.toString()}`)
   const rows = (await res.json()) as VenueRow[]
   return rows[0] ?? null
+}
+
+async function fetchTeamMembers(venueId: string): Promise<TeamMember[]> {
+  try {
+    // Fetch all users with venue_id matching this venue
+    const query = encodeURIComponent('id,email,raw_user_meta_data')
+    const res = await serviceRoleFetch(
+      `/rest/v1/auth_user_profiles?select=${query}`
+    )
+    const allUsers = (await res.json()) as TeamMember[]
+
+    // Filter users who have this venue_id in their metadata
+    const teamMembers = allUsers.filter(
+      (user) => user.raw_user_meta_data?.venue_id === venueId
+    )
+
+    return teamMembers
+  } catch (error) {
+    console.error('Error fetching team members:', error)
+    return []
+  }
 }
 
 export default async function DeskTeamPage() {
@@ -34,9 +66,10 @@ export default async function DeskTeamPage() {
 
   const venueId = user?.user_metadata?.venue_id as string | undefined
   const venue = venueId ? await fetchVenue(venueId) : null
+  const teamMembers = venueId ? await fetchTeamMembers(venueId) : []
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 text-[#02374D]">
+    <div className="mx-auto w-full max-w-4xl space-y-8 text-[#02374D]">
       <header className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6F716D]">Team</p>
         <h1 className="text-3xl font-medium uppercase tracking-[0.02em] text-black">Invite your desk team</h1>
@@ -50,7 +83,57 @@ export default async function DeskTeamPage() {
           This manager account isn&apos;t linked to a venue yet. Add a venue ID via admin tools before inviting your team.
         </section>
       ) : (
-        <RoleInviteForm mode="manager" managedVenue={{ id: venueId, name: venue?.name ?? "Your venue" }} />
+        <>
+          <RoleInviteForm mode="manager" managedVenue={{ id: venueId, name: venue?.name ?? "Your venue" }} />
+
+          {/* Team Members Section */}
+          {teamMembers.length > 0 && (
+            <section className="space-y-4">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6F716D]">
+                Current Team ({teamMembers.length})
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {teamMembers.map((member) => {
+                  const displayName =
+                    member.raw_user_meta_data?.full_name ||
+                    member.raw_user_meta_data?.name ||
+                    member.email.split('@')[0]
+                  const role = member.raw_user_meta_data?.app_role || 'staff'
+                  const roleLabel =
+                    role === 'venue_manager' ? 'Manager' : role === 'venue_staff' ? 'Staff' : role.replace('_', ' ')
+
+                  // Generate initials for avatar
+                  const initials = displayName
+                    .split(/\s+/)
+                    .map((word) => word[0]?.toUpperCase())
+                    .slice(0, 2)
+                    .join('')
+
+                  return (
+                    <div
+                      key={member.id}
+                      className="flex flex-col items-center rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 text-center shadow-[0px_4px_18px_rgba(0,0,0,0.08)]"
+                    >
+                      {/* Avatar */}
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#02374D] text-lg font-semibold text-white">
+                        {initials}
+                      </div>
+
+                      {/* Name */}
+                      <p className="mt-3 font-semibold text-[#02374D]">{displayName}</p>
+
+                      {/* Role */}
+                      <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[#6F716D]">{roleLabel}</p>
+
+                      {/* Email */}
+                      <p className="mt-2 text-xs text-[#4F514D]">{member.email}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+        </>
       )}
     </div>
   )

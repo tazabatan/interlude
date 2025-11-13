@@ -29,6 +29,7 @@ export default function AdminNav() {
   const pathname = usePathname()
   const inviteActive = pathname === "/admin"
   const createActive = pathname.startsWith("/admin/create")
+  const dashboardActive = pathname.startsWith("/admin/dashboard")
 
   return (
     <nav className="flex flex-wrap items-center justify-end gap-6 text-sm font-medium uppercase tracking-[0.18em] text-[#777] sm:justify-center lg:flex-nowrap lg:gap-10 lg:tracking-[0.2em]">
@@ -54,7 +55,18 @@ export default function AdminNav() {
             : "text-[#777] hover:text-black"
         )}
       >
-        Venue
+        Venues
+      </Link>
+      <Link
+        href="/admin/dashboard"
+        className={clsx(
+          "pb-1 transition whitespace-nowrap uppercase tracking-[0.2em]",
+          dashboardActive
+            ? "text-black underline decoration-2 underline-offset-8"
+            : "text-[#777] hover:text-black"
+        )}
+      >
+        Dashboard
       </Link>
     </nav>
   )
@@ -127,7 +139,7 @@ function DropdownMenu({ label, links }: { label: string; links: NavLink[] }) {
           role="menu"
           onMouseEnter={clearCloseTimer}
           onMouseLeave={scheduleClose}
-          className="absolute left-1/2 top-full z-20 mt-3 w-56 -translate-x-1/2 rounded-[28px] border border-[#E8E4D7] bg-[#FBF7ED] p-4 text-[#02374D] shadow-[0px_18px_40px_rgba(0,0,0,0.15)]"
+          className="absolute left-1/2 top-full z-[100] mt-3 w-56 -translate-x-1/2 rounded-[28px] border border-[#E8E4D7] bg-[#FBF7ED] p-4 text-[#02374D] shadow-[0px_18px_40px_rgba(0,0,0,0.15)]"
         >
           <ul className="space-y-1 text-xs font-semibold uppercase tracking-[0.25em] text-[#6F716D]">
             {links.map((link) => (

@@ -66,7 +66,7 @@ export default function AccountMenu({ userName, email, role, subtitle }: Account
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-20 mt-3 w-64 rounded-[28px] border border-[#E8E4D7] bg-[#FBF7ED] p-5 text-sm text-[#02374D] shadow-[0px_20px_45px_rgba(0,0,0,0.18)]"
+          className="absolute right-0 z-[100] mt-3 w-64 rounded-[28px] border border-[#E8E4D7] bg-[#FBF7ED] p-5 text-sm text-[#02374D] shadow-[0px_20px_45px_rgba(0,0,0,0.18)]"
         >
           <div className="pb-3 text-xs uppercase tracking-[0.3em] text-[#6F716D]">Signed in</div>
           <div className="pb-2 text-base font-semibold text-black">{displayName}</div>
