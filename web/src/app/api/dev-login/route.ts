@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const DEV_VENUE_ID = '11111111-2222-3333-4444-555555555555'
 
@@ -40,7 +40,7 @@ const DEV_ACCOUNTS: Record<string, DevAccount> = {
   },
 }
 
-async function findUserByEmail(admin: ReturnType<typeof createClient<any, any, any, any>>, email: string) {
+async function findUserByEmail(admin: SupabaseClient<any, any, any, any>, email: string) {
   let page = 1
   const perPage = 200
 
@@ -57,7 +57,7 @@ async function findUserByEmail(admin: ReturnType<typeof createClient<any, any, a
   return null
 }
 
-async function ensureUser(admin: ReturnType<typeof createClient<any, any, any, any>>, account: DevAccount) {
+async function ensureUser(admin: SupabaseClient<any, any, any, any>, account: DevAccount) {
   const existing = await findUserByEmail(admin, account.email)
   if (!existing) {
     const { error } = await admin.auth.admin.createUser({
@@ -87,7 +87,7 @@ async function ensureUser(admin: ReturnType<typeof createClient<any, any, any, a
   if (error) throw new Error(`Failed to update ${account.email}: ${error.message}`)
 }
 
-async function ensureSeedVenue(admin: ReturnType<typeof createClient<any, any, any, any>>) {
+async function ensureSeedVenue(admin: SupabaseClient<any, any, any, any>) {
   const { error } = await admin
     .from('venues')
     // Supabase client isn't typed with our schema yet, so cast to satisfy TS
