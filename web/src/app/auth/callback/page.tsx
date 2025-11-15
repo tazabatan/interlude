@@ -54,6 +54,3 @@ export default function AuthCallback() {
     </Suspense>
   )
 }
-
-  return <p>Signing you in…</p>
-}
