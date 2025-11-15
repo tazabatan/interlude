@@ -25,7 +25,7 @@ export type VenueKPIData = {
 
 export type ChartDataPoint = {
   date: string
-  count: number
+  count?: number
   amount?: number
 }
 

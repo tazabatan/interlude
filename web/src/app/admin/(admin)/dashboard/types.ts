@@ -23,7 +23,7 @@ export type KPIData = {
 
 export type ChartDataPoint = {
   date: string
-  count: number
+  count?: number
   amount?: number
 }
 
