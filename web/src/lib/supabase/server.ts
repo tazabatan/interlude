@@ -10,19 +10,18 @@ export async function getSupabaseServer() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptionsWithName) => {
-          try {
-            cookieStore.set({ name, value, ...options })
-          } catch (error) {
-            // Ignore errors during rendering - cookies can only be modified in Server Actions or Route Handlers
-          }
+        getAll() {
+          return cookieStore.getAll()
         },
-        remove: (name: string, options: CookieOptionsWithName) => {
+        setAll(cookiesToSet) {
           try {
-            cookieStore.set({ name, value: '', ...options, maxAge: 0 })
-          } catch (error) {
-            // Ignore errors during rendering - cookies can only be modified in Server Actions or Route Handlers
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
           }
         },
       },
