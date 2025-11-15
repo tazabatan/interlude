@@ -239,6 +239,7 @@ export async function savePassAction(formData: FormData) {
         ? `Credit ${normalizedState.currency} ${Math.round(prepaidCreditCents / 100)}`
         : ""
     const displayPriceText = (explicitDisplay || autoDisplay || "").trim() || null
+    const interludePerk = normalizedState.interludePerk.trim() || null
 
     const profile = buildPassProfileFromState(normalizedState)
 
@@ -253,6 +254,7 @@ export async function savePassAction(formData: FormData) {
           currency: normalizedState.currency,
           min_spend_amount: minSpendAmountCents,
           display_price_text: displayPriceText,
+          interlude_perk: interludePerk,
           visibility: normalizedState.visibility,
           auto_approve_enabled: normalizedState.autoApprove,
           default_arrival_start_local: normalizedState.arrivalStart,

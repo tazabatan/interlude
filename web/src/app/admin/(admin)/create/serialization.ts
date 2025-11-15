@@ -31,6 +31,7 @@ export type PassRow = {
   currency: string | null
   min_spend_amount: number | null
   display_price_text: string | null
+  interlude_perk: string | null
   visibility: string | null
   auto_approve_enabled: boolean
   default_arrival_start_local: string | null
@@ -118,6 +119,7 @@ export function mapPassRowToRecord(row: PassRow): PassRecord {
     kind: presentationKind,
     shortDescription,
     economicsType,
+    interludePerk: row.interlude_perk ?? "",
     minSpendAmountCents: row.min_spend_amount,
     prepaidCreditCents,
     currency: row.currency ?? "USD",

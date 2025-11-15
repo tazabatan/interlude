@@ -1,7 +1,10 @@
+import { notFound } from 'next/navigation'
 import { fetchDeskBookings, type DeskBooking } from '@/lib/desk'
 import { buildGuestProfile, fetchGuestProfilesByIds, type GuestProfile } from '@/lib/guest-profile'
 import { RequestsClient, type RequestCardPayload, type PassCategory } from './client'
 import { formatArrivalValue } from '@/lib/arrival'
+import { getUserRole } from '@/lib/get-user-role'
+import { computePartyCountsFromAges, formatPartySummary } from '@/lib/party'
 
 function formatDateLabel(value: string) {
   const date = new Date(value)
@@ -67,22 +70,38 @@ function formatStatusLabel(status: string) {
   return status === 'issued' ? 'Pass issued' : status.replace(/_/g, ' ')
 }
 
+function resolvePartySummary(booking: DeskBooking) {
+  const adults = booking.guest_adult_count
+  const children = booking.guest_child_count
+  if (adults != null || children != null) {
+    return formatPartySummary(adults ?? 0, children ?? 0, booking.party_size)
+  }
+  if (booking.guest_ages && booking.guest_ages.length > 0) {
+    const counts = computePartyCountsFromAges(booking.guest_ages)
+    return formatPartySummary(counts.adults, counts.children, booking.party_size)
+  }
+  return formatPartySummary(null, null, booking.party_size)
+}
+
 function mapBookingToPayload(booking: DeskBooking, profileMap: Record<string, GuestProfile>): RequestCardPayload {
   const guestProfile = profileMap[booking.user_id] ?? buildGuestProfile()
-  const guestLabel = `${guestProfile.name}'s group of ${booking.party_size}`
+  const firstName = guestProfile.firstName || guestProfile.name
+  const guestLabel = `${firstName}'s group of ${booking.party_size}`
   const imageSrc = guestProfile.avatarUrl ?? pickGuestImage(booking.id)
   const imageUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
+  const partySummary = resolvePartySummary(booking)
   return {
     id: booking.id,
     status: booking.status,
     statusLabel: formatStatusLabel(booking.status),
     dateLabel: formatDateLabel(booking.date),
     partySize: booking.party_size,
+    partySummary,
     arrivalWindow: formatArrivalValue(booking.requested_arrival_time, booking.arrival_window_start, booking.arrival_window_end),
     passLabel: formatPassLabel(booking.pass?.kind ?? null),
     priceLabel: formatPassPrice(
       booking.pass?.display_price_text ?? null,
-      booking.pass?.min_spend_amount ?? null,
+      booking.pass?.min_spend_amount ?? booking.pass?.profile?.prepaidCreditAmountCents ?? null,
       booking.pass?.currency ?? 'USD'
     ),
     category: mapCategory(booking.pass?.kind ?? null),
@@ -93,7 +112,13 @@ function mapBookingToPayload(booking: DeskBooking, profileMap: Record<string, Gu
 }
 
 export default async function DeskRequestsPage() {
-  const requestedRaw = await fetchDeskBookings('requested')
+  const { user } = await getUserRole()
+  const venueId = user?.user_metadata?.venue_id as string | undefined
+  if (!venueId) {
+    notFound()
+  }
+
+  const requestedRaw = await fetchDeskBookings('requested', venueId)
   const guestProfiles = await fetchGuestProfilesByIds(requestedRaw.map((booking) => booking.user_id))
   const requested = requestedRaw.map((booking) => mapBookingToPayload(booking, guestProfiles))
   const totalRequests = requested.length

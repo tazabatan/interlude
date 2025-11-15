@@ -32,25 +32,51 @@ export function formatPassLabel(kind: string | null, options: LabelOptions = {})
   return detail ? 'Private Pass' : 'Private Pass'
 }
 
-export function formatPassPrice(displayText: string | null, amountCents: number | null, currency: string | null, options: { prefix?: string } = {}) {
+export function formatPassPrice(
+  displayText: string | null,
+  amountCents: number | null,
+  currency: string | null,
+  options: { prefix?: string } = {}
+) {
   const prefix = options.prefix ?? ''
 
   // When using a prefix (like "From "), always use the amount calculation instead of displayText
-  if (prefix && typeof amountCents === 'number') {
-    try {
-      const value = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: (currency ?? 'USD').toUpperCase(),
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(amountCents / 100)
-      return `${prefix}${value}`
-    } catch {
-      return '$—'
+  if (prefix) {
+    if (typeof amountCents === 'number') {
+      try {
+        const value = new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: (currency ?? 'USD').toUpperCase(),
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(amountCents / 100)
+        return `${prefix}${value}`
+      } catch {
+        return `${prefix}$—`
+      }
     }
+    // If prefix but no amount, return placeholder
+    return `${prefix}$—`
   }
 
-  if (displayText) return `${prefix}${displayText}`
+  // No prefix - use displayText if available, otherwise format amount
+  if (displayText) {
+    const trimmed = displayText.trim()
+    const numericCandidate = Number(trimmed.replace(/,/g, ''))
+    if (trimmed && !Number.isNaN(numericCandidate) && currency) {
+      try {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: (currency ?? 'USD').toUpperCase(),
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(numericCandidate)
+      } catch {
+        // fall through to returning trimmed display text
+      }
+    }
+    return trimmed
+  }
   if (typeof amountCents === 'number') {
     try {
       const value = new Intl.NumberFormat('en-US', {
@@ -59,7 +85,7 @@ export function formatPassPrice(displayText: string | null, amountCents: number 
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       }).format(amountCents / 100)
-      return `${prefix}${value}`
+      return value
     } catch {
       return '$—'
     }

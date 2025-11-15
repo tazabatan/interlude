@@ -306,6 +306,8 @@ export async function updatePassPricingAction(formData: FormData) {
     payload.display_price_text = displayText
     payload.no_show_amount_per_person = hold
   }
+  const perk = formData.get('perk')?.toString()?.trim() ?? ''
+  payload.interlude_perk = perk || null
 
   await deskAction('update_pass_pricing', payload)
   revalidatePath('/desk/passes')

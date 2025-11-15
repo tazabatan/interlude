@@ -9,6 +9,7 @@ type SupabaseUserRow = {
 
 export type GuestProfile = {
   name: string
+  firstName: string
   email: string | null
   phone: string | null
   dietaryNotes: string | null
@@ -34,9 +35,11 @@ export function buildGuestProfile(user?: SupabaseUserRow | null): GuestProfile {
   const avatarValue = pickString(metadata?.avatar_url)
   const avatarUrl = resolveAvatarUrl(avatarValue, supabaseUrl)
   const avatarIsLocal = avatarUrl ? isLocalUrl(avatarUrl) : false
+  const firstName = deriveFirstName(name)
 
   return {
     name,
+    firstName,
     email,
     phone,
     dietaryNotes: dietaryNotes || null,
@@ -59,6 +62,11 @@ function pickString(value: unknown): string | null {
 function capitalize(value: string) {
   if (!value) return 'Guest'
   return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+function deriveFirstName(fullName: string) {
+  const [first] = fullName.trim().split(/\s+/)
+  return first || 'Guest'
 }
 
 function resolveAvatarUrl(avatarValue: string | null, supabaseUrl: string) {

@@ -1,7 +1,11 @@
+import { notFound } from 'next/navigation'
 import { fetchDeskBookings, fetchDeskBookingsByStatuses, type DeskBooking } from '@/lib/desk'
 import { buildGuestProfile, fetchGuestProfilesByIds, type GuestProfile } from '@/lib/guest-profile'
+import { getUserRole } from '@/lib/get-user-role'
 import { BookingsClient } from './client'
 import { formatArrivalValue } from '@/lib/arrival'
+import { computePartyCountsFromAges, formatPartySummary } from '@/lib/party'
+import { formatPassPrice } from '@/lib/passes/helpers'
 
 function formatDateLabel(value: string) {
   const date = new Date(value)
@@ -19,22 +23,15 @@ function formatPassLabel(kind: string | null) {
   return 'Pass'
 }
 
-function formatPassPrice(displayText: string | null, amountCents: number | null, currency: string | null) {
-  if (displayText) return displayText
-  if (typeof amountCents === 'number') {
-    const isoCurrency = (currency ?? 'USD').toUpperCase()
-    try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: isoCurrency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(amountCents / 100)
-    } catch (error) {
-      console.warn('formatPassPrice fallback', error)
-    }
+function resolvePartySummary(booking: DeskBooking) {
+  if (booking.guest_adult_count != null || booking.guest_child_count != null) {
+    return formatPartySummary(booking.guest_adult_count ?? 0, booking.guest_child_count ?? 0, booking.party_size)
   }
-  return 'TBD price'
+  if (booking.guest_ages && booking.guest_ages.length > 0) {
+    const counts = computePartyCountsFromAges(booking.guest_ages)
+    return formatPartySummary(counts.adults, counts.children, booking.party_size)
+  }
+  return formatPartySummary(null, null, booking.party_size)
 }
 
 function pickGuestImage(seed: string) {
@@ -82,9 +79,10 @@ function mapBooking(booking: DeskBooking, profileMap: Record<string, GuestProfil
     booking.arrival_window_end
   )
   const passLabel = formatPassLabel(booking.pass?.kind ?? null)
+  const fallbackPrice = booking.pass?.min_spend_amount ?? booking.pass?.profile?.prepaidCreditAmountCents ?? null
   const priceLabel = formatPassPrice(
     booking.pass?.display_price_text ?? null,
-    booking.pass?.min_spend_amount ?? null,
+    fallbackPrice,
     booking.pass?.currency ?? 'USD'
   )
   const isToday = booking.date === todayIso
@@ -101,11 +99,13 @@ function mapBooking(booking: DeskBooking, profileMap: Record<string, GuestProfil
   const canMarkArrived = isToday && booking.status === 'issued'
   const ctaLabel = isDeclined ? 'Undo Decline' : canMarkArrived ? 'Mark Arrived' : null
   const guestProfile = profileMap[booking.user_id] ?? buildGuestProfile()
-  const guestLabel = `${guestProfile.name}'s group of ${booking.party_size}`
+  const guestLabel = `${guestProfile.firstName || guestProfile.name}'s group of ${booking.party_size}`
   const imageSrc = guestProfile.avatarUrl ?? pickGuestImage(booking.id)
   const imageUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
   const paymentState = mapPaymentState(booking.hold_status)
   const category = mapCategory(booking.pass?.kind ?? null)
+  const partySummary = resolvePartySummary(booking)
+  const interludePerk = booking.pass?.interlude_perk ?? null
 
   return {
     id: booking.id,
@@ -120,6 +120,7 @@ function mapBooking(booking: DeskBooking, profileMap: Record<string, GuestProfil
     isToday,
     ctaLabel,
     segment,
+    interludePerk,
     guestLabel,
     imageSrc,
     imageUnoptimized,
@@ -137,6 +138,8 @@ function mapBooking(booking: DeskBooking, profileMap: Record<string, GuestProfil
       dietaryNotes: guestProfile.dietaryNotes,
       loungePreferences: guestProfile.loungePreferences,
       partySize: booking.party_size,
+      partySummary,
+      interludePerk,
       arrival: arrivalWindow,
       avatarUrl: imageSrc,
       avatarUnoptimized: imageUnoptimized,
@@ -145,22 +148,30 @@ function mapBooking(booking: DeskBooking, profileMap: Record<string, GuestProfil
 }
 
 function mapPending(booking: DeskBooking) {
+  const partySummary = resolvePartySummary(booking)
   return {
     id: booking.id,
     dateLabel: formatDateLabel(booking.date),
     arrivalWindow: formatArrivalValue(null, booking.arrival_window_start, booking.arrival_window_end),
     statusLabel: booking.status.replace(/_/g, ' '),
     partySize: booking.party_size,
+    partySummary,
   }
 }
 
 export type BookingCardPayload = ReturnType<typeof mapBooking>
 
 export default async function DeskBookingsPage() {
+  const { user } = await getUserRole()
+  const venueId = user?.user_metadata?.venue_id as string | undefined
+  if (!venueId) {
+    notFound()
+  }
+
   const todayIso = new Date().toISOString().slice(0, 10)
   const [primaryRaw, pendingRaw] = await Promise.all([
-    fetchDeskBookingsByStatuses(['approved', 'issued', 'redeemed', 'redeemed_late', 'declined', 'cancelled']),
-    fetchDeskBookings('pending_verification'),
+    fetchDeskBookingsByStatuses(['approved', 'issued', 'redeemed', 'redeemed_late', 'declined', 'cancelled'], venueId),
+    fetchDeskBookings('pending_verification', venueId),
   ])
 
   const guestProfiles = await fetchGuestProfilesByIds(primaryRaw.map((booking) => booking.user_id))
@@ -197,7 +208,7 @@ function PendingVerificationSection({ bookings }: { bookings: ReturnType<typeof 
             </div>
             <div className="mt-4 text-sm font-semibold text-[#02374D]">{booking.arrivalWindow}</div>
             <div className="mt-auto rounded-[24px] bg-white/70 px-4 py-4 text-sm text-[#4F514D]">
-              Status · {booking.statusLabel.toUpperCase()} · Party {booking.partySize}
+              Status · {booking.statusLabel.toUpperCase()} · {booking.partySummary ?? `Party ${booking.partySize}`}
             </div>
           </div>
         ))}

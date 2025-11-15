@@ -26,8 +26,7 @@ export async function fetchMemberBookings() {
         requested_arrival_time,
         qr_jti,
         hold_status,
-        pass:passes(kind,profile,display_price_text,min_spend_amount,currency),
-        venue:venues(name,tz)
+        pass:passes(kind,profile,display_price_text,min_spend_amount,currency,venue:venues(name,tz))
       `
     )
     .eq('user_id', user.id)
@@ -70,8 +69,7 @@ export async function fetchMemberBookingById(bookingId: string) {
         requested_arrival_time,
         qr_jti,
         hold_status,
-        pass:passes(kind,profile,display_price_text,min_spend_amount,currency),
-        venue:venues(name,tz)
+        pass:passes(kind,profile,display_price_text,min_spend_amount,currency,venue:venues(name,tz))
       `
     )
     .eq('user_id', user.id)

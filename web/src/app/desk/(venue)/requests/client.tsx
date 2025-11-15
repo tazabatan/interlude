@@ -13,6 +13,7 @@ export type RequestCardPayload = {
   statusLabel: string
   dateLabel: string
   partySize: number
+  partySummary: string
   arrivalWindow: string
   passLabel: string
   priceLabel: string
@@ -109,6 +110,7 @@ function RequestCard({ booking }: { booking: RequestCardPayload }) {
             <div className="text-sm text-[#31332f]">
               {booking.passLabel} · {booking.priceLabel}
             </div>
+            <div className="text-xs uppercase tracking-[0.2em] text-[#6F716D]">{booking.partySummary}</div>
           </div>
         </div>
       </Link>

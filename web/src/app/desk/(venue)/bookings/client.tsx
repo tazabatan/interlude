@@ -201,6 +201,9 @@ function BookingCard({
             <div className="text-sm text-[#31332f]">
               {booking.passLabel} · {booking.priceLabel}
             </div>
+            <div className="text-xs uppercase tracking-[0.2em] text-[#6F716D]">
+              {booking.partySummary ?? `Party of ${booking.partySize}`}
+            </div>
           </div>
         </div>
       </Link>
@@ -320,7 +323,7 @@ function GuestDetailDialog({ booking, onClose }: { booking: BookingCardPayload; 
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6F716D]">Guest details</p>
             <h3 className="text-2xl font-semibold">{details.name}</h3>
-            <p className="text-sm text-[#4F514D]">Party of {details.partySize}</p>
+            <p className="text-sm text-[#4F514D]">{details.partySummary ?? `Party of ${details.partySize}`}</p>
           </div>
           <button
             type="button"
@@ -350,6 +353,7 @@ function GuestDetailDialog({ booking, onClose }: { booking: BookingCardPayload; 
               value={formatContactPreference(details.contactPreference)}
             />
             <DetailRow label="Arrival time" value={details.arrival ?? 'Arrival time TBD'} />
+            {details.interludePerk && <DetailRow label="Interlude perk" value={details.interludePerk} />}
           </div>
         </div>
 

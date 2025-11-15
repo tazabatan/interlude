@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation'
 import { fetchBookingsByDateRange, fetchPassInventoryByDateRange, fetchVenuePasses } from '@/lib/desk'
 import { getUserRole } from '@/lib/get-user-role'
 import { CalendarClient } from './client'
@@ -22,11 +23,14 @@ export default async function DeskCalendarPage() {
   const { user, role } = await getUserRole()
   const venueId = user?.user_metadata?.venue_id as string | undefined
   const readOnly = role !== 'venue_manager'
+  if (!venueId) {
+    notFound()
+  }
 
   const [bookings, inventory, passes] = await Promise.all([
-    fetchBookingsByDateRange(startDate, endDate),
-    fetchPassInventoryByDateRange(startDate, endDate),
-    venueId ? fetchVenuePasses(venueId) : Promise.resolve([]),
+    fetchBookingsByDateRange(startDate, endDate, venueId),
+    fetchPassInventoryByDateRange(startDate, endDate, venueId),
+    fetchVenuePasses(venueId),
   ])
 
   return (

@@ -1,55 +1,82 @@
-import PassCard from '@/components/pass-card'
+import Image from 'next/image'
+import Link from 'next/link'
 import { getPassHeroImageUrl } from '@/lib/desk'
 import { audienceFromRole, fetchExplorePasses } from '@/lib/explore'
 import { getUserRole } from '@/lib/get-user-role'
+import { formatTimezoneLabel } from '@/lib/timezone'
+import ExploreClient, { type ExplorePass } from './explore-client'
 
 export default async function ExplorePage() {
   const { role } = await getUserRole()
   const audience = audienceFromRole(role)
+  const isGuestAudience = audience === 'guest'
   const passes = await fetchExplorePasses(audience)
 
-  return (
-    <div className="space-y-10 text-[#02374D]">
-      <header className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6F716D]">Explore</p>
-        <h1 className="text-3xl font-medium uppercase tracking-[0.02em] text-black">Private passes</h1>
-        <p className="text-sm text-[#6F716D]">Pay at the venue. Holds are authorized the afternoon before arrival.</p>
-      </header>
+  const explorePasses: ExplorePass[] = passes.map((pass) => {
+    const fallbackAmount = pass.min_spend_amount ?? pass.profile?.prepaidCreditAmountCents ?? null
+    return {
+      id: pass.id,
+      name: pass.venue?.name ?? pass.kind ?? 'Private Pass',
+      location: pass.venue?.tz ? formatTimezoneLabel(pass.venue.tz) : null,
+      kind: pass.kind,
+      displayPriceText: pass.display_price_text,
+      minSpendAmount: fallbackAmount,
+      currency: pass.currency,
+      imageUrl: getPassHeroImageUrl(pass),
+    }
+  })
 
-      {passes.length === 0 ? (
-        <div className="rounded-[28px] border border-dashed border-[#DBD8C9] bg-white/70 px-8 py-16 text-center text-sm text-[#4F514D]">
-          No passes are available right now. Check back soon.
-        </div>
-      ) : (
-        <section className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {passes.map((pass) => {
-              const displayName = pass.venue?.name ?? pass.kind ?? pass.id
-              const imageUrl = getPassHeroImageUrl(pass)
-              const isMinSpend = pass.kind === 'MIN_SPEND'
-              const pricePrefix = isMinSpend ? '' : undefined
-              const displayPriceText = isMinSpend ? 'Free with minimum spend' : pass.display_price_text
-              return (
-                <PassCard
-                  key={pass.id}
-                  passId={pass.id}
-                  name={displayName}
-                  location="ANGUILLA"
-                  kind={pass.kind}
-                  displayPriceText={displayPriceText}
-                  minSpendAmount={pass.min_spend_amount}
-                  currency={pass.currency}
-                  href={`/app/venue/${pass.id}`}
-                  srLabel={`View pass for ${displayName}`}
-                  showStatusBadge={false}
-                  imageUrl={imageUrl}
-                  pricePrefix={pricePrefix}
-                />
-              )
-            })}
+  return (
+    <div className="space-y-16 pb-20 text-[#02374D]">
+      <section
+        className="relative h-[48rem] overflow-hidden"
+        style={{ width: '100vw', marginLeft: 'calc(50% - 50vw)' }}
+      >
+        <div className="relative h-full w-full">
+          <Image
+            src="/images/explore-hero.png"
+            alt="Private beach with umbrellas overlooking turquoise water"
+            fill
+            sizes="100vw"
+            priority
+            className="object-cover object-[center_70%]"
+          />
+
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.18)_0%,rgba(0,0,0,0.14)_45%,rgba(0,0,0,0.06)_70%,rgba(0,0,0,0)_100%)]" />
+
+          <div className="absolute inset-0 flex items-center justify-center bg-transparent text-center">
+            <div className="w-full max-w-5xl px-6 text-white sm:px-10">
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/70">Day access for the in-between</p>
+              <h1 className="mt-5 text-4xl font-normal uppercase leading-tight tracking-[0.05em] text-white drop-shadow-[0_15px_40px_rgba(0,0,0,0.45)] sm:text-5xl">
+                Access the world&apos;s best hotels — no room required
+              </h1>
+              <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/85">
+                Book day access to private beaches, rooftop pools, and signature spa rituals for a{' '}
+                <strong className="font-semibold text-white">fraction of the room rate.</strong>
+              </p>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+                {isGuestAudience ? (
+                  <Link
+                    href="/auth?mode=signup"
+                    className="inline-flex items-center justify-center rounded-full border border-white/80 px-6 py-3 text-xs font-semibold uppercase tracking-[0.4em] text-white transition hover:border-white hover:bg-white/10"
+                  >
+                    Become a member
+                  </Link>
+                ) : (
+                  <Link
+                    href="/app/passes"
+                    className="inline-flex items-center justify-center rounded-full border border-white/80 px-6 py-3 text-xs font-semibold uppercase tracking-[0.4em] text-white transition hover:border-white hover:bg-white/10"
+                  >
+                    Find day passes
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
+
+      <ExploreClient passes={explorePasses} />
     </div>
   )
 }

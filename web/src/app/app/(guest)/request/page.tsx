@@ -4,6 +4,7 @@ import { fetchPassById } from '@/lib/desk'
 import { formatPassLabel } from '@/lib/passes/helpers'
 import { formatRequestedArrival } from '@/lib/arrival'
 import RequestFlow from './request-flow'
+import { computePartyCountsFromAges, formatPartySummary } from '@/lib/party'
 
 const DEFAULT_TAX_RATE = Number(process.env.NEXT_PUBLIC_REQUEST_TAX_RATE ?? 0.135)
 const DEMO_PASS_ID = process.env.NEXT_PUBLIC_DEMO_PASS_ID ?? ''
@@ -38,6 +39,8 @@ type PageProps = {
     date?: string
     partySize?: string
     arrivalTime?: string
+    partyAge?: string
+    guestAges?: string
   }>
 }
 
@@ -53,6 +56,11 @@ export default async function RequestPage({ searchParams }: PageProps) {
   const requestedDate = params.date ?? new Date().toISOString().slice(0, 10)
   const partySize = Number(params.partySize ?? 2) || 2
   const arrivalTime = params.arrivalTime ?? null
+  const partyAgeNote = params.partyAge?.trim() ?? ''
+  const guestAgeValues = normalizeGuestAges(params.guestAges, partySize)
+  const guestAgeNumbers = guestAgeValues.map((value) => (value ? Number(value) : null))
+  const guestAgeDetails = buildGuestAgeDetails(guestAgeValues)
+  const counts = computePartyCountsFromAges(guestAgeNumbers)
   const arrivalTimeLabel =
     arrivalTime && arrivalTime.trim() ? formatRequestedArrival(arrivalTime) : 'Arrival time TBD'
 
@@ -63,9 +71,9 @@ export default async function RequestPage({ searchParams }: PageProps) {
 
   const currency = (pass.currency ?? 'USD').toUpperCase()
   const venueName = pass.venue?.name ?? 'Unnamed Venue'
-  const destination = (pass.venue?.tz ?? 'America/Anguilla').toUpperCase()
   const passLabel = formatPassLabel(pass.kind, { detail: true })
-  const priceCents = pass.min_spend_amount ?? 0
+  const perGuestPriceCents = pass.min_spend_amount ?? 0
+  const priceCents = perGuestPriceCents * partySize
   const taxCents = Math.round(priceCents * DEFAULT_TAX_RATE)
   const totalCents = priceCents + taxCents
 
@@ -74,11 +82,13 @@ export default async function RequestPage({ searchParams }: PageProps) {
     dateIso: requestedDate,
     dateDisplay: formatDisplayDate(requestedDate),
     venueName,
-    destination,
+    destination: venueName,
     arrivalTimeLabel,
     passLabel,
     partySize,
-    partySizeLabel: `${partySize} ${partySize === 1 ? 'Adult' : 'Adults'}`,
+    partySizeLabel: formatPartySummary(counts.adults, counts.children, partySize),
+    guestAgeDetails: guestAgeDetails.length > 0 ? guestAgeDetails : partyAgeNote ? [partyAgeNote] : null,
+    guestAgesComplete: guestAgeValues.every((value) => value.trim() !== ''),
     priceLabel: formatCurrency(priceCents, currency),
     taxLabel: formatCurrency(taxCents, currency),
     totalLabel: formatCurrency(totalCents, currency),
@@ -100,7 +110,21 @@ export default async function RequestPage({ searchParams }: PageProps) {
     email: user?.email ?? metadata.email ?? '',
   }
 
-  const authRedirectTarget = `/app/request?passId=${encodeURIComponent(passId)}&date=${encodeURIComponent(requestedDate)}&partySize=${partySize}`
+  const authParams = new URLSearchParams({
+    passId,
+    date: requestedDate,
+    partySize: String(partySize),
+  })
+  if (arrivalTime) {
+    authParams.set('arrivalTime', arrivalTime)
+  }
+  const serializedGuestAges = serializeGuestAges(guestAgeValues)
+  if (serializedGuestAges) {
+    authParams.set('guestAges', serializedGuestAges)
+  } else if (partyAgeNote) {
+    authParams.set('partyAge', partyAgeNote)
+  }
+  const authRedirectTarget = `/app/request?${authParams.toString()}`
   const authRedirectUrl = `/auth?next=${encodeURIComponent(authRedirectTarget)}`
 
   return (
@@ -111,8 +135,46 @@ export default async function RequestPage({ searchParams }: PageProps) {
       dateIso={requestedDate}
       partySize={partySize}
       arrivalTime={arrivalTime}
+      guestAges={guestAgeValues}
       isAuthenticated={Boolean(user)}
       authRedirectUrl={authRedirectUrl}
     />
   )
+}
+
+const ADULT_AGE_TOKEN = '30'
+
+function normalizeGuestAges(raw: string | undefined, expectedCount: number) {
+  if (!raw) return Array.from({ length: expectedCount }, (_, index) => (index === 0 ? ADULT_AGE_TOKEN : ADULT_AGE_TOKEN))
+  const parts = raw.split(',').map((value) => sanitizeAgeValue(value))
+  const limited = parts.slice(0, expectedCount)
+  while (limited.length < expectedCount) {
+    limited.push(ADULT_AGE_TOKEN)
+  }
+  if (!limited[0]) {
+    limited[0] = ADULT_AGE_TOKEN
+  }
+  return limited
+}
+
+function sanitizeAgeValue(value: string | undefined | null) {
+  if (!value) return ''
+  const digits = value.replace(/[^\d]/g, '')
+  if (!digits) return ''
+  const numeric = Math.min(Number(digits), 120)
+  return Number.isNaN(numeric) ? '' : String(numeric)
+}
+
+function buildGuestAgeDetails(values: string[]) {
+  const hasAny = values.some((value) => value)
+  if (!hasAny) return []
+  return values.map((value, index) => `Guest ${index + 1}: ${value || '—'}`)
+}
+
+function serializeGuestAges(values: string[]) {
+  const sanitized = values.map((value) => sanitizeAgeValue(value))
+  if (!sanitized.some((value) => value)) {
+    return ''
+  }
+  return sanitized.join(',')
 }

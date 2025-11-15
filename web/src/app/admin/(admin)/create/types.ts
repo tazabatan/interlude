@@ -81,6 +81,7 @@ export type PassFormState = {
   name: string
   kind: "BEACH_PASS" | "POOL_PASS" | "GYM_PASS" | "SPA_PASS"
   shortDescription: string
+  interludePerk: string
   economicsType: PassEconomicsType
   minSpendAmount: string
   prepaidCreditAmount: string
@@ -109,6 +110,7 @@ export type PassRecord = {
   name: string
   kind: PassFormState["kind"]
   shortDescription: string
+  interludePerk: string
   economicsType: PassEconomicsType
   minSpendAmountCents: number | null
   prepaidCreditCents: number | null

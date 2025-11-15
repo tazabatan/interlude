@@ -1,10 +1,12 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { fetchDeskBookingById } from '@/lib/desk'
+import { fetchDeskBookingById, type DeskBooking } from '@/lib/desk'
+import { getUserRole } from '@/lib/get-user-role'
 import { cancelDeskBookingAction, forceAuthorizeAction, markArrivedAction, undoDeclineAction } from '../../actions'
 import { buildGuestProfile, fetchGuestProfileById } from '@/lib/guest-profile'
 import { buildArrivalDisplay } from '@/lib/arrival'
+import { computePartyCountsFromAges, formatPartySummary } from '@/lib/party'
 
 type Params = Promise<{ id: string }>
 type SearchParams = Promise<{ from?: string; date?: string }>
@@ -112,7 +114,12 @@ export default async function BookingDetailPage({
 }) {
   const { id } = await params
   const search = await searchParams
-  const booking = await fetchDeskBookingById(id)
+  const { user } = await getUserRole()
+  const venueId = user?.user_metadata?.venue_id as string | undefined
+  if (!venueId) {
+    notFound()
+  }
+  const booking = await fetchDeskBookingById(id, venueId)
 
   if (!booking || booking.status === 'requested') {
     notFound()
@@ -132,9 +139,10 @@ export default async function BookingDetailPage({
   const passLabel = formatPassType(booking.pass?.kind ?? null)
   const venueName = booking.pass?.venue?.name ?? 'Venue TBD'
   const guestProfile = (await fetchGuestProfileById(booking.user_id)) ?? buildGuestProfile()
-  const guestLabel = `${guestProfile.name}'s group of ${booking.party_size}`
+  const guestLabel = `${guestProfile.firstName || guestProfile.name}'s group of ${booking.party_size}`
   const guestAvatarSrc = guestProfile.avatarUrl ?? pickGuestImage(booking.id)
   const guestAvatarUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
+  const partySummary = resolvePartySummary(booking)
   const canMarkArrived = booking.status === 'issued' && Boolean(booking.qr_jti)
   const canForceAuthorize = booking.hold_status !== 'authorized' && booking.status !== 'cancelled'
   const canUndoDecline = booking.status === 'declined'
@@ -152,12 +160,13 @@ export default async function BookingDetailPage({
       ? { href: `/desk/calendar/${search.date}`, label: '← Back to calendar' }
       : { href: '/desk/bookings', label: '← Back to bookings' }
 
-  const detailRows = [
-    { label: 'Venue', value: venueName },
-    { label: 'Pass', value: passLabel },
-    { label: 'Date', value: bookingDate },
+const detailRows = [
+  { label: 'Venue', value: venueName },
+  { label: 'Pass', value: passLabel },
+  ...(booking.pass?.interlude_perk ? [{ label: 'Interlude perk', value: booking.pass.interlude_perk }] : []),
+  { label: 'Date', value: bookingDate },
     { label: arrivalLabel, value: arrivalValue },
-    { label: 'Guests', value: `Party of ${booking.party_size}` },
+    { label: 'Guests', value: partySummary },
     { label: 'Hold amount', value: holdAmount },
     { label: 'Hold status', value: holdStatus },
     {
@@ -237,6 +246,12 @@ export default async function BookingDetailPage({
               </div>
             ))}
           </dl>
+          {booking.pass?.interlude_perk && (
+            <div className="rounded-[24px] border border-[#E8E4D7] bg-[#FFFCF5] px-5 py-4 text-sm text-[#02374D] shadow-[0px_2px_8px_rgba(0,0,0,0.05)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">Interlude perk</p>
+              <p className="mt-2 text-base text-black">{booking.pass.interlude_perk}</p>
+            </div>
+          )}
 
           <div className="rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 text-[#02374D]">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -255,7 +270,7 @@ export default async function BookingDetailPage({
                 <p className="text-xs uppercase tracking-[0.25em] text-[#6F716D]">
                   {formatContactPreferenceLabel(guestProfile.contactPreference)}
                 </p>
-                <p className="text-sm text-[#4F514D]">Party of {booking.party_size}</p>
+                <p className="text-sm text-[#4F514D]">{partySummary}</p>
               </div>
             </div>
 
@@ -333,11 +348,12 @@ export default async function BookingDetailPage({
             <h2 className="text-sm uppercase tracking-[0.3em] text-white/60">Summary</h2>
             <p className="mt-4 text-lg font-semibold uppercase tracking-wide">{venueName}</p>
             <p className="mt-1 text-sm text-white/90">{bookingDate}</p>
-            <p className="mt-6 text-sm">
-              {passLabel} · {guestLabel}
-              <br />
-              {arrivalValue}
-            </p>
+            <div className="mt-6 space-y-1 text-sm">
+              <p>{passLabel}</p>
+              <p>{partySummary}</p>
+              <p>{guestLabel}</p>
+              <p>{arrivalValue}</p>
+            </div>
           </div>
 
           <div className="rounded-3xl bg-white p-6 text-sm text-[#4F514D] shadow-sm">
@@ -353,4 +369,15 @@ export default async function BookingDetailPage({
       </div>
     </div>
   )
+}
+
+function resolvePartySummary(booking: DeskBooking) {
+  if (booking.guest_adult_count != null || booking.guest_child_count != null) {
+    return formatPartySummary(booking.guest_adult_count ?? 0, booking.guest_child_count ?? 0, booking.party_size)
+  }
+  if (booking.guest_ages && booking.guest_ages.length > 0) {
+    const counts = computePartyCountsFromAges(booking.guest_ages)
+    return formatPartySummary(counts.adults, counts.children, booking.party_size)
+  }
+  return formatPartySummary(null, null, booking.party_size)
 }

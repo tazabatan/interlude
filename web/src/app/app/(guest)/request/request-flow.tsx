@@ -15,6 +15,8 @@ type Summary = {
   passLabel: string
   partySize: number
   partySizeLabel: string
+  guestAgeDetails?: string[] | null
+  guestAgesComplete: boolean
   priceLabel: string
   taxLabel: string
   totalLabel: string
@@ -38,6 +40,7 @@ type RequestFlowProps = {
   dateIso: string
   partySize: number
   arrivalTime: string | null
+  guestAges: string[]
   isAuthenticated: boolean
   authRedirectUrl: string
 }
@@ -51,6 +54,7 @@ export default function RequestFlow({
   dateIso,
   partySize,
   arrivalTime,
+  guestAges,
   isAuthenticated,
   authRedirectUrl,
 }: RequestFlowProps) {
@@ -71,22 +75,32 @@ export default function RequestFlow({
 
   const trackerStep = step === "account" ? 1 : step === "confirm" ? 2 : 3
   const backHref = `/app/venue/${summary.passId}?date=${summary.dateIso}`
+  const guestAgesMissing = !summary.guestAgesComplete
 
-  const summaryList = useMemo(
-    () => [
+  const summaryList = useMemo(() => {
+    const rows = [
       { label: "Pass", value: summary.passLabel },
       { label: "Date", value: summary.dateDisplay },
       { label: "Arrival time", value: summary.arrivalTimeLabel },
       { label: "Guests", value: summary.partySizeLabel },
+    ]
+    if (summary.guestAgeDetails && summary.guestAgeDetails.length > 0) {
+      rows.push({ label: "Guest ages", value: summary.guestAgeDetails.join(', ') })
+    }
+    rows.push(
       { label: "Price", value: summary.priceLabel },
       { label: "Tax", value: summary.taxLabel },
       { label: "Cancellation", value: summary.cancellationCopy },
       { label: "Payment", value: summary.paymentCopy },
-    ],
-    [summary]
-  )
+    )
+    return rows
+  }, [summary])
 
   const startPaymentStep = () => {
+    if (guestAgesMissing) {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+      return
+    }
     setStep("pay")
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
@@ -102,6 +116,7 @@ export default function RequestFlow({
         _date: dateIso,
         _party_size: partySize,
         _arrival_time: arrivalTime,
+        _guest_ages: guestAges.join(","),
       })
       if (rpcError) {
         throw rpcError
@@ -188,13 +203,24 @@ export default function RequestFlow({
             <button
               type="button"
               onClick={startPaymentStep}
-              className="self-start rounded-full bg-[#02374D] px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#02486A]"
+              disabled={guestAgesMissing}
+              className="self-start rounded-full bg-[#02374D] px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#02486A] disabled:cursor-not-allowed disabled:bg-[#6F716D]"
             >
               Confirm booking
             </button>
+            {guestAgesMissing && (
+              <p className="text-sm text-[#B4231F]">
+                Add an age for each guest before confirming. Use the back arrow to edit your party details.
+              </p>
+            )}
           </div>
           <div className="flex-[1] min-w-0">
-            <SummaryPanel summary={summary} primaryCtaLabel="Confirm booking" onPrimaryClick={startPaymentStep} />
+            <SummaryPanel
+              summary={summary}
+              primaryCtaLabel="Confirm booking"
+              onPrimaryClick={startPaymentStep}
+              ctaDisabled={guestAgesMissing}
+            />
           </div>
         </section>
       ) : (
@@ -339,11 +365,13 @@ function SummaryPanel({
   primaryCtaLabel,
   onPrimaryClick,
   hideButton = false,
+  ctaDisabled = false,
 }: {
   summary: Summary
   primaryCtaLabel: string
   onPrimaryClick: () => void
   hideButton?: boolean
+  ctaDisabled?: boolean
 }) {
   return (
     <div className="sticky top-6 self-start rounded-[28px] border border-[#E8E4D7] bg-[#02374D] p-6 text-white shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
@@ -354,6 +382,9 @@ function SummaryPanel({
         <p>{summary.arrivalTimeLabel}</p>
         <p>{summary.passLabel}</p>
         <p>{summary.partySizeLabel}</p>
+        {summary.guestAgeDetails?.map((line) => (
+          <p key={line}>{line}</p>
+        ))}
       </div>
       <div className="mt-5 border-t border-white/20 pt-5 text-sm">
         <p className="text-xs uppercase tracking-[0.2em] text-white/70">Total Price (inc. taxes & fees)</p>
@@ -367,7 +398,8 @@ function SummaryPanel({
         <button
           type="button"
           onClick={onPrimaryClick}
-          className="mt-6 w-full rounded-full bg-white px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-[#02374D] transition hover:bg-[#F4F1E7]"
+          disabled={ctaDisabled}
+          className="mt-6 w-full rounded-full bg-white px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-[#02374D] transition hover:bg-[#F4F1E7] disabled:cursor-not-allowed disabled:bg-[#DBD8C9] disabled:text-[#7A7B74]"
         >
           {primaryCtaLabel}
         </button>

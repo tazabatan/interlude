@@ -4,17 +4,18 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 
-const links = [
+export const guestNavLinks = [
   { href: '/app', label: 'Wallet' },
   { href: '/app/explore', label: 'Explore' },
-]
+  { href: '/app/rewards', label: 'Rewards' },
+] as const
 
 export default function GuestNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="flex gap-10 text-sm font-medium uppercase tracking-[0.2em] text-[#777]">
-      {links.map((link) => {
+    <nav className="flex items-center gap-10 text-sm font-medium uppercase tracking-[0.2em] text-[#777]">
+      {guestNavLinks.map((link) => {
         const isActive = pathname === link.href
         return (
           <Link
@@ -31,9 +32,6 @@ export default function GuestNav() {
           </Link>
         )
       })}
-      <span className="pb-1 text-[#777] opacity-50 cursor-not-allowed">
-        Rewards
-      </span>
     </nav>
   )
 }

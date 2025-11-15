@@ -2,10 +2,11 @@ import type { ReactNode } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Montserrat } from "next/font/google"
-import VenueDeskNav from "./nav"
+import VenueDeskNav, { venueDeskAllNavLinks, venueTeamLink } from "./nav"
 import { getUserRole } from "@/lib/get-user-role"
 import AccountMenu from "@/components/account-menu"
 import { serviceRoleFetch } from "@/lib/supabase/service-role"
+import Footer from "@/components/footer"
 
 const montserrat = Montserrat({
   subsets: ['latin'],
@@ -39,27 +40,42 @@ export default async function DeskLayout({ children }: { children: ReactNode }) 
 
   return (
     <div className={`${montserrat.className} min-h-screen bg-[#F4F1E7] text-[#02374D]`}>
-      <header className="bg-[#F4F1E7]/90 backdrop-blur">
-        <div className="flex w-full items-center gap-6 px-[5rem] py-6">
-          <Link href="/desk" className="flex items-center">
+      <header className="relative z-50 bg-[#F4F1E7]/90 backdrop-blur">
+        <div className="relative flex w-full items-center px-6 py-6 sm:px-10 lg:px-[5rem]">
+          <div className="flex flex-1 xl:flex-initial" />
+          <Link
+            href="/desk"
+            className="absolute left-1/2 -translate-x-1/2 xl:static xl:translate-x-0"
+          >
             <Image src="/interlude-logo.png" alt="Interlude" width={180} height={28} priority />
           </Link>
-          <div className="flex flex-1 justify-center">
+          <div className="absolute left-1/2 hidden -translate-x-1/2 xl:flex">
             <VenueDeskNav />
           </div>
-          {user ? (
-            <AccountMenu userName={displayName} email={user.email} role={role} subtitle={subtitle} />
-          ) : (
-            <Link
-              href="/auth"
-              className="rounded-full border border-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#02374D] transition hover:bg-[#02374D] hover:text-white"
-            >
-              Sign in
-            </Link>
-          )}
+          <div className="flex flex-1 justify-end">
+            {user ? (
+              <AccountMenu
+                userName={displayName}
+                email={user.email}
+                role={role}
+                subtitle={subtitle}
+                navLinks={venueDeskAllNavLinks}
+                additionalDesktopLinks={[venueTeamLink]}
+                mobileBreakpoint="xl"
+              />
+            ) : (
+              <Link
+                href="/auth"
+                className="rounded-full border border-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#02374D] transition hover:bg-[#02374D] hover:text-white"
+              >
+                Sign in
+              </Link>
+            )}
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-6xl px-6 py-10 lg:max-w-7xl 2xl:max-w-[105rem]">{children}</main>
+      <Footer />
     </div>
   )
 }

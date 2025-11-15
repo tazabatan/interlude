@@ -47,6 +47,8 @@ type PassProfileAsset = {
 
 type PassProfilePayload = {
   heroImage?: PassProfileAsset | null
+  economicsType?: string | null
+  prepaidCreditAmountCents?: number | null
 }
 
 export type DeskBooking = {
@@ -55,6 +57,9 @@ export type DeskBooking = {
   pass_id: string
   date: string
   party_size: number
+  guest_adult_count: number | null
+  guest_child_count: number | null
+  guest_ages: number[] | null
   status: string
   arrival_window_start: string | null
   arrival_window_end: string | null
@@ -69,6 +74,7 @@ export type DeskBooking = {
     currency: string | null
     min_spend_amount: number | null
     display_price_text: string | null
+    interlude_perk: string | null
     auto_approve_enabled: boolean
     default_arrival_start_local: string | null
     default_arrival_window_minutes: number | null
@@ -86,6 +92,7 @@ export type DeskPass = {
   currency: string | null
   min_spend_amount: number | null
   display_price_text: string | null
+  interlude_perk: string | null
   status: string | null
   visibility: string | null
   auto_approve_enabled: boolean
@@ -129,6 +136,9 @@ const BOOKING_SELECT = [
   'pass_id',
   'date',
   'party_size',
+  'guest_adult_count',
+  'guest_child_count',
+  'guest_ages',
   'status',
   'arrival_window_start',
   'arrival_window_end',
@@ -144,6 +154,7 @@ const BOOKING_SELECT = [
     'currency,',
     'min_spend_amount,',
     'display_price_text,',
+    'interlude_perk,',
     'auto_approve_enabled,',
     'default_arrival_start_local,',
     'default_arrival_window_minutes,',
@@ -159,6 +170,7 @@ export const PASS_SELECT = [
   'currency',
   'min_spend_amount',
   'display_price_text',
+  'interlude_perk',
   'status',
   'visibility',
   'auto_approve_enabled',
@@ -180,28 +192,36 @@ function buildStatusFilter(statuses: string[]) {
   return `status=in.(${statuses.join(',')})`
 }
 
-async function fetchBookingsWithFilter(filter: string) {
-  const res = await serviceRoleFetch(
-    `/rest/v1/bookings?${filter}&order=created_at.desc&select=${encodeURIComponent(BOOKING_SELECT)}`,
-  )
+async function fetchBookingsWithFilter(filter: string, venueId?: string) {
+  let url = `/rest/v1/bookings?${filter}&order=created_at.desc&select=${encodeURIComponent(BOOKING_SELECT)}`
+
+  if (venueId) {
+    url += `&venue_id=eq.${venueId}`
+  }
+
+  const res = await serviceRoleFetch(url)
   return (await res.json()) as DeskBooking[]
 }
 
-export async function fetchDeskBookings(status: 'requested' | 'pending_verification') {
-  return fetchBookingsWithFilter(buildStatusFilter([status]))
+export async function fetchDeskBookings(status: 'requested' | 'pending_verification', venueId?: string) {
+  return fetchBookingsWithFilter(buildStatusFilter([status]), venueId)
 }
 
-export async function fetchDeskBookingById(bookingId: string) {
-  const res = await serviceRoleFetch(
-    `/rest/v1/bookings?id=eq.${bookingId}&limit=1&select=${encodeURIComponent(BOOKING_SELECT)}`
-  )
+export async function fetchDeskBookingById(bookingId: string, venueId?: string) {
+  let url = `/rest/v1/bookings?id=eq.${bookingId}&limit=1&select=${encodeURIComponent(BOOKING_SELECT)}`
+
+  if (venueId) {
+    url += `&venue_id=eq.${venueId}`
+  }
+
+  const res = await serviceRoleFetch(url)
   const rows = (await res.json()) as DeskBooking[]
   return rows[0] ?? null
 }
 
-export async function fetchDeskBookingsByStatuses(statuses: string[]) {
+export async function fetchDeskBookingsByStatuses(statuses: string[], venueId?: string) {
   if (statuses.length === 0) return []
-  return fetchBookingsWithFilter(buildStatusFilter(statuses))
+  return fetchBookingsWithFilter(buildStatusFilter(statuses), venueId)
 }
 
 export async function fetchVenuePasses(venueId: string) {
@@ -330,23 +350,31 @@ export type PassInventory = {
   paused: boolean
 }
 
-export async function fetchBookingsByDateRange(startDate: string, endDate: string) {
-  const res = await serviceRoleFetch(
-    `/rest/v1/bookings?date=gte.${startDate}&date=lte.${endDate}&order=date.asc&select=${encodeURIComponent(BOOKING_SELECT)}`
-  )
+export async function fetchBookingsByDateRange(startDate: string, endDate: string, venueId?: string) {
+  let url = `/rest/v1/bookings?date=gte.${startDate}&date=lte.${endDate}&order=date.asc&select=${encodeURIComponent(BOOKING_SELECT)}`
+  if (venueId) {
+    url += `&venue_id=eq.${venueId}`
+  }
+  const res = await serviceRoleFetch(url)
   return (await res.json()) as DeskBooking[]
 }
 
-export async function fetchPassInventoryByDateRange(startDate: string, endDate: string) {
-  const res = await serviceRoleFetch(
-    `/rest/v1/pass_inventory?date=gte.${startDate}&date=lte.${endDate}&select=id,pass_id,date,cap,paused`
-  )
+export async function fetchPassInventoryByDateRange(startDate: string, endDate: string, venueId?: string) {
+  const baseSelect = 'id,pass_id,date,cap,paused'
+  const select = venueId ? `${baseSelect},pass:passes(venue_id)` : baseSelect
+  let url = `/rest/v1/pass_inventory?date=gte.${startDate}&date=lte.${endDate}&select=${encodeURIComponent(select)}`
+  if (venueId) {
+    url += `&pass.venue_id=eq.${venueId}`
+  }
+  const res = await serviceRoleFetch(url)
   return (await res.json()) as PassInventory[]
 }
 
-export async function fetchBookingsByDate(date: string) {
-  const res = await serviceRoleFetch(
-    `/rest/v1/bookings?date=eq.${date}&order=created_at.desc&select=${encodeURIComponent(BOOKING_SELECT)}`
-  )
+export async function fetchBookingsByDate(date: string, venueId?: string) {
+  let url = `/rest/v1/bookings?date=eq.${date}&order=created_at.desc&select=${encodeURIComponent(BOOKING_SELECT)}`
+  if (venueId) {
+    url += `&venue_id=eq.${venueId}`
+  }
+  const res = await serviceRoleFetch(url)
   return (await res.json()) as DeskBooking[]
 }

@@ -1,6 +1,8 @@
+import { notFound } from 'next/navigation'
 import PassCard from '@/components/pass-card'
 import { fetchDeskBookings, fetchVenuePasses, fetchPassInventoryByDateRange, getPassHeroImageUrl } from '@/lib/desk'
-import { supabaseServer } from '@/lib/supabase/server'
+import { getUserRole } from '@/lib/get-user-role'
+import { formatTimezoneLabel } from '@/lib/timezone'
 
 type PassControl = {
   passId: string
@@ -22,15 +24,18 @@ function formatPassControls(passRows: Awaited<ReturnType<typeof fetchDeskBooking
   const map = new Map<string, PassControl>()
   passRows.flat().forEach((booking) => {
     if (booking.pass && !map.has(booking.pass_id)) {
+      const venueName = booking.pass.venue?.name ?? 'Unnamed Venue'
+      const tz = booking.pass.venue?.tz ?? 'America/Anguilla'
+      const destination = formatTimezoneLabel(tz)
       map.set(booking.pass_id, {
         passId: booking.pass_id,
-        name: booking.pass.venue?.name ?? booking.pass.kind ?? booking.pass_id,
-        location: 'ANGUILLA',
+        name: venueName,
+        location: destination,
         kind: booking.pass.kind,
         displayPriceText: booking.pass.display_price_text,
-        minSpendAmount: booking.pass.min_spend_amount,
+        minSpendAmount: booking.pass.min_spend_amount ?? booking.pass.profile?.prepaidCreditAmountCents ?? null,
         currency: booking.pass.currency,
-        tz: booking.pass.venue?.tz ?? 'UTC',
+        tz,
         autoApprove: booking.pass.auto_approve_enabled,
         defaultStart: booking.pass.default_arrival_start_local ?? '12:00',
         defaultMinutes: booking.pass.default_arrival_window_minutes ?? 60,
@@ -44,37 +49,48 @@ function formatPassControls(passRows: Awaited<ReturnType<typeof fetchDeskBooking
 
 export default async function DeskPassesPage() {
   const today = new Date().toISOString().slice(0, 10)
-  const data = await Promise.all([fetchDeskBookings('requested'), fetchDeskBookings('pending_verification')])
+
+  const { user } = await getUserRole()
+  const venueId = user?.user_metadata?.venue_id as string | undefined
+  if (!venueId) {
+    notFound()
+  }
+
+  // Fetch bookings filtered by venue
+  const data = await Promise.all([
+    fetchDeskBookings('requested', venueId),
+    fetchDeskBookings('pending_verification', venueId)
+  ])
   let passControls = formatPassControls(data)
 
   if (passControls.length === 0) {
-    const supabase = await supabaseServer()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    const venueId = user?.user_metadata?.venue_id as string | undefined
     if (venueId) {
       const passes = await fetchVenuePasses(venueId)
-      passControls = passes.map((pass) => ({
-        passId: pass.id,
-        name: pass.venue?.name ?? pass.kind ?? pass.id,
-        location: 'ANGUILLA',
-        kind: pass.kind,
-        displayPriceText: pass.display_price_text ?? null,
-        minSpendAmount: pass.min_spend_amount ?? null,
-        currency: pass.currency ?? null,
-        tz: pass.venue?.tz ?? 'UTC',
-        autoApprove: pass.auto_approve_enabled,
-        defaultStart: pass.default_arrival_start_local ?? '12:00',
-        defaultMinutes: pass.default_arrival_window_minutes ?? 60,
-        isPaused: false,
-        imageUrl: getPassHeroImageUrl(pass),
-      }))
+      passControls = passes.map((pass) => {
+        const venueName = pass.venue?.name ?? 'Unnamed Venue'
+        const tz = pass.venue?.tz ?? 'America/Anguilla'
+        const destination = formatTimezoneLabel(tz)
+        return {
+          passId: pass.id,
+          name: venueName,
+          location: destination,
+          kind: pass.kind,
+          displayPriceText: pass.display_price_text ?? null,
+          minSpendAmount: pass.min_spend_amount ?? pass.profile?.prepaidCreditAmountCents ?? null,
+          currency: pass.currency ?? null,
+          tz,
+          autoApprove: pass.auto_approve_enabled,
+          defaultStart: pass.default_arrival_start_local ?? '12:00',
+          defaultMinutes: pass.default_arrival_window_minutes ?? 60,
+          isPaused: false,
+          imageUrl: getPassHeroImageUrl(pass),
+        }
+      })
     }
   }
 
   // Fetch today's inventory to check paused status
-  const inventory = await fetchPassInventoryByDateRange(today, today)
+  const inventory = await fetchPassInventoryByDateRange(today, today, venueId)
   const pausedPassIds = new Set(inventory.filter((inv) => inv.paused).map((inv) => inv.pass_id))
 
   // Update passControls with paused status
@@ -121,6 +137,7 @@ function ControlsSection({ controls }: { controls: PassControl[] }) {
               showStatusBadge
               status={control.isPaused ? 'paused' : 'active'}
               imageUrl={control.imageUrl ?? undefined}
+              pricePrefix=""
             />
           ))}
       </div>

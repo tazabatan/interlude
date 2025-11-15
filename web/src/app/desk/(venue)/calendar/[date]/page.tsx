@@ -1,6 +1,9 @@
-import { fetchBookingsByDate } from '@/lib/desk'
+import { notFound } from 'next/navigation'
+import { fetchBookingsByDate, type DeskBooking } from '@/lib/desk'
 import { buildGuestProfile, fetchGuestProfilesByIds } from '@/lib/guest-profile'
 import { formatArrivalValue } from '@/lib/arrival'
+import { computePartyCountsFromAges, formatPartySummary } from '@/lib/party'
+import { getUserRole } from '@/lib/get-user-role'
 import { DayDetailClient } from './client'
 
 type DayDetailPageProps = {
@@ -79,9 +82,25 @@ function mapPaymentState(holdStatus: string | null) {
   return { key: 'unknown', label: 'Payment pending' }
 }
 
+function resolvePartySummary(booking: DeskBooking) {
+  if (booking.guest_adult_count != null || booking.guest_child_count != null) {
+    return formatPartySummary(booking.guest_adult_count ?? 0, booking.guest_child_count ?? 0, booking.party_size)
+  }
+  if (booking.guest_ages && booking.guest_ages.length > 0) {
+    const counts = computePartyCountsFromAges(booking.guest_ages)
+    return formatPartySummary(counts.adults, counts.children, booking.party_size)
+  }
+  return formatPartySummary(null, null, booking.party_size)
+}
+
 export default async function DayDetailPage({ params }: DayDetailPageProps) {
-  const { date } = await params
-  const bookingsRaw = await fetchBookingsByDate(date)
+  const [{ date }, { user }] = await Promise.all([params, getUserRole()])
+  const venueId = user?.user_metadata?.venue_id as string | undefined
+  if (!venueId) {
+    notFound()
+  }
+
+  const bookingsRaw = await fetchBookingsByDate(date, venueId)
   const guestProfiles = await fetchGuestProfilesByIds(bookingsRaw.map((booking) => booking.user_id))
 
   const bookings = bookingsRaw.map((booking) => {
@@ -98,12 +117,13 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
       booking.pass?.currency ?? 'USD'
     )
     const guestProfile = guestProfiles[booking.user_id] ?? buildGuestProfile()
-    const guestLabel = `${guestProfile.name}'s group of ${booking.party_size}`
+    const guestLabel = `${guestProfile.firstName || guestProfile.name}'s group of ${booking.party_size}`
     const imageSrc = guestProfile.avatarUrl ?? pickGuestImage(booking.id)
     const imageUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
     const paymentState = mapPaymentState(booking.hold_status)
     const category = mapCategory(booking.pass?.kind ?? null)
     const isRequest = booking.status === 'requested'
+    const partySummary = resolvePartySummary(booking)
 
     return {
       id: booking.id,
@@ -122,6 +142,7 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
       paymentStateKey: paymentState.key,
       paymentStateLabel: paymentState.label,
       qrJti: booking.qr_jti,
+      partySummary,
     }
   })
 

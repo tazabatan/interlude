@@ -55,6 +55,7 @@ export const createEmptyPassFormState = (defaultCurrency = "USD"): PassFormState
   name: "",
   kind: "BEACH_PASS",
   shortDescription: "",
+  interludePerk: "",
   economicsType: "min_spend",
   minSpendAmount: "150",
   prepaidCreditAmount: "0",

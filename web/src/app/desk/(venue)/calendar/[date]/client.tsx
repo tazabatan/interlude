@@ -56,6 +56,7 @@ type BookingCardPayload = {
   priceLabel: string
   statusLabel: string
   partySize: number
+  partySummary?: string
   guestLabel: string
   imageSrc: string
   imageUnoptimized: boolean
@@ -226,6 +227,9 @@ function BookingCard({ booking, isToday, dayIso }: { booking: BookingCardPayload
             <div className="text-base font-semibold uppercase tracking-[0.08em] text-black">{booking.guestLabel}</div>
             <div className="text-sm text-[#31332f]">
               {booking.passLabel} · {booking.priceLabel}
+            </div>
+            <div className="text-xs uppercase tracking-[0.2em] text-[#6F716D]">
+              {booking.partySummary ?? `Party of ${booking.partySize}`}
             </div>
           </div>
         </div>

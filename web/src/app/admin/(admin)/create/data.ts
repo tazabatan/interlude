@@ -10,6 +10,7 @@ const PASS_SELECT_FIELDS = [
   "currency",
   "min_spend_amount",
   "display_price_text",
+  "interlude_perk",
   "visibility",
   "auto_approve_enabled",
   "default_arrival_start_local",

@@ -85,10 +85,17 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
   const staffFillButtonTone = 'border-[#DBD8C9] bg-[#DBD8C9] text-[#5F6059] cursor-not-allowed opacity-90'
   const staffOutlineButtonTone = 'border-[#DBD8C9] text-[#5F6059] bg-[#F1EEE2] cursor-not-allowed opacity-90'
 
+  const profileEconomics = pass.profile?.economicsType ?? (pass.kind === 'MIN_SPEND' ? 'min_spend' : 'prepaid_credit')
+  const prepaidCents = pass.profile?.prepaidCreditAmountCents ?? null
   const guestPrice =
-    pass.kind === 'MIN_SPEND'
+    profileEconomics === 'min_spend'
       ? formatPassPrice(null, pass.min_spend_amount ?? null, pass.currency ?? 'USD')
-      : pass.display_price_text ?? formatPassPrice(null, pass.min_spend_amount ?? null, pass.currency ?? 'USD')
+      : (
+          pass.display_price_text?.trim() ||
+          (typeof prepaidCents === 'number'
+            ? formatPassPrice(null, prepaidCents, pass.currency ?? 'USD')
+            : formatPassPrice(null, pass.min_spend_amount ?? null, pass.currency ?? 'USD'))
+        )
   const heroImageUrl = getPassHeroImageUrl(pass)
   const heroImageSrc = heroImageUrl ?? pickPassImage(pass.id)
   const heroNeedsUnoptimized = Boolean(
@@ -172,6 +179,11 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
               <p>
                 <span className="font-semibold text-black">Default cap:</span> {pass.default_daily_cap}
               </p>
+              {pass.interlude_perk && (
+                <p>
+                  <span className="font-semibold text-black">Interlude perk:</span> {pass.interlude_perk}
+                </p>
+              )}
             </section>
 
             <section className="rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 text-sm leading-6 text-[#4F514D] shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
@@ -190,7 +202,6 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
           <section
             className={`space-y-4 rounded-[28px] border p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] ${controlPanelTone}`}
           >
-            <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">Guest copy preview</h2>
             <div className={`rounded-[20px] border p-6 text-sm leading-6 text-[#4F514D] shadow-inner ${innerCardTone}`}>
               <p className="font-semibold uppercase tracking-[0.08em] text-black">{pass.venue?.name ?? 'Pass'}</p>
               <p className="text-2xl font-semibold text-black">{guestPrice}</p>
@@ -550,6 +561,16 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
                     </label>
                   </div>
                 )}
+                <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
+                  Interlude perk
+                  <input
+                    type="text"
+                    name="perk"
+                    defaultValue={pass.interlude_perk ?? ''}
+                    placeholder="Welcome rum punch"
+                    className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
+                  />
+                </label>
                 <p className="text-xs italic text-[#6F716D]">
                   Guardrail: changes apply to new approvals only. Issued bookings keep their original snapshot.
                 </p>

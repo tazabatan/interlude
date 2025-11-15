@@ -85,9 +85,10 @@ export default async function BookingDetailPage({ params }: { params: Params }) 
   const arrivalWindow = formatArrivalWindow(booking.arrival_window_start, booking.arrival_window_end)
   const bookingDate = formatDisplayDate(booking.date)
   const showCancelAction = !['cancelled', 'declined', 'redeemed', 'redeemed_late', 'no_show'].includes(booking.status)
+  const destination = booking.venue_name ?? 'Venue to be confirmed'
 
   const detailRows = [
-    { label: 'Destination', value: booking.venue_name ?? 'Venue to be confirmed' },
+    { label: 'Destination', value: destination },
     { label: 'Pass', value: passLabel },
     { label: 'Price', value: priceDisplay },
     { label: 'Date', value: bookingDate },

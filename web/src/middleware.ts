@@ -37,7 +37,47 @@ export async function middleware(req: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const role = (user?.user_metadata?.app_role as string | undefined) ?? 'guest'
+  let role = (user?.user_metadata?.app_role as string | undefined) ?? 'guest'
+
+  // Check for impersonation session
+  const impersonationCookie = req.cookies.get('impersonation_session')
+  if (impersonationCookie && user) {
+    try {
+      const impersonationSession = JSON.parse(impersonationCookie.value)
+      // Check if session is still valid (not expired)
+      const now = Date.now()
+      const expiryTime = impersonationSession.startTime + impersonationSession.timeLimitMinutes * 60 * 1000
+
+      if (now <= expiryTime) {
+        // Fetch the impersonated user's role using service role
+        const serviceRoleUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+        const query = encodeURIComponent('raw_user_meta_data')
+        const filterQuery = encodeURIComponent(`id.eq.${impersonationSession.impersonatedUserId}`)
+        const userRes = await fetch(
+          `${serviceRoleUrl}/rest/v1/auth_user_profiles?select=${query}&${filterQuery}`,
+          {
+            headers: {
+              'apikey': serviceRoleKey,
+              'Authorization': `Bearer ${serviceRoleKey}`,
+            },
+          }
+        )
+
+        if (userRes.ok) {
+          const users = await userRes.json() as Array<{ raw_user_meta_data: { app_role?: string } }>
+          if (users.length > 0) {
+            // Use the impersonated user's role for routing
+            role = (users[0].raw_user_meta_data?.app_role as string | undefined) ?? 'guest'
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to parse impersonation session in middleware:', error)
+    }
+  }
+
   const path = req.nextUrl.pathname
 
   const buildRedirect = (target: string) => {

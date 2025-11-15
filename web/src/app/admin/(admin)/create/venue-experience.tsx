@@ -216,6 +216,7 @@ const clonePassToFormState = (record: PassRecord): PassFormState => ({
   name: record.name,
   kind: record.kind,
   shortDescription: record.shortDescription,
+  interludePerk: record.interludePerk || "",
   economicsType: record.economicsType,
   minSpendAmount:
     typeof record.minSpendAmountCents === "number" ? String(Math.max(0, record.minSpendAmountCents) / 100) : "",
@@ -300,10 +301,19 @@ export default function AdminVenueExperience({ initialVenues }: AdminVenueExperi
   const [isSavingVenue, setIsSavingVenue] = useState(false)
   const [isSavingPass, setIsSavingPass] = useState(false)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [venueSearchQuery, setVenueSearchQuery] = useState('')
 
   const hasVenues = venues.length > 0
   const activeVenue = activeVenueId ? venues.find((venue) => venue.id === activeVenueId) : null
   const viewingPasses = activeView === "passes" && Boolean(activeVenue)
+
+  // Filter venues based on search query
+  const filteredVenues = venues.filter((venue) => {
+    if (!venueSearchQuery.trim()) return true
+    const query = venueSearchQuery.toLowerCase()
+    const name = venue.displayName?.toLowerCase() || ''
+    return name.includes(query)
+  })
 
   // Fetch team members when viewing a venue
   useEffect(() => {
@@ -505,8 +515,8 @@ export default function AdminVenueExperience({ initialVenues }: AdminVenueExperi
                       name={pass.name}
                       location={activeVenue.address.city || activeVenue.address.country || "Anguilla"}
                       kind={pass.kind}
-                      displayPriceText={pass.displayPriceText || pass.shortDescription}
-                      minSpendAmount={pass.minSpendAmountCents}
+                      displayPriceText={pass.displayPriceText}
+                      minSpendAmount={pass.minSpendAmountCents ?? pass.prepaidCreditCents ?? null}
                       currency={pass.currency}
                       href={`/admin/create?pass=${pass.id}`}
                       srLabel={`Edit ${pass.name}`}
@@ -595,24 +605,38 @@ export default function AdminVenueExperience({ initialVenues }: AdminVenueExperi
             </button>
           </div>
 
-          <header className="relative mx-auto w-full max-w-5xl py-8">
-            <h1 className="text-center text-3xl font-medium uppercase tracking-[0.05em] text-black">Venues</h1>
-            <button
-              type="button"
-              aria-label="Add venue"
-              onClick={openForCreate}
-              className="absolute right-0 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-[#DBD8C9] text-black transition hover:bg-[#d0ccba] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#02374D]"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </button>
-          </header>
+          <div className="relative py-8">
+            <input
+              type="text"
+              placeholder="Search venues..."
+              value={venueSearchQuery}
+              onChange={(e) => setVenueSearchQuery(e.target.value)}
+              className="w-64 rounded-full border border-[#E8E4D7] bg-white px-5 py-2.5 text-sm text-[#02374D] placeholder:text-[#6F716D] focus:border-[#02374D] focus:outline-none focus:ring-2 focus:ring-[#02374D]/20"
+            />
+            <header className="absolute left-1/2 top-1/2 mx-auto w-full max-w-5xl -translate-x-1/2 -translate-y-1/2">
+              <h1 className="text-center text-3xl font-medium uppercase tracking-[0.05em] text-black">Venues</h1>
+              <button
+                type="button"
+                aria-label="Add venue"
+                onClick={openForCreate}
+                className="absolute right-0 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-[#DBD8C9] text-black transition hover:bg-[#d0ccba] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#02374D]"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+            </header>
+          </div>
 
           {hasVenues ? (
             <section className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {venues.map((venue) => {
+              {filteredVenues.length === 0 ? (
+                <div className="rounded-[32px] border border-dashed border-[#DAD7C7] bg-[#F5F0E3] px-8 py-16 text-center text-sm text-[#4F514D]">
+                  No venues found matching &quot;{venueSearchQuery}&quot;
+                </div>
+              ) : (
+                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {filteredVenues.map((venue) => {
                   const city = venue.address.city?.trim()
                   const country = venue.address.country?.trim()
                   const locationLabel = city || country || undefined
@@ -646,7 +670,8 @@ export default function AdminVenueExperience({ initialVenues }: AdminVenueExperi
                     </div>
                   )
                 })}
-              </div>
+                </div>
+              )}
             </section>
           ) : (
             <div className="rounded-[32px] border border-dashed border-[#DAD7C7] bg-[#F5F0E3] px-8 py-16 text-center text-sm text-[#4F514D]">
@@ -1685,6 +1710,19 @@ function PassBuilderOverlay({
                   onChange={(event) => {
                     onFormInteraction()
                     setFormState((prev) => ({ ...prev, displayPriceText: event.target.value }))
+                  }}
+                  className={INPUT_CLASSES}
+                />
+              </label>
+              <label className={LABEL_CLASSES}>
+                Interlude perk
+                <input
+                  type="text"
+                  value={formState.interludePerk}
+                  placeholder="e.g., Welcome rum punch"
+                  onChange={(event) => {
+                    onFormInteraction()
+                    setFormState((prev) => ({ ...prev, interludePerk: event.target.value }))
                   }}
                   className={INPUT_CLASSES}
                 />
