@@ -23,11 +23,11 @@ export async function middleware(req: NextRequest) {
     {
       cookies: {
         get: (name: string) => req.cookies.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptionsWithName) => {
-          res.cookies.set({ name, value, ...options })
+        set: (_name: string, _value: string, _options: CookieOptionsWithName) => {
+          // Middleware cannot mutate cookies on Next.js 16; noop to avoid runtime errors
         },
-        remove: (name: string, options: CookieOptionsWithName) => {
-          res.cookies.set({ name, value: '', ...options, maxAge: 0 })
+        remove: (_name: string, _options: CookieOptionsWithName) => {
+          // Noop
         },
       },
     }
