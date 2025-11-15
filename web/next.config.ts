@@ -3,9 +3,6 @@ import type { NextConfig } from "next"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: __dirname,
-  },
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",
@@ -14,7 +11,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: "http",
+        protocol: "http" as const,
         hostname: "127.0.0.1",
         port: "54321",
         pathname: "/storage/v1/object/public/**",
@@ -22,9 +19,8 @@ const nextConfig: NextConfig = {
       ...(supabaseUrl
         ? [
             {
-              protocol: "https",
+              protocol: "https" as const,
               hostname: new URL(supabaseUrl).hostname,
-              port: "",
               pathname: "/storage/v1/object/public/**",
             },
           ]

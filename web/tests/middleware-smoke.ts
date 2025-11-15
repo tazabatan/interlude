@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
 import React from 'react'
 
-import { middleware } from '../src/middleware'
+import { proxy } from '../src/proxy'
 import RootLayout from '../src/app/layout'
 import GuestLayout from '../src/app/app/(guest)/layout'
 import DeskLayout from '../src/app/desk/(venue)/layout'
@@ -49,33 +49,33 @@ function expectRedirect(response: any, expectedPath: string) {
 async function runMiddlewareTests() {
   // Unauthenticated redirects
   setSupabaseMock({ response: { data: { user: null } } })
-  const guestApp = await middleware(createRequest('/app'))
+  const guestApp = await proxy(createRequest('/app'))
   assert.equal(guestApp.type, 'next', 'Guests should be able to view /app landing without signing in')
-  expectRedirect(await middleware(createRequest('/app/booking/demo')), '/auth?next=/app/booking/demo')
-  expectRedirect(await middleware(createRequest('/desk')), '/auth?next=/desk')
-  expectRedirect(await middleware(createRequest('/admin')), '/auth?next=/admin')
+  expectRedirect(await proxy(createRequest('/app/booking/demo')), '/auth?next=/app/booking/demo')
+  expectRedirect(await proxy(createRequest('/desk')), '/auth?next=/desk')
+  expectRedirect(await proxy(createRequest('/admin')), '/auth?next=/admin')
 
   // Member access rules
   setSupabaseMock({ response: { data: { user: { id: 'user1', user_metadata: { app_role: 'member' } } } } })
-  const memberApp = await middleware(createRequest('/app'))
+  const memberApp = await proxy(createRequest('/app'))
   assert.equal(memberApp.type, 'next', 'Member should access /app')
-  expectRedirect(await middleware(createRequest('/desk')), '/app')
-  expectRedirect(await middleware(createRequest('/admin')), '/app')
+  expectRedirect(await proxy(createRequest('/desk')), '/app')
+  expectRedirect(await proxy(createRequest('/admin')), '/app')
 
   // Venue staff access rules
   setSupabaseMock({ response: { data: { user: { id: 'user2', user_metadata: { app_role: 'venue_staff' } } } } })
-  const staffDesk = await middleware(createRequest('/desk'))
+  const staffDesk = await proxy(createRequest('/desk'))
   assert.equal(staffDesk.type, 'next', 'Venue staff should access /desk')
-  expectRedirect(await middleware(createRequest('/app')), '/desk')
-  expectRedirect(await middleware(createRequest('/admin')), '/app')
+  expectRedirect(await proxy(createRequest('/app')), '/desk')
+  expectRedirect(await proxy(createRequest('/admin')), '/app')
 
   // Admin access rules
   setSupabaseMock({ response: { data: { user: { id: 'user3', user_metadata: { app_role: 'admin' } } } } })
-  const adminApp = await middleware(createRequest('/app'))
+  const adminApp = await proxy(createRequest('/app'))
   assert.equal(adminApp.type, 'next', 'Admin should access /app')
-  const adminDesk = await middleware(createRequest('/desk'))
+  const adminDesk = await proxy(createRequest('/desk'))
   assert.equal(adminDesk.type, 'next', 'Admin should access /desk')
-  const adminAdmin = await middleware(createRequest('/admin'))
+  const adminAdmin = await proxy(createRequest('/admin'))
   assert.equal(adminAdmin.type, 'next', 'Admin should access /admin')
 
   // Cookie propagation
@@ -85,7 +85,7 @@ async function runMiddlewareTests() {
       return { data: { user: null } }
     },
   })
-  const cookieRedirect = await middleware(createRequest('/app/booking/demo'))
+  const cookieRedirect = await proxy(createRequest('/app/booking/demo'))
   expectRedirect(cookieRedirect, '/auth?next=/app/booking/demo')
   const refreshed = cookieRedirect.cookies.get('sb-access-token')
   assert.ok(refreshed, 'Expected refreshed cookie to be forwarded')
@@ -123,7 +123,7 @@ async function main() {
   try {
     await runMiddlewareTests()
     runLayoutTests()
-    console.log('✅ Middleware role gating and layout separation smoke tests passed')
+    console.log('✅ Proxy role gating and layout separation smoke tests passed')
   } catch (error) {
     console.error('❌ Smoke tests failed')
     console.error(error)

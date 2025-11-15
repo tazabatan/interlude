@@ -75,7 +75,7 @@ async function fetchUser(accessToken: string) {
   return res.json() as Promise<{ id: string; user_metadata?: Record<string, unknown> }>
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const accessToken = extractAccessToken(req)
   const user = accessToken ? await fetchUser(accessToken) : null
   let role = (user?.user_metadata?.['app_role'] as string | undefined) ?? 'guest'
@@ -114,7 +114,7 @@ export async function middleware(req: NextRequest) {
         }
       }
     } catch (error) {
-      console.error('Failed to parse impersonation session in middleware:', error)
+      console.error('Failed to parse impersonation session in proxy:', error)
     }
   }
 
