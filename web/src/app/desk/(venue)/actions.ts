@@ -213,8 +213,8 @@ export async function updatePassServiceHoursAction(formData: FormData) {
   const openRaw = formData.get('open')?.toString()
   const closeRaw = formData.get('close')?.toString()
   if (!passId) throw new Error('passId missing')
-  const open = parseTimeInput(openRaw, 'open time')
-  const close = parseTimeInput(closeRaw, 'close time')
+  const open = parseTimeInput(openRaw ?? null, 'open time')
+  const close = parseTimeInput(closeRaw ?? null, 'close time')
   if (minutesBetween(open, close) <= 0) throw new Error('Close time must be after open time')
   await deskAction('update_pass_service_hours', {
     p_pass_id: passId,
@@ -294,14 +294,14 @@ export async function updatePassPricingAction(formData: FormData) {
 
   const payload: Record<string, unknown> = { p_pass_id: passId, pass_id: passId }
   if (kind === 'MIN_SPEND') {
-    const minSpend = dollarsToCents(formData.get('minSpend')?.toString())
-    const hold = dollarsToCents(formData.get('hold')?.toString())
+    const minSpend = dollarsToCents(formData.get('minSpend')?.toString() ?? null)
+    const hold = dollarsToCents(formData.get('hold')?.toString() ?? null)
     if (minSpend === null || hold === null) throw new Error('Amounts required')
     payload.min_spend_amount = minSpend
     payload.no_show_amount_per_person = hold
   } else {
     const displayText = formData.get('displayText')?.toString()?.trim() ?? ''
-    const hold = dollarsToCents(formData.get('hold')?.toString())
+    const hold = dollarsToCents(formData.get('hold')?.toString() ?? null)
     if (hold === null) throw new Error('Hold amount required')
     payload.display_price_text = displayText
     payload.no_show_amount_per_person = hold

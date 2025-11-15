@@ -41,7 +41,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to load bookings' }, { status: 500 })
   }
 
-  const rows = (response.data ?? []) as GuestBookingRow[]
+  const rows = (response.data ?? []) as unknown as GuestBookingRow[]
   const passes = await fetchPassesByIds(rows.map((row) => row.pass_id))
   const passMap = new Map(passes.map((pass) => [pass.id, pass]))
   const bookings = rows.map((row) => buildGuestBookingView(row, passMap.get(row.pass_id)))

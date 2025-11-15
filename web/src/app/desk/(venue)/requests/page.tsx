@@ -47,7 +47,7 @@ function mapCategory(kind: string | null): PassCategory {
 }
 
 function pickGuestImage(seed: string) {
-  const placeholders = [
+  const placeholders: readonly string[] = [
     '/guest-photos/guest-1.jpg',
     '/guest-photos/guest-2.jpg',
     '/guest-photos/guest-3.jpg',
@@ -55,7 +55,7 @@ function pickGuestImage(seed: string) {
     '/guest-photos/guest-5.png',
     '/guest-photos/guest-6.png',
     '/guest-photos/guest-7.png',
-  ] as const
+  ]
   if (placeholders.length === 0) return ''
   let hash = 0
   for (let i = 0; i < seed.length; i += 1) {

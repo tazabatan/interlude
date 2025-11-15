@@ -1,4 +1,4 @@
-const PASS_PLACEHOLDER_IMAGES = [
+const PASS_PLACEHOLDER_IMAGES: readonly string[] = [
   '/venue-photos/4655308-beachfront-five-bedroom-pool-villa-belmond-cap-juluca.jpg',
   '/venue-photos/Fb-2.png',
   '/venue-photos/Screenshot 2025-10-29 at 17.48.44.png',
@@ -6,7 +6,7 @@ const PASS_PLACEHOLDER_IMAGES = [
   '/venue-photos/Screenshot 2025-10-29 at 17.49.28.png',
   '/venue-photos/Screenshot 2025-11-07 at 13.25.25.png',
   '/venue-photos/belmond-cap-juluca.jpg',
-] as const
+]
 
 type LabelOptions = {
   detail?: boolean

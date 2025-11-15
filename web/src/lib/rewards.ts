@@ -87,7 +87,7 @@ export async function fetchMemberRewards(userId?: string | null): Promise<Member
     throw new Error('Unable to load rewards')
   }
 
-  const rows = (response.data ?? []) as BookingRow[]
+  const rows = (response.data ?? []) as unknown as BookingRow[]
   const redemptions = extractRedemptions(rows)
   if (redemptions.length === 0) {
     return buildEmptySummary()

@@ -55,6 +55,7 @@ function getDaysInMonth(year: number, month: number): DayData[] {
       cancelled: 0,
       declined: 0,
       totalGuests: 0,
+      passIds: [],
     })
   }
 
@@ -77,6 +78,7 @@ function getDaysInMonth(year: number, month: number): DayData[] {
       cancelled: 0,
       declined: 0,
       totalGuests: 0,
+      passIds: [],
     })
   }
 
@@ -100,6 +102,7 @@ function getDaysInMonth(year: number, month: number): DayData[] {
       cancelled: 0,
       declined: 0,
       totalGuests: 0,
+      passIds: [],
     })
   }
 

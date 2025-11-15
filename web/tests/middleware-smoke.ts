@@ -7,6 +7,7 @@ import RootLayout from '../src/app/layout'
 import GuestLayout from '../src/app/app/(guest)/layout'
 import DeskLayout from '../src/app/desk/(venue)/layout'
 import AdminLayout from '../src/app/admin/(admin)/layout'
+import type { NextRequest } from 'next/server'
 
 process.env.NEXT_PUBLIC_SUPABASE_URL ??= 'http://localhost:54321'
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= 'anon-key'
@@ -17,9 +18,9 @@ function setSupabaseMock(mock: any) {
   ;(globalThis as any).__supabaseMock = mock
 }
 
-function createRequest(path: string, cookieValues: CookieMap = {}) {
+function createRequest(path: string, cookieValues: CookieMap = {}): NextRequest {
   const cookieEntries = new Map(Object.entries(cookieValues))
-  return {
+  const request = {
     nextUrl: new URL(`https://example.com${path}`),
     url: `https://example.com${path}`,
     cookies: {
@@ -29,6 +30,7 @@ function createRequest(path: string, cookieValues: CookieMap = {}) {
       },
     },
   }
+  return request as unknown as NextRequest
 }
 
 function expectRedirect(response: any, expectedPath: string) {

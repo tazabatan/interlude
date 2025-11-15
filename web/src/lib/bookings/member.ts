@@ -37,7 +37,7 @@ export async function fetchMemberBookings() {
     throw new Error('Failed to load bookings')
   }
 
-  const rows = (response.data ?? []) as GuestBookingRow[]
+  const rows = (response.data ?? []) as unknown as GuestBookingRow[]
   const passes = await fetchPassesByIds(rows.map((row) => row.pass_id))
   const passMap = new Map(passes.map((pass) => [pass.id, pass]))
   const bookings = rows.map((row) => buildGuestBookingView(row, passMap.get(row.pass_id)))
@@ -85,7 +85,7 @@ export async function fetchMemberBookingById(bookingId: string) {
     return null
   }
 
-  const row = response.data as GuestBookingRow
+  const row = response.data as unknown as GuestBookingRow
   const pass = row.pass_id ? await fetchPassById(row.pass_id) : null
   return buildGuestBookingView(row, pass)
 }

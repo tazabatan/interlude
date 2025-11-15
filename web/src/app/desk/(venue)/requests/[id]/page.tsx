@@ -42,7 +42,7 @@ const FINAL_STATUS_LABEL: Record<string, string> = {
   pending_verification: 'Awaiting verification',
 }
 
-const GUEST_PLACEHOLDER_IMAGES = [
+const GUEST_PLACEHOLDER_IMAGES: readonly string[] = [
   '/guest-photos/guest-1.jpg',
   '/guest-photos/guest-2.jpg',
   '/guest-photos/guest-3.jpg',
@@ -50,7 +50,18 @@ const GUEST_PLACEHOLDER_IMAGES = [
   '/guest-photos/guest-5.png',
   '/guest-photos/guest-6.png',
   '/guest-photos/guest-7.png',
-] as const
+]
+
+function pickGuestImage(seed: string) {
+  if (GUEST_PLACEHOLDER_IMAGES.length === 0) return ''
+  let hash = 0
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i)
+    hash |= 0
+  }
+  const index = Math.abs(hash) % GUEST_PLACEHOLDER_IMAGES.length
+  return GUEST_PLACEHOLDER_IMAGES[index]
+}
 
 function formatStatusLabel(status: string) {
   return status === 'issued' ? 'Pass issued' : status.replace(/_/g, ' ')

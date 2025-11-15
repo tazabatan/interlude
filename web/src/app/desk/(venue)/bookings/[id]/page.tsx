@@ -39,7 +39,7 @@ const FINAL_STATUS_COPY: Record<string, string> = {
   declined: 'Request was declined.',
 }
 
-const GUEST_PLACEHOLDER_IMAGES = [
+const GUEST_PLACEHOLDER_IMAGES: readonly string[] = [
   '/guest-photos/guest-1.jpg',
   '/guest-photos/guest-2.jpg',
   '/guest-photos/guest-3.jpg',
@@ -47,7 +47,7 @@ const GUEST_PLACEHOLDER_IMAGES = [
   '/guest-photos/guest-5.png',
   '/guest-photos/guest-6.png',
   '/guest-photos/guest-7.png',
-] as const
+]
 
 function pickGuestImage(seed: string) {
   if (GUEST_PLACEHOLDER_IMAGES.length === 0) return ''

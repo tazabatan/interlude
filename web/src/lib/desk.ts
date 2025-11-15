@@ -276,7 +276,7 @@ export async function deskAction(action: string, payload: unknown) {
           authState.session?.accessToken ??
           authState.user?.access_token ??
           authState.user?.accessToken ??
-          null
+          undefined
       }
     }
   }
