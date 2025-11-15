@@ -31,15 +31,16 @@ export async function getImpersonationInfo(): Promise<ImpersonationInfo> {
     const isExpired = now > expiryTime
 
     if (isExpired) {
-      // Clean up expired session
-      cookieStore.delete('impersonation_session')
+      // Note: We don't delete the cookie here because this runs during rendering.
+      // The cookie will be cleaned up by the ImpersonationTracker component via a server action.
       return { isImpersonating: false, session: null, isExpired: true }
     }
 
     return { isImpersonating: true, session, isExpired: false }
   } catch (error) {
     console.error('Failed to parse impersonation session:', error)
-    cookieStore.delete('impersonation_session')
+    // Note: We don't delete the cookie here because this runs during rendering.
+    // Invalid cookies will be ignored and eventually expire.
     return { isImpersonating: false, session: null, isExpired: false }
   }
 }

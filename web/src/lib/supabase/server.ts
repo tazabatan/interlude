@@ -12,10 +12,18 @@ export async function getSupabaseServer() {
       cookies: {
         get: (name: string) => cookieStore.get(name)?.value,
         set: (name: string, value: string, options: CookieOptionsWithName) => {
-          cookieStore.set({ name, value, ...options })
+          try {
+            cookieStore.set({ name, value, ...options })
+          } catch (error) {
+            // Ignore errors during rendering - cookies can only be modified in Server Actions or Route Handlers
+          }
         },
         remove: (name: string, options: CookieOptionsWithName) => {
-          cookieStore.set({ name, value: '', ...options, maxAge: 0 })
+          try {
+            cookieStore.set({ name, value: '', ...options, maxAge: 0 })
+          } catch (error) {
+            // Ignore errors during rendering - cookies can only be modified in Server Actions or Route Handlers
+          }
         },
       },
     }
