@@ -90,13 +90,14 @@ async function ensureUser(admin: ReturnType<typeof createClient>, account: DevAc
 async function ensureSeedVenue(admin: ReturnType<typeof createClient>) {
   const { error } = await admin
     .from('venues')
+    // Supabase client isn't typed with our schema yet, so cast to satisfy TS
     .upsert(
       {
         id: DEV_VENUE_ID,
         name: 'Seed Venue',
         tz: 'America/Anguilla',
         is_test_venue: true,
-      },
+      } as any,
       { onConflict: 'id' }
     )
   if (error) throw new Error(`Failed to upsert seed venue: ${error.message}`)
