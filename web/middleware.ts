@@ -1,4 +1,4 @@
-import { middleware, config as proxyConfig } from './src/proxy'
+import { middleware, config } from './src/proxy'
 
 export default middleware
-export const config = proxyConfig
+export { config }
