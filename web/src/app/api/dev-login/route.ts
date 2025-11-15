@@ -40,7 +40,7 @@ const DEV_ACCOUNTS: Record<string, DevAccount> = {
   },
 }
 
-async function findUserByEmail(admin: ReturnType<typeof createClient>, email: string) {
+async function findUserByEmail(admin: ReturnType<typeof createClient<any, any, any, any>>, email: string) {
   let page = 1
   const perPage = 200
 
@@ -57,7 +57,7 @@ async function findUserByEmail(admin: ReturnType<typeof createClient>, email: st
   return null
 }
 
-async function ensureUser(admin: ReturnType<typeof createClient>, account: DevAccount) {
+async function ensureUser(admin: ReturnType<typeof createClient<any, any, any, any>>, account: DevAccount) {
   const existing = await findUserByEmail(admin, account.email)
   if (!existing) {
     const { error } = await admin.auth.admin.createUser({
@@ -87,7 +87,7 @@ async function ensureUser(admin: ReturnType<typeof createClient>, account: DevAc
   if (error) throw new Error(`Failed to update ${account.email}: ${error.message}`)
 }
 
-async function ensureSeedVenue(admin: ReturnType<typeof createClient>) {
+async function ensureSeedVenue(admin: ReturnType<typeof createClient<any, any, any, any>>) {
   const { error } = await admin
     .from('venues')
     // Supabase client isn't typed with our schema yet, so cast to satisfy TS
