@@ -34,6 +34,7 @@ export default function AuthPage() {
     if (data.session) {
       await fetch('/api/auth/set-session', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
