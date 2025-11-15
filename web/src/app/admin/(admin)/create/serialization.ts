@@ -1,5 +1,6 @@
 import { VenueRecord, VenueFormState, PassRecord, PassEconomicsType, VenueStatus, ImageAsset, PassFormState } from "./types"
 import { createEmptyVenueFormState } from "./state"
+export type { VenueRecord, PassRecord } from "./types"
 
 type StoredImageAsset = {
   id: string
