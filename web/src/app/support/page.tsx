@@ -1,7 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
 import type { Metadata } from "next"
-import { Montserrat } from "next/font/google"
 import GuestNav, { guestNavLinks } from "@/app/app/(guest)/nav"
 import VenueDeskNav, { venueDeskNavLinks } from "@/app/desk/(venue)/nav"
 import AdminNav, { adminNavLinks } from "@/app/admin/(admin)/nav"
@@ -9,12 +8,7 @@ import AccountMenu from "@/components/account-menu"
 import { getUserRole } from "@/lib/get-user-role"
 import { fetchMemberRewards } from "@/lib/rewards"
 import { serviceRoleFetch } from "@/lib/supabase/service-role"
-
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-})
+import { montserrat } from "@/app/fonts"
 
 export const metadata: Metadata = {
   title: "Support | Interlude",

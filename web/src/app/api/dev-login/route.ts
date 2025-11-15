@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const DEV_VENUE_ID = '11111111-2222-3333-4444-555555555555'
+const DEV_VENUE_NAME = process.env.DEV_VENUE_NAME ?? 'Belmond Cap Juluca'
 
 type DevAccount = {
   email: string
@@ -94,7 +95,7 @@ async function ensureSeedVenue(admin: SupabaseClient<any, any, any, any>) {
     .upsert(
       {
         id: DEV_VENUE_ID,
-        name: 'Seed Venue',
+        name: DEV_VENUE_NAME,
         tz: 'America/Anguilla',
         is_test_venue: true,
       } as any,

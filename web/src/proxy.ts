@@ -1,3 +1,4 @@
+import { decodeJwt } from 'jose'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -12,50 +13,151 @@ function isPublicAppPath(pathname: string) {
   return false
 }
 
-type SupabaseAuthState = {
-  currentSession?: { access_token?: string; accessToken?: string }
-  session?: { access_token?: string; accessToken?: string }
-  user?: { access_token?: string; accessToken?: string }
+type AuthUser = {
+  id: string
+  email?: string
+  user_metadata?: Record<string, unknown>
+}
+
+type SupabaseAuthUser = {
+  id?: string
+  email?: string
+  user_metadata?: Record<string, unknown> | null
+}
+
+type SupabaseSession = {
   access_token?: string
   accessToken?: string
+  user?: SupabaseAuthUser | null
 }
+
+type SupabaseAuthState =
+  | {
+      currentSession?: SupabaseSession | null
+      session?: SupabaseSession | null
+      user?: SupabaseAuthUser | null
+      access_token?: string
+      accessToken?: string
+    }
+  | [SupabaseSession | null | undefined, SupabaseAuthUser | null | undefined]
 
 function parseSupabaseAuthCookie(value: string) {
   try {
+    // Handle base64-encoded cookies (Supabase SSR format)
+    if (value.startsWith('base64-')) {
+      const base64String = value.slice(7) // Remove 'base64-' prefix
+      const decoded = atob(base64String) // Decode base64 to string
+      return JSON.parse(decoded) as SupabaseAuthState
+    }
+    // Try parsing as raw JSON
     return JSON.parse(value) as SupabaseAuthState
+  } catch (err) {
+    console.error('Failed to parse auth cookie:', err)
+    return null
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function normalizeAuthUser(value: unknown): AuthUser | null {
+  if (!isRecord(value)) return null
+  const id = typeof value.id === 'string' ? value.id : null
+  if (!id) return null
+
+  const normalized: AuthUser = { id }
+
+  if (typeof value.email === 'string') {
+    normalized.email = value.email
+  }
+
+  const metadata = value.user_metadata
+  if (isRecord(metadata)) {
+    normalized.user_metadata = metadata
+  }
+
+  return normalized
+}
+
+function getTokenFromState(state: SupabaseAuthState | null) {
+  if (!state) return null
+  if (Array.isArray(state)) {
+    const session = state[0]
+    return session?.access_token ?? session?.accessToken ?? null
+  }
+
+  return (
+    state.currentSession?.access_token ??
+    state.currentSession?.accessToken ??
+    state.session?.access_token ??
+    state.session?.accessToken ??
+    (typeof state.access_token === 'string' ? state.access_token : null) ??
+    (typeof state.accessToken === 'string' ? state.accessToken : null)
+  )
+}
+
+function getUserFromState(state: SupabaseAuthState | null): AuthUser | null {
+  if (!state) return null
+  if (Array.isArray(state)) {
+    const [, userEntry] = state
+    return normalizeAuthUser(userEntry) ?? normalizeAuthUser(state[0]?.user)
+  }
+
+  return (
+    normalizeAuthUser(state.currentSession?.user) ??
+    normalizeAuthUser(state.session?.user) ??
+    normalizeAuthUser(state.user)
+  )
+}
+
+function decodeUserFromToken(accessToken: string): AuthUser | null {
+  try {
+    const payload = decodeJwt(accessToken) as Record<string, unknown>
+    const sub = typeof payload.sub === 'string' ? payload.sub : null
+    if (!sub) return null
+
+    const normalized: AuthUser = { id: sub }
+    if (typeof payload.email === 'string') {
+      normalized.email = payload.email
+    }
+
+    let metadata = isRecord(payload.user_metadata) ? { ...payload.user_metadata } : undefined
+    const appRole =
+      isRecord(payload.app_metadata) && typeof payload.app_metadata['app_role'] === 'string'
+        ? (payload.app_metadata['app_role'] as string)
+        : null
+
+    if (appRole && (!metadata || typeof metadata['app_role'] === 'undefined')) {
+      metadata = { ...(metadata ?? {}), app_role: appRole }
+    }
+
+    if (metadata) {
+      normalized.user_metadata = metadata
+    }
+
+    return normalized
   } catch {
     return null
   }
 }
 
-function extractAccessToken(req: NextRequest) {
-  const direct =
+function getAuthContext(req: NextRequest) {
+  const directToken =
     req.cookies.get('sb-access-token')?.value ??
     req.cookies.get('sb:token')?.value ??
     req.cookies.get('access-token')?.value
-
-  if (direct) return direct
 
   const authCookie =
     req.cookies.get('sb-auth-token') ??
     req.cookies.get('supabase-auth-token') ??
     req.cookies.getAll().find((cookie) => cookie.name.endsWith('-auth-token') || cookie.name.includes('-auth-token'))
 
-  if (!authCookie?.value) return null
-  const parsed = parseSupabaseAuthCookie(authCookie.value)
-  if (!parsed) return null
+  const parsedState = authCookie?.value ? parseSupabaseAuthCookie(authCookie.value) : null
+  const accessToken = directToken ?? getTokenFromState(parsedState) ?? null
+  const user = getUserFromState(parsedState) ?? (accessToken ? decodeUserFromToken(accessToken) : null)
 
-  return (
-    parsed.currentSession?.access_token ??
-    parsed.currentSession?.accessToken ??
-    parsed.session?.access_token ??
-    parsed.session?.accessToken ??
-    parsed.user?.access_token ??
-    parsed.user?.accessToken ??
-    parsed.access_token ??
-    parsed.accessToken ??
-    null
-  )
+  return { accessToken, user }
 }
 
 async function fetchUser(accessToken: string) {
@@ -72,12 +174,25 @@ async function fetchUser(accessToken: string) {
   })
 
   if (!res.ok) return null
-  return res.json() as Promise<{ id: string; user_metadata?: Record<string, unknown> }>
+  const data = (await res.json()) as {
+    id: string
+    email?: string
+    user_metadata?: Record<string, unknown>
+  }
+
+  return {
+    id: data.id,
+    email: data.email,
+    user_metadata: data.user_metadata,
+  }
 }
 
-export async function middleware(req: NextRequest) {
-  const accessToken = extractAccessToken(req)
-  const user = accessToken ? await fetchUser(accessToken) : null
+export async function proxy(req: NextRequest) {
+  const { accessToken, user: cachedUser } = getAuthContext(req)
+  let user = cachedUser
+  if (!user && accessToken) {
+    user = await fetchUser(accessToken)
+  }
   let role = (user?.user_metadata?.['app_role'] as string | undefined) ?? 'guest'
 
   const impersonationCookie = req.cookies.get('impersonation_session')
@@ -147,6 +262,5 @@ export async function middleware(req: NextRequest) {
   return NextResponse.next()
 }
 
-export const config = {
-  matcher: ['/app/:path*', '/desk/:path*', '/admin/:path*', '/account/:path*'],
-}
+export const middleware = proxy
+export default proxy

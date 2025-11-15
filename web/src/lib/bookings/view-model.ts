@@ -1,5 +1,5 @@
 import { getPassHeroImageUrl } from '@/lib/desk'
-import { formatPassPrice } from '@/lib/passes/helpers'
+import { formatPassPrice, resolveDisplayPriceText } from '@/lib/passes/helpers'
 
 type PassHeroImage = {
   storagePath?: string | null
@@ -106,12 +106,19 @@ function holdAuthorizesBanner(date: string | null, venueTz: string | null) {
   return `Hold authorizes at 14:00 ${tz} the day before your booking`
 }
 
-function resolvePriceDisplay(kind: string | null, displayText: string | null, amount: number | null, currency: string | null) {
+function resolvePriceDisplay(
+  kind: string | null,
+  displayText: string | null,
+  amount: number | null,
+  currency: string | null,
+  venueName: string | null
+) {
   if (kind === 'MIN_SPEND') {
-    return formatPassPrice(null, amount ?? null, currency ?? null, { prefix: 'Min spend ' })
+    return formatPassPrice(null, amount ?? null, currency ?? null, { prefix: 'Min spend ', venueName })
   }
-  if (displayText) return displayText
-  return formatPassPrice(null, amount ?? null, currency ?? null)
+  const resolvedDisplayText = resolveDisplayPriceText(displayText, venueName)
+  if (resolvedDisplayText) return resolvedDisplayText
+  return formatPassPrice(null, amount ?? null, currency ?? null, { venueName })
 }
 
 export function buildGuestBookingView(row: GuestBookingRow, passOverride?: PassLike): GuestBookingView {
@@ -127,6 +134,7 @@ export function buildGuestBookingView(row: GuestBookingRow, passOverride?: PassL
     price_source?.display_price_text ?? null,
     price_source?.min_spend_amount ?? null,
     price_source?.currency ?? null,
+    price_source?.venue?.name ?? null,
   )
   const pass_display_price_text = price_source?.display_price_text ?? null
   const pass_min_spend_amount = price_source?.min_spend_amount ?? null

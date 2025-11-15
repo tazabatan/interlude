@@ -142,7 +142,6 @@ export async function autoApproveAction(formData: FormData) {
   const enabled = enabledValue === 'true'
   await deskAction('set_auto_approve', { p_pass_id: passId, p_enabled: enabled })
   revalidatePath('/desk')
-  revalidatePath('/desk/passes')
   revalidatePath(`/desk/passes/${passId}`)
 }
 
@@ -156,7 +155,6 @@ export async function dailyCapAction(formData: FormData) {
   if (!Number.isFinite(cap) || cap < 0) throw new Error('cap must be a non-negative number')
   await deskAction('set_daily_cap', { p_pass_id: passId, p_date: date, p_cap: cap })
   revalidatePath('/desk')
-  revalidatePath('/desk/passes')
   revalidatePath(`/desk/passes/${passId}`)
 }
 
@@ -169,7 +167,6 @@ export async function setDefaultCapAction(formData: FormData) {
   if (!Number.isFinite(cap) || cap < 0) throw new Error('cap must be a non-negative number')
   const safeCap = Math.floor(cap)
   await deskAction('set_default_cap', { p_pass_id: passId, pass_id: passId, cap: safeCap })
-  revalidatePath('/desk/passes')
   revalidatePath(`/desk/passes/${passId}`)
 }
 
@@ -203,7 +200,6 @@ export async function updatePassStatusVisibilityAction(formData: FormData) {
   }
   if (!status && !visibility) throw new Error('No updates requested')
   await deskAction('update_pass_status_visibility', payload)
-  revalidatePath('/desk/passes')
   revalidatePath(`/desk/passes/${passId}`)
 }
 
@@ -222,7 +218,6 @@ export async function updatePassServiceHoursAction(formData: FormData) {
     open: open.raw,
     close: close.raw,
   })
-  revalidatePath('/desk/passes')
   revalidatePath(`/desk/passes/${passId}`)
 }
 
@@ -282,7 +277,6 @@ export async function updatePassArrivalWindowAction(formData: FormData) {
     minutes: windowMinutes,
     grace_minutes: Math.round(grace),
   })
-  revalidatePath('/desk/passes')
   revalidatePath(`/desk/passes/${passId}`)
 }
 
@@ -310,7 +304,6 @@ export async function updatePassPricingAction(formData: FormData) {
   payload.interlude_perk = perk || null
 
   await deskAction('update_pass_pricing', payload)
-  revalidatePath('/desk/passes')
   revalidatePath(`/desk/passes/${passId}`)
 }
 

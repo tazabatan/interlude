@@ -13,7 +13,7 @@ import {
   updatePassServiceHoursAction,
   updatePassStatusVisibilityAction,
 } from '@/app/desk/(venue)/actions'
-import { formatPassLabel, formatPassPrice, pickPassImage } from '@/lib/passes/helpers'
+import { formatPassLabel, formatPassPrice, pickPassImage, resolveDisplayPriceText } from '@/lib/passes/helpers'
 import { DropdownField } from './DropdownField'
 
 type PassDetailPageProps = {
@@ -87,11 +87,12 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
 
   const profileEconomics = pass.profile?.economicsType ?? (pass.kind === 'MIN_SPEND' ? 'min_spend' : 'prepaid_credit')
   const prepaidCents = pass.profile?.prepaidCreditAmountCents ?? null
+  const resolvedDisplayPriceText = resolveDisplayPriceText(pass.display_price_text ?? null, pass.venue?.name ?? null)
   const guestPrice =
     profileEconomics === 'min_spend'
       ? formatPassPrice(null, pass.min_spend_amount ?? null, pass.currency ?? 'USD')
       : (
-          pass.display_price_text?.trim() ||
+          resolvedDisplayPriceText ||
           (typeof prepaidCents === 'number'
             ? formatPassPrice(null, prepaidCents, pass.currency ?? 'USD')
             : formatPassPrice(null, pass.min_spend_amount ?? null, pass.currency ?? 'USD'))

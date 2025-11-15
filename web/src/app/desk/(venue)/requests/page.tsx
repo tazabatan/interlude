@@ -5,6 +5,7 @@ import { RequestsClient, type RequestCardPayload, type PassCategory } from './cl
 import { formatArrivalValue } from '@/lib/arrival'
 import { getUserRole } from '@/lib/get-user-role'
 import { computePartyCountsFromAges, formatPartySummary } from '@/lib/party'
+import { formatPassPrice } from '@/lib/passes/helpers'
 
 function formatDateLabel(value: string) {
   const date = new Date(value)
@@ -20,24 +21,6 @@ function formatPassLabel(kind: string | null) {
   if (kind === 'DAY_PASS') return 'Day Pass'
   if (kind === 'BEACH_PASS') return 'Beach Club Pass'
   return 'Pass'
-}
-
-function formatPassPrice(displayText: string | null, amountCents: number | null, currency: string | null) {
-  if (displayText) return displayText
-  if (typeof amountCents === 'number') {
-    const isoCurrency = (currency ?? 'USD').toUpperCase()
-    try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: isoCurrency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(amountCents / 100)
-    } catch (error) {
-      console.warn('formatPassPrice fallback', error)
-    }
-  }
-  return 'TBD price'
 }
 
 function mapCategory(kind: string | null): PassCategory {
@@ -102,7 +85,8 @@ function mapBookingToPayload(booking: DeskBooking, profileMap: Record<string, Gu
     priceLabel: formatPassPrice(
       booking.pass?.display_price_text ?? null,
       booking.pass?.min_spend_amount ?? booking.pass?.profile?.prepaidCreditAmountCents ?? null,
-      booking.pass?.currency ?? 'USD'
+      booking.pass?.currency ?? 'USD',
+      { venueName: booking.pass?.venue?.name ?? null }
     ),
     category: mapCategory(booking.pass?.kind ?? null),
     guestLabel,

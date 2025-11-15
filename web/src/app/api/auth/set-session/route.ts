@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
   }
 
   const response = NextResponse.json({ success: true })
+  const setCookies: string[] = []
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,9 +19,12 @@ export async function POST(req: NextRequest) {
       cookies: {
         get: (name: string) => req.cookies.get(name)?.value,
         set: (name: string, value: string, options: CookieOptionsWithName) => {
+          console.log('Setting cookie:', name, 'with options:', options)
+          setCookies.push(name)
           response.cookies.set({ name, value, ...options })
         },
         remove: (name: string, options: CookieOptionsWithName) => {
+          console.log('Removing cookie:', name)
           response.cookies.set({ name, value: '', ...options, maxAge: 0 })
         },
       },
@@ -33,8 +37,10 @@ export async function POST(req: NextRequest) {
   })
 
   if (error) {
+    console.error('setSession error:', error)
     return NextResponse.json({ error: error.message }, { status: error.status ?? 400 })
   }
 
+  console.log('Cookies set:', setCookies)
   return response
 }

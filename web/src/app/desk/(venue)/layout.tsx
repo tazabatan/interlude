@@ -1,18 +1,12 @@
 import type { ReactNode } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Montserrat } from "next/font/google"
 import VenueDeskNav, { venueDeskAllNavLinks, venueTeamLink } from "./nav"
 import { getUserRole } from "@/lib/get-user-role"
 import AccountMenu from "@/components/account-menu"
 import { serviceRoleFetch } from "@/lib/supabase/service-role"
 import Footer from "@/components/footer"
-
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-})
+import { montserrat } from "@/app/fonts"
 
 export default async function DeskLayout({ children }: { children: ReactNode }) {
   const { user, role } = await getUserRole()

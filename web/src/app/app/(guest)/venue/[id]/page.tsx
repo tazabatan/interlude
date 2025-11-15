@@ -83,7 +83,9 @@ export default async function VenuePassPage({ params }: VenuePassPageProps) {
   const isMinSpend = economicsType === 'min_spend'
   const formattedMinSpend = formatPassPrice(null, pass.min_spend_amount ?? null, pass.currency)
   const fallbackPriceCents = pass.profile?.prepaidCreditAmountCents ?? pass.min_spend_amount ?? null
-  const priceCurrency = formatPassPrice(pass.display_price_text, fallbackPriceCents, pass.currency)
+  const priceCurrency = formatPassPrice(pass.display_price_text, fallbackPriceCents, pass.currency, {
+    venueName: pass.venue?.name ?? null,
+  })
   const priceDisplay = isMinSpend
     ? `${simplePassLabel} includes a minimum spend of ${formattedMinSpend} per person on food or beverages`
     : priceCurrency

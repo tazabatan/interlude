@@ -5,12 +5,21 @@ DB_CONTAINER=${DB_CONTAINER:-supabase_db_interlude}
 
 VENUE_ID=${VENUE_ID:-11111111-2222-3333-4444-555555555555}
 PASS_ID=${PASS_ID:-5d0ba2c3-e1f2-42c2-9d77-c6a13d90e517}
+VENUE_NAME=${VENUE_NAME:-"Belmond Cap Juluca"}
+PASS_DISPLAY_TEXT=${PASS_DISPLAY_TEXT:-"Spend \$250 at ${VENUE_NAME}"}
+
+sql_escape() {
+  printf "%s" "$1" | sed "s/'/''/g"
+}
+
+VENUE_NAME_SQL=$(sql_escape "$VENUE_NAME")
+PASS_DISPLAY_TEXT_SQL=$(sql_escape "$PASS_DISPLAY_TEXT")
 
 echo "🌱 Seeding demo venue + pass data into $DB_CONTAINER..."
 
 docker exec "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -X -U postgres -d postgres <<SQL
 INSERT INTO public.venues (id, name, tz, is_test_venue)
-VALUES ('${VENUE_ID}', 'Seed Venue', 'America/Anguilla', true)
+VALUES ('${VENUE_ID}', '${VENUE_NAME_SQL}', 'America/Anguilla', true)
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     tz = EXCLUDED.tz,
@@ -43,7 +52,7 @@ VALUES (
   'HOLD_ONLY',
   'USD',
   25000,
-  'Spend $250 at Seed Venue',
+  '${PASS_DISPLAY_TEXT_SQL}',
   5000,
   true,
   'active',

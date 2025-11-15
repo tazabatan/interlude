@@ -1,18 +1,12 @@
 import type { ReactNode } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Montserrat } from "next/font/google"
 import GuestNav, { guestNavLinks } from "./nav"
 import { getUserRole } from "@/lib/get-user-role"
 import AccountMenu from "@/components/account-menu"
 import { fetchMemberRewards } from "@/lib/rewards"
 import Footer from "@/components/footer"
-
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-})
+import { montserrat } from "@/app/fonts"
 
 export default async function GuestLayout({ children }: { children: ReactNode }) {
   const { user, role } = await getUserRole()

@@ -169,7 +169,7 @@ export async function saveVenueAction(formData: FormData) {
       .upsert(
         {
           id: venueId,
-          name: normalizedState.internalName || normalizedState.displayName || "Venue",
+          name: normalizedState.displayName || normalizedState.internalName || "Venue",
           tz: normalizedState.timezone || "America/Anguilla",
           status: normalizedState.status,
           profile,

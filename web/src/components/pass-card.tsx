@@ -55,10 +55,14 @@ export default function PassCard({
   showSubtitle = true,
   onClick,
 }: PassCardProps) {
+  const venueName = name ?? null
   const resolvedName = (name ?? 'Pass').toUpperCase()
   const resolvedLocation = location ?? DEFAULT_LOCATION
   const subtitle = formatPassLabel(kind)
-  const price = formatPassPrice(displayPriceText, minSpendAmount, currency, { prefix: pricePrefix })
+  const price = formatPassPrice(displayPriceText, minSpendAmount, currency, {
+    prefix: pricePrefix,
+    venueName,
+  })
   const photoSrc = imageUrl ?? pickPassImage(passId)
   const resolvedStatus: PassCardStatus = status ?? 'active'
   const statusClasses = STATUS_STYLES[resolvedStatus]

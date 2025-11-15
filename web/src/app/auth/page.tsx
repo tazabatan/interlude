@@ -31,21 +31,29 @@ export default function AuthPage() {
       setErrorMessage(error.message)
       return
     }
+
+    // Set session on the server side
     if (data.session) {
-      await fetch('/api/auth/set-session', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        }),
-      }).catch(() => {
-        // no-op; middleware will treat missing cookies as unauthenticated
-      })
+      try {
+        await fetch('/api/auth/set-session', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          }),
+        })
+
+        // Small delay to ensure cookies are propagated
+        await new Promise(resolve => setTimeout(resolve, 100))
+      } catch (err) {
+        console.error('set-session error:', err)
+      }
     }
+
     const role = data.user.user_metadata?.app_role as string | undefined
     const redirect =
       nextParam ??
@@ -54,8 +62,9 @@ export default function AuthPage() {
         : role === 'admin'
           ? '/admin'
           : '/app')
-    router.replace(redirect)
-    router.refresh()
+
+    // Use full page navigation to ensure cookies are set before next request
+    window.location.href = redirect
   }
 
   const onSignupSubmit = async (e: FormEvent<HTMLFormElement>) => {

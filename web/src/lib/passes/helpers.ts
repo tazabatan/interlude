@@ -21,6 +21,15 @@ const PASS_KIND_LABELS: Record<string, { base: string; detail?: string }> = {
   DAY_PASS: { base: 'Pool Pass', detail: 'Day Pass — Hotel' },
 }
 
+export function resolveDisplayPriceText(displayText: string | null | undefined, venueName?: string | null) {
+  const trimmed = typeof displayText === 'string' ? displayText.trim() : ''
+  if (!trimmed) return null
+  if (venueName) {
+    return trimmed.replace(/Seed Venue/gi, venueName)
+  }
+  return trimmed
+}
+
 export function formatPassLabel(kind: string | null, options: LabelOptions = {}) {
   const detail = options.detail ?? false
   if (kind) {
@@ -36,9 +45,11 @@ export function formatPassPrice(
   displayText: string | null,
   amountCents: number | null,
   currency: string | null,
-  options: { prefix?: string } = {}
+  options: { prefix?: string; venueName?: string | null } = {}
 ) {
   const prefix = options.prefix ?? ''
+  const venueName = options.venueName ?? null
+  const resolvedDisplayText = resolveDisplayPriceText(displayText, venueName)
 
   // When using a prefix (like "From "), always use the amount calculation instead of displayText
   if (prefix) {
@@ -60,8 +71,8 @@ export function formatPassPrice(
   }
 
   // No prefix - use displayText if available, otherwise format amount
-  if (displayText) {
-    const trimmed = displayText.trim()
+  if (resolvedDisplayText) {
+    const trimmed = resolvedDisplayText
     const numericCandidate = Number(trimmed.replace(/,/g, ''))
     if (trimmed && !Number.isNaN(numericCandidate) && currency) {
       try {

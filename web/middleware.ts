@@ -1,4 +1,7 @@
-import { middleware, config } from './src/proxy'
+import proxy from './src/proxy'
 
-export default middleware
-export { config }
+export const config = {
+  matcher: ['/app/:path*', '/admin/:path*', '/desk/:path*', '/account/:path*', '/api/:path*'],
+}
+
+export default proxy

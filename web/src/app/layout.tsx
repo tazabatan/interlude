@@ -1,11 +1,9 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
+import { inter } from './fonts'
 import { getImpersonationInfo } from '@/lib/impersonation'
 import ImpersonationBanner from '@/components/impersonation-banner'
 import ImpersonationTracker from '@/components/impersonation-tracker'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Interlude',

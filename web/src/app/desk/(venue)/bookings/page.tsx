@@ -83,7 +83,8 @@ function mapBooking(booking: DeskBooking, profileMap: Record<string, GuestProfil
   const priceLabel = formatPassPrice(
     booking.pass?.display_price_text ?? null,
     fallbackPrice,
-    booking.pass?.currency ?? 'USD'
+    booking.pass?.currency ?? 'USD',
+    { venueName: booking.pass?.venue?.name ?? null }
   )
   const isToday = booking.date === todayIso
   const isDeclined = booking.status === 'declined'

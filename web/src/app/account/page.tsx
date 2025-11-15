@@ -1,16 +1,10 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { Montserrat } from "next/font/google"
 import MemberAccountForm from "./member-form"
 import StaffAccountForm from "./staff-form"
 import { getUserRole } from "@/lib/get-user-role"
 import { serviceRoleFetch } from "@/lib/supabase/service-role"
-
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-})
+import { montserrat } from "@/app/fonts"
 
 const roleLabels: Record<string, string> = {
   member: "Member",
