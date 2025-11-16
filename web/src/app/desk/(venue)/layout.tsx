@@ -8,6 +8,9 @@ import { serviceRoleFetch } from "@/lib/supabase/service-role"
 import Footer from "@/components/footer"
 import { montserrat } from "@/app/fonts"
 
+// Force all desk routes to be dynamic
+export const dynamic = 'force-dynamic'
+
 export default async function DeskLayout({ children }: { children: ReactNode }) {
   const { user, role } = await getUserRole()
   const displayName =

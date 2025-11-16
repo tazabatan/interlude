@@ -8,6 +8,9 @@ import { fetchMemberRewards } from "@/lib/rewards"
 import Footer from "@/components/footer"
 import { montserrat } from "@/app/fonts"
 
+// Force all app routes to be dynamic
+export const dynamic = 'force-dynamic'
+
 export default async function GuestLayout({ children }: { children: ReactNode }) {
   const { user, role } = await getUserRole()
   const roleLabel =
