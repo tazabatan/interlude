@@ -18,6 +18,11 @@ type TeamMember = {
 
 export async function GET(req: NextRequest) {
   const venueId = req.nextUrl.searchParams.get('venue_id')
+  const limitParam = Number(req.nextUrl.searchParams.get('limit') ?? '100')
+  const pageParam = Number(req.nextUrl.searchParams.get('page') ?? '1')
+  const limit = Math.max(1, Math.min(200, Number.isFinite(limitParam) ? limitParam : 100))
+  const page = Math.max(1, Number.isFinite(pageParam) ? pageParam : 1)
+  const offset = (page - 1) * limit
 
   // Verify admin role
   const supabase = await getSupabaseServer()
@@ -35,24 +40,18 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Fetch all users using service role
-    const query = encodeURIComponent('id,email,raw_user_meta_data')
-    const res = await serviceRoleFetch(`/rest/v1/auth_user_profiles?select=${query}`)
-
-    if (!res.ok) {
-      console.error('Failed to fetch users:', res.statusText)
-      return NextResponse.json({ error: 'Failed to fetch team members' }, { status: 500 })
-    }
-
-    const allUsers = (await res.json()) as TeamMember[]
-
-    // Filter by venue_id if provided
-    let teamMembers = allUsers
+    const params = new URLSearchParams({
+      select: 'id,email,raw_user_meta_data',
+      order: 'email.asc',
+      limit: limit.toString(),
+      offset: offset.toString(),
+    })
     if (venueId) {
-      teamMembers = allUsers.filter(
-        (user) => user.raw_user_meta_data?.venue_id === venueId
-      )
+      params.set('raw_user_meta_data->>venue_id', `eq.${venueId}`)
     }
+
+    const res = await serviceRoleFetch(`/rest/v1/auth_user_profiles?${params.toString()}`)
+    const teamMembers = (await res.json()) as TeamMember[]
 
     return NextResponse.json({ teamMembers })
   } catch (error) {

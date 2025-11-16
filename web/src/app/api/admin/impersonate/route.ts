@@ -1,17 +1,16 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import {
+  encodeImpersonationCookie,
+  decodeImpersonationCookie,
+  type SignedImpersonationPayload,
+} from '@/lib/impersonation-cookie'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import { serviceRoleFetch } from '@/lib/supabase/service-role'
 
 export const dynamic = 'force-dynamic'
 
-type ImpersonationSession = {
-  impersonatedUserId: string
-  impersonatedEmail: string
-  startTime: number
-  timeLimitMinutes: number
-  adminUserId: string
-}
+type ImpersonationSession = SignedImpersonationPayload
 
 export async function POST(req: Request) {
   try {
@@ -62,19 +61,26 @@ export async function POST(req: Request) {
 
     const targetUser = users[0]
     const targetUserRole = (targetUser.raw_user_meta_data?.app_role as string | undefined) ?? 'guest'
+    const startTime = Date.now()
+    const timeLimitMinutes = timeLimit
+    const expiresAt = startTime + timeLimitMinutes * 60 * 1000
 
     // Create impersonation session data
     const impersonationSession: ImpersonationSession = {
       impersonatedUserId: targetUser.id,
       impersonatedEmail: targetUser.email,
-      startTime: Date.now(),
-      timeLimitMinutes: timeLimit,
+      impersonatedRole: targetUserRole,
+      startTime,
+      timeLimitMinutes,
+      expiresAt,
       adminUserId: adminUser.id,
     }
 
+    const cookieValue = await encodeImpersonationCookie(impersonationSession)
+
     // Store in cookie
     const cookieStore = await cookies()
-    cookieStore.set('impersonation_session', JSON.stringify(impersonationSession), {
+    cookieStore.set('impersonation_session', cookieValue, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -135,7 +141,11 @@ export async function DELETE() {
       return NextResponse.json({ error: 'No active impersonation session' }, { status: 400 })
     }
 
-    const session = JSON.parse(impersonationCookie.value) as ImpersonationSession
+    const session = await decodeImpersonationCookie(impersonationCookie.value)
+    if (!session) {
+      cookieStore.delete('impersonation_session')
+      return NextResponse.json({ error: 'No active impersonation session' }, { status: 400 })
+    }
 
     // Update audit log
     try {

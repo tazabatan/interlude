@@ -10,6 +10,7 @@ const VISIBILITY_VALUES = new Set(['members', 'guest_only', 'both', 'private'])
 const PASS_STATUS_VALUES = new Set(['active', 'paused'])
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/
 const DESK_CANCELLABLE_STATUSES = new Set(['approved', 'issued', 'pending_verification'])
+const DESK_ROLES = new Set(['venue_manager', 'venue_staff'])
 
 type ParsedTime = {
   raw: string
@@ -50,16 +51,34 @@ function clampToServiceHours(target: ParsedTime, open: ParsedTime, close: Parsed
   return target
 }
 
+async function requireDeskAccess() {
+  const { role, user } = await getUserRole()
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+  if (!DESK_ROLES.has(role)) {
+    throw new Error('Desk access required')
+  }
+  const venueId = (user.user_metadata?.venue_id as string | undefined) ?? null
+  if (!venueId) {
+    throw new Error('No venue context')
+  }
+  return { role, user, venueId }
+}
+
 async function requireVenueManager() {
-  const { role } = await getUserRole()
-  if (role !== 'venue_manager') {
+  const context = await requireDeskAccess()
+  if (context.role !== 'venue_manager') {
     throw new Error('Only venue managers can update pass controls')
   }
+  return context
 }
 
 export async function approveDefaultAction(formData: FormData) {
   const bookingId = formData.get('bookingId')?.toString()
   if (!bookingId) throw new Error('bookingId missing')
+  const { venueId } = await requireDeskAccess()
+  await ensureBookingAccess(bookingId, venueId)
   await approveBooking({ bookingId, windowStart: null, windowEnd: null, issueNow: true })
   revalidatePath('/desk')
 }
@@ -67,10 +86,12 @@ export async function approveDefaultAction(formData: FormData) {
 export async function approveCustomAction(formData: FormData) {
   const bookingId = formData.get('bookingId')?.toString()
   if (!bookingId) throw new Error('bookingId missing')
+  const { venueId } = await requireDeskAccess()
   const windowStartRaw = formData.get('windowStart')?.toString().trim()
   const windowEndRaw = formData.get('windowEnd')?.toString().trim()
   const windowStart = windowStartRaw ? new Date(windowStartRaw).toISOString() : null
   const windowEnd = windowEndRaw ? new Date(windowEndRaw).toISOString() : null
+  await ensureBookingAccess(bookingId, venueId)
   await approveBooking({ bookingId, windowStart, windowEnd, issueNow: true })
   revalidatePath('/desk')
 }
@@ -78,6 +99,8 @@ export async function approveCustomAction(formData: FormData) {
 export async function declineAction(formData: FormData) {
   const bookingId = formData.get('bookingId')?.toString()
   if (!bookingId) throw new Error('bookingId missing')
+  const { venueId } = await requireDeskAccess()
+  await ensureBookingAccess(bookingId, venueId)
   const reason = formData.get('reason')?.toString().trim() || null
   await declineBooking({ bookingId, reason })
   revalidatePath('/desk')
@@ -87,7 +110,8 @@ export async function markArrivedAction(formData: FormData) {
   const bookingId = formData.get('bookingId')?.toString()
   const qrJti = formData.get('qrJti')?.toString()
   if (!bookingId || !qrJti) throw new Error('bookingId and qrJti are required')
-  const { user } = await getUserRole()
+  const { user, venueId } = await requireDeskAccess()
+  await ensureBookingAccess(bookingId, venueId)
   const serverName =
     (user?.user_metadata?.full_name as string | undefined) ??
     (user?.user_metadata?.name as string | undefined) ??
@@ -101,7 +125,7 @@ export async function cancelDeskBookingAction(formData: FormData) {
   const bookingId = formData.get('bookingId')?.toString()
   if (!bookingId) throw new Error('bookingId missing')
 
-  const { user } = await getUserRole()
+  const { user, venueId } = await requireDeskAccess()
   const actorId = user?.id ?? null
   const actorName =
     (user?.user_metadata?.full_name as string | undefined) ??
@@ -109,7 +133,7 @@ export async function cancelDeskBookingAction(formData: FormData) {
     user?.email ??
     'Desk staff'
 
-  const booking = await fetchBookingState(bookingId)
+  const booking = await fetchBookingState(bookingId, venueId)
   if (!booking) throw new Error('Booking not found')
 
   if (booking.status === 'cancelled') {
@@ -322,6 +346,8 @@ export async function pauseDayAction(params: { date: string; paused: boolean; pa
 export async function undoDeclineAction(formData: FormData) {
   const bookingId = formData.get('bookingId')?.toString()
   if (!bookingId) throw new Error('bookingId missing')
+  const { venueId } = await requireDeskAccess()
+  await ensureBookingAccess(bookingId, venueId)
   await undoDeclineBooking({ bookingId })
   revalidatePath('/desk')
   revalidatePath('/desk/requests')
@@ -343,22 +369,27 @@ export async function setDayCapacityAction(params: { date: string; cap: number; 
 }
 
 export async function forceAuthorizeAction(formData: FormData) {
-  await requireVenueManager()
+  const { venueId } = await requireVenueManager()
   const bookingId = formData.get('bookingId')?.toString()
   if (!bookingId) throw new Error('bookingId missing')
+  await ensureBookingAccess(bookingId, venueId)
   await deskAction('force_authorize_now', { p_booking_id: bookingId })
   revalidatePath('/desk')
 }
 
-async function fetchBookingState(bookingId: string) {
+async function fetchBookingState(bookingId: string, venueId: string) {
   const params = new URLSearchParams({
     id: `eq.${bookingId}`,
-    select: 'id,status,hold_status',
+    select: 'id,status,hold_status,venue_id',
     limit: '1',
   })
+  params.set('venue_id', `eq.${venueId}`)
   const res = await serviceRoleFetch(`/rest/v1/bookings?${params.toString()}`)
-  const rows = (await res.json()) as Array<{ id: string; status: string; hold_status: string | null }>
-  return rows[0] ?? null
+  const rows = (await res.json()) as Array<{ id: string; status: string; hold_status: string | null; venue_id: string }>
+  const booking = rows[0]
+  if (!booking) return null
+  if (booking.venue_id !== venueId) return null
+  return booking
 }
 
 async function cancelBookingRecord(params: {
@@ -410,5 +441,19 @@ async function cancelBookingRecord(params: {
         attempts: 0,
       }),
     })
+  }
+}
+
+async function ensureBookingAccess(bookingId: string, venueId: string) {
+  const params = new URLSearchParams({
+    id: `eq.${bookingId}`,
+    venue_id: `eq.${venueId}`,
+    select: 'id',
+    limit: '1',
+  })
+  const res = await serviceRoleFetch(`/rest/v1/bookings?${params.toString()}`)
+  const rows = (await res.json()) as Array<{ id: string }>
+  if (rows.length === 0) {
+    throw new Error('Booking not found or forbidden')
   }
 }

@@ -1,14 +1,9 @@
 import { cookies } from 'next/headers'
+import { decodeImpersonationCookie, type SignedImpersonationPayload } from './impersonation-cookie'
 import { getSupabaseServer } from './supabase/server'
 import { serviceRoleFetch } from './supabase/service-role'
 
-export type ImpersonationSession = {
-  impersonatedUserId: string
-  impersonatedEmail: string
-  startTime: number
-  timeLimitMinutes: number
-  adminUserId: string
-}
+export type ImpersonationSession = SignedImpersonationPayload
 
 export type ImpersonationInfo = {
   isImpersonating: boolean
@@ -25,10 +20,12 @@ export async function getImpersonationInfo(): Promise<ImpersonationInfo> {
   }
 
   try {
-    const session = JSON.parse(impersonationCookie.value) as ImpersonationSession
+    const session = await decodeImpersonationCookie(impersonationCookie.value)
+    if (!session) {
+      return { isImpersonating: false, session: null, isExpired: false }
+    }
     const now = Date.now()
-    const expiryTime = session.startTime + session.timeLimitMinutes * 60 * 1000
-    const isExpired = now > expiryTime
+    const isExpired = now > session.expiresAt
 
     if (isExpired) {
       // Note: We don't delete the cookie here because this runs during rendering.
@@ -57,7 +54,11 @@ export async function getEffectiveUser() {
 
   const impersonationInfo = await getImpersonationInfo()
 
-  if (!impersonationInfo.isImpersonating || !impersonationInfo.session) {
+  if (
+    !impersonationInfo.isImpersonating ||
+    !impersonationInfo.session ||
+    impersonationInfo.session.adminUserId !== actualUser.id
+  ) {
     const role = (actualUser.user_metadata?.app_role as string | undefined) ?? 'guest'
     return { user: actualUser, role, isImpersonating: false, impersonationInfo: null }
   }

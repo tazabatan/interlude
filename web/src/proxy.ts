@@ -1,6 +1,7 @@
 import { decodeJwt } from 'jose'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { decodeImpersonationCookie } from '@/lib/impersonation-cookie'
 
 const guestRoles = ['member', 'admin']
 const deskRoles = ['venue_manager', 'venue_staff', 'admin']
@@ -197,38 +198,9 @@ export async function proxy(req: NextRequest) {
 
   const impersonationCookie = req.cookies.get('impersonation_session')
   if (impersonationCookie && user) {
-    try {
-      const impersonationSession = JSON.parse(impersonationCookie.value)
-      const now = Date.now()
-      const expiryTime = impersonationSession.startTime + impersonationSession.timeLimitMinutes * 60 * 1000
-
-      if (now <= expiryTime) {
-        const serviceRoleUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-        if (serviceRoleUrl && serviceRoleKey) {
-          const query = encodeURIComponent('raw_user_meta_data')
-          const filterQuery = encodeURIComponent(`id.eq.${impersonationSession.impersonatedUserId}`)
-          const userRes = await fetch(
-            `${serviceRoleUrl}/rest/v1/auth_user_profiles?select=${query}&${filterQuery}`,
-            {
-              headers: {
-                apikey: serviceRoleKey,
-                Authorization: `Bearer ${serviceRoleKey}`,
-              },
-              cache: 'no-store',
-            }
-          )
-
-          if (userRes.ok) {
-            const users = (await userRes.json()) as Array<{ raw_user_meta_data: { app_role?: string } }>
-            if (users.length > 0) {
-              role = (users[0].raw_user_meta_data?.app_role as string | undefined) ?? 'guest'
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to parse impersonation session in middleware:', error)
+    const session = await decodeImpersonationCookie(impersonationCookie.value)
+    if (session && session.adminUserId === user.id && Date.now() <= session.expiresAt) {
+      role = session.impersonatedRole ?? role
     }
   }
 

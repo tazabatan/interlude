@@ -69,11 +69,10 @@ async function verifySignature(signatureHeader: string, payload: string) {
 }
 
 async function recordEvent(event: Record<string, unknown>) {
-  await fetch(`${SUPABASE_URL}/rest/v1/stripe_events`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/stripe_events`, {
     method: "POST",
     headers: {
       ...supabaseHeaders!,
-      Prefer: "resolution=ignore-duplicates",
     },
     body: JSON.stringify({
       id: event.id,
@@ -81,6 +80,16 @@ async function recordEvent(event: Record<string, unknown>) {
       payload: event,
     }),
   });
+
+  if (res.status === 409) {
+    return false;
+  }
+
+  if (!res.ok) {
+    throw new Error(`failed to persist stripe event: ${res.status} ${await res.text()}`);
+  }
+
+  return true;
 }
 
 async function callRpc(fn: string, args: Record<string, unknown>) {
@@ -119,10 +128,17 @@ serve(async (req) => {
 
   const event = JSON.parse(rawBody) as Record<string, any>;
 
+  let isNewEvent = false;
   try {
-    await recordEvent(event);
-  } catch (_) {
-    // ignore duplicate insert errors
+    isNewEvent = await recordEvent(event);
+  } catch (error) {
+    return new Response(String(error), { status: 500 });
+  }
+
+  if (!isNewEvent) {
+    return new Response(JSON.stringify({ received: true, duplicate: true }), {
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   try {
