@@ -1,6 +1,8 @@
 import UserImpersonationForm from './user-impersonation-form'
 import RecentImpersonationSessions from './recent-impersonation-sessions'
 
+export const dynamic = 'force-dynamic'
+
 export default function UserLoginPage() {
   return (
     <div className="space-y-8">

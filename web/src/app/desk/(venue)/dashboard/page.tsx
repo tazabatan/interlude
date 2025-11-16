@@ -2,6 +2,8 @@ import { VenueDashboardClient } from './client'
 import { fetchVenueDashboardData } from './actions'
 import type { VenueDashboardFilters } from './types'
 
+export const dynamic = 'force-dynamic'
+
 export default async function VenueDashboardPage() {
   // Fetch initial data for current month
   const initialFilters: VenueDashboardFilters = {
