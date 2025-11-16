@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { randomUUID } from 'node:crypto'
 import { approveBooking, declineBooking, deskAction, fetchPassById, redeemBooking, undoDeclineBooking } from '@/lib/desk'
 import { getUserRole } from '@/lib/get-user-role'
@@ -11,6 +12,10 @@ const PASS_STATUS_VALUES = new Set(['active', 'paused'])
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/
 const DESK_CANCELLABLE_STATUSES = new Set(['approved', 'issued', 'pending_verification'])
 const DESK_ROLES = new Set(['venue_manager', 'venue_staff'])
+type RequestContext = {
+  from?: string
+  date?: string
+}
 
 type ParsedTime = {
   raw: string
@@ -51,6 +56,55 @@ function clampToServiceHours(target: ParsedTime, open: ParsedTime, close: Parsed
   return target
 }
 
+function readRequestContext(formData: FormData): RequestContext {
+  const from = formData.get('from')?.toString().trim()
+  const date = formData.get('date')?.toString().trim()
+  return {
+    from: from || undefined,
+    date: date || undefined,
+  }
+}
+
+function shouldReturnInlineResult(formData: FormData) {
+  const inlineFlag = formData.get('inline')?.toString()
+  return inlineFlag === 'true'
+}
+
+function buildRequestDetailUrl(bookingId: string, params?: RequestContext & { error?: string }) {
+  const searchParams = new URLSearchParams()
+  if (params?.from) searchParams.set('from', params.from)
+  if (params?.date) searchParams.set('date', params.date)
+  if (params?.error) searchParams.set('error', params.error)
+  const query = searchParams.toString()
+  return query ? `/desk/requests/${bookingId}?${query}` : `/desk/requests/${bookingId}`
+}
+
+function redirectToRequestDetail(bookingId: string, params?: RequestContext & { error?: string }) {
+  redirect(buildRequestDetailUrl(bookingId, params))
+}
+
+function formatRequestError(error: unknown) {
+  if (error instanceof Error) {
+    const jsonStart = error.message.indexOf('{')
+    if (jsonStart !== -1) {
+      const jsonSlice = error.message.slice(jsonStart)
+      try {
+        const parsed = JSON.parse(jsonSlice) as { message?: string } | undefined
+        if (parsed?.message && parsed.message.trim()) {
+          return parsed.message
+        }
+      } catch {
+        // ignore JSON parse errors and fall through
+      }
+    }
+    const sanitized = error.message.replace(/^Supabase request failed \(\d+\):\s*/i, '').trim()
+    if (sanitized) {
+      return sanitized
+    }
+  }
+  return 'Unable to approve this request right now. Please review capacity or try again.'
+}
+
 async function requireDeskAccess() {
   const { role, user } = await getUserRole()
   if (!user) {
@@ -79,8 +133,25 @@ export async function approveDefaultAction(formData: FormData) {
   if (!bookingId) throw new Error('bookingId missing')
   const { venueId } = await requireDeskAccess()
   await ensureBookingAccess(bookingId, venueId)
-  await approveBooking({ bookingId, windowStart: null, windowEnd: null, issueNow: true })
+  const context = readRequestContext(formData)
+  const inlineResult = shouldReturnInlineResult(formData)
+  try {
+    await approveBooking({ bookingId, windowStart: null, windowEnd: null, issueNow: true })
+  } catch (error) {
+    const errorMessage = formatRequestError(error)
+    if (inlineResult) {
+      throw new Error(errorMessage)
+    }
+    redirectToRequestDetail(bookingId, { ...context, error: errorMessage })
+  }
   revalidatePath('/desk')
+  revalidatePath('/desk/requests')
+  if (context.from === 'calendar') {
+    if (context.date) {
+      revalidatePath(`/desk/calendar/${context.date}`)
+    }
+    revalidatePath('/desk/calendar')
+  }
 }
 
 export async function approveCustomAction(formData: FormData) {
@@ -92,8 +163,25 @@ export async function approveCustomAction(formData: FormData) {
   const windowStart = windowStartRaw ? new Date(windowStartRaw).toISOString() : null
   const windowEnd = windowEndRaw ? new Date(windowEndRaw).toISOString() : null
   await ensureBookingAccess(bookingId, venueId)
-  await approveBooking({ bookingId, windowStart, windowEnd, issueNow: true })
+  const inlineResult = shouldReturnInlineResult(formData)
+  const context = readRequestContext(formData)
+  try {
+    await approveBooking({ bookingId, windowStart, windowEnd, issueNow: true })
+  } catch (error) {
+    const errorMessage = formatRequestError(error)
+    if (inlineResult) {
+      throw new Error(errorMessage)
+    }
+    redirectToRequestDetail(bookingId, { ...context, error: errorMessage })
+  }
   revalidatePath('/desk')
+  revalidatePath('/desk/requests')
+  if (context.from === 'calendar') {
+    if (context.date) {
+      revalidatePath(`/desk/calendar/${context.date}`)
+    }
+    revalidatePath('/desk/calendar')
+  }
 }
 
 export async function declineAction(formData: FormData) {

@@ -14,7 +14,7 @@ import { buildArrivalDisplay } from '@/lib/arrival'
 import { computePartyCountsFromAges, formatPartySummary } from '@/lib/party'
 
 type Params = Promise<{ id: string }>
-type SearchParams = Promise<{ from?: string; date?: string }>
+type SearchParams = Promise<{ from?: string; date?: string; error?: string }>
 
 const TIMELINE_STEPS = [
   { key: 'requested', label: 'Requested' },
@@ -193,6 +193,7 @@ export default async function DeskRequestDetailPage({
       value: booking.created_at ? formatDisplayDate(booking.created_at) : 'TBD',
     },
   ]
+  const errorMessage = search.error?.trim() ? search.error : null
 
   return (
     <div className="space-y-10 pb-16 text-[#02374D]">
@@ -300,8 +301,16 @@ export default async function DeskRequestDetailPage({
           </div>
 
           <div className="space-y-6">
+            {errorMessage && (
+              <div className="rounded-3xl border border-[#F5B8B8] bg-[#FFF7F7] p-4 text-sm text-[#B4231F]">
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#B4231F]">Approval failed</p>
+                <p className="mt-1 text-sm normal-case text-[#7A271A]">{errorMessage}</p>
+              </div>
+            )}
             <form action={approveDefaultAction} className="flex flex-wrap gap-3">
               <input type="hidden" name="bookingId" value={booking.id} />
+              {search.from ? <input type="hidden" name="from" value={search.from} /> : null}
+              {search.date ? <input type="hidden" name="date" value={search.date} /> : null}
               <button className="rounded-full bg-[#02374D] px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-[#02486A]">
                 Approve with default window
               </button>
@@ -333,6 +342,8 @@ export default async function DeskRequestDetailPage({
                 </label>
               </div>
               <input type="hidden" name="bookingId" value={booking.id} />
+              {search.from ? <input type="hidden" name="from" value={search.from} /> : null}
+              {search.date ? <input type="hidden" name="date" value={search.date} /> : null}
               <button className="w-full rounded-full border border-[#02374D] px-4 py-2 text-sm font-semibold uppercase tracking-wide text-[#02374D] transition hover:bg-[#02374D] hover:text-white">
                 Approve with custom window
               </button>

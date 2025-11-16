@@ -3,7 +3,17 @@
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { approveDefaultAction, declineAction } from '../actions'
+
+type ApproveActionState = {
+  status: 'idle'
+} | {
+  status: 'submitting'
+} | {
+  status: 'error'
+  message: string
+}
 
 export type PassCategory = 'all' | 'beach' | 'pool' | 'spa' | 'gym'
 
@@ -79,6 +89,8 @@ export function RequestsClient({ bookings, heading }: { bookings: RequestCardPay
 
 function RequestCard({ booking }: { booking: RequestCardPayload }) {
   const detailHref = `/desk/requests/${booking.id}`
+  const router = useRouter()
+  const [state, setState] = useState<ApproveActionState>({ status: 'idle' })
 
   return (
     <div className="flex min-h-[24rem] flex-col gap-6 rounded-[32px] border border-[#E8E4D7] bg-[#F9F6ED] px-7 py-8 text-center shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
@@ -115,10 +127,41 @@ function RequestCard({ booking }: { booking: RequestCardPayload }) {
         </div>
       </Link>
 
+      {state.status === 'error' && (
+        <div className="rounded-2xl border border-[#F5B8B8] bg-white/80 px-4 py-3 text-left text-xs text-[#B4231F]">
+          <p className="font-semibold uppercase tracking-[0.2em]">Approval failed</p>
+          <p className="mt-1 text-[#7A271A]">{state.message}</p>
+        </div>
+      )}
+
       <div className="flex gap-3 pt-2">
-        <form action={approveDefaultAction} className="flex flex-1 justify-center">
+        <form
+          action={async (formData) => {
+            setState({ status: 'submitting' })
+            try {
+              await approveDefaultAction(formData)
+              setState({ status: 'idle' })
+              router.refresh()
+            } catch (error) {
+              setState({
+                status: 'error',
+                message: error instanceof Error ? error.message : 'Unable to approve request. Please try again.',
+              })
+            }
+          }}
+          className="flex flex-1 justify-center"
+        >
           <input type="hidden" name="bookingId" value={booking.id} />
-          <button className="w-full max-w-[12rem] rounded-full bg-[#7fcfc2] px-3 py-2 text-sm font-semibold text-white shadow-[0px_4px_18px_rgba(0,0,0,0.12)] transition hover:bg-[#6ac4b6]">
+          <input type="hidden" name="from" value="requests" />
+          <input type="hidden" name="inline" value="true" />
+          <button
+            className={`w-full max-w-[12rem] rounded-full px-3 py-2 text-sm font-semibold text-white shadow-[0px_4px_18px_rgba(0,0,0,0.12)] transition ${
+              state.status === 'submitting'
+                ? 'cursor-not-allowed bg-[#9bded3]'
+                : 'bg-[#7fcfc2] hover:bg-[#6ac4b6]'
+            }`}
+            disabled={state.status === 'submitting'}
+          >
             Approve
           </button>
         </form>
