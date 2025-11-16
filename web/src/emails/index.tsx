@@ -12,22 +12,13 @@ import { DayOfReminderEmail, dayOfReminderSubject } from '@/emails/templates/day
 import { HoldStatusEmail, holdStatusSubject } from '@/emails/templates/hold-status-email'
 import { NoScanNoticeEmail, noScanSubject } from '@/emails/templates/no-scan-notice-email'
 
-type TemplateId = 'booking-approved' | 'day-of-reminder' | 'hold-status' | 'no-scan'
-
 type TemplateEntry<TPayload> = {
   component: (payload: TPayload) => ReactElement
   subject: (payload: TPayload) => string
   tagValue: string
 }
 
-type TemplateMap = {
-  'booking-approved': TemplateEntry<BookingApprovedEmailPayload>
-  'day-of-reminder': TemplateEntry<DayOfReminderEmailPayload>
-  'hold-status': TemplateEntry<HoldStatusEmailPayload>
-  'no-scan': TemplateEntry<NoScanNoticeEmailPayload>
-}
-
-const templateMap: TemplateMap = {
+const templateMap = {
   'booking-approved': {
     component: BookingApprovedEmail,
     subject: bookingApprovedSubject,
@@ -50,15 +41,9 @@ const templateMap: TemplateMap = {
   },
 }
 
-type TemplatePayload<TTemplate extends TemplateId> = TTemplate extends 'booking-approved'
-  ? BookingApprovedEmailPayload
-  : TTemplate extends 'day-of-reminder'
-    ? DayOfReminderEmailPayload
-    : TTemplate extends 'hold-status'
-      ? HoldStatusEmailPayload
-      : TTemplate extends 'no-scan'
-        ? NoScanNoticeEmailPayload
-        : never
+type TemplateMap = typeof templateMap
+type TemplateId = keyof TemplateMap
+type TemplatePayload<TTemplate extends TemplateId> = Parameters<TemplateMap[TTemplate]['component']>[0]
 
 export async function sendBookingApprovedEmail(payload: BookingApprovedEmailPayload) {
   await sendTemplateEmail('booking-approved', payload)
@@ -77,7 +62,7 @@ export async function sendNoScanNoticeEmail(payload: NoScanNoticeEmailPayload) {
 }
 
 async function sendTemplateEmail<TTemplate extends TemplateId>(template: TTemplate, payload: TemplatePayload<TTemplate>) {
-  const entry = templateMap[template]
+  const entry = templateMap[template] as TemplateEntry<TemplatePayload<TTemplate>>
   const component = entry.component(payload)
   await sendTransactionalEmail({
     to: payload.recipient,
@@ -91,7 +76,7 @@ async function sendTemplateEmail<TTemplate extends TemplateId>(template: TTempla
 }
 
 export function renderEmailPreview<TTemplate extends TemplateId>(template: TTemplate, payload: TemplatePayload<TTemplate>) {
-  const entry = templateMap[template]
+  const entry = templateMap[template] as TemplateEntry<TemplatePayload<TTemplate>>
   return renderEmail(entry.component(payload))
 }
 
