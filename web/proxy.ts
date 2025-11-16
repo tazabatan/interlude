@@ -204,7 +204,7 @@ async function decodeImpersonationCookie(cookieValue: string) {
   }
 }
 
-export async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const { accessToken, user: cachedUser } = getAuthContext(req)
   let user = cachedUser
   if (!user && accessToken) {
@@ -253,6 +253,4 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: ['/app/:path*', '/admin/:path*', '/desk/:path*', '/account/:path*', '/api/:path*'],
 }
-
-export default middleware
 
