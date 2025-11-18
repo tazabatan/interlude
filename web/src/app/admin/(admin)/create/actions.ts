@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache"
 import { getSupabaseAdminClient } from "@/lib/supabase/admin"
 import { fetchAdminVenueRowById, fetchAdminPassRowById } from "./data"
 import { mapVenueRowToRecord, mapPassRowToRecord, buildVenueProfileFromState, buildPassProfileFromState } from "./serialization"
-import type { VenueFormState, PassFormState, ImageAsset } from "./types"
+import type { VenueFormState, PassFormState, ImageAsset, VenueStatus } from "./types"
 
 type SerializableImageInput = {
   id: string
@@ -164,9 +164,17 @@ export async function saveVenueAction(formData: FormData) {
     }
 
     const profile = buildVenueProfileFromState(normalizedState)
+    type UpsertVenueProfile = ReturnType<typeof buildVenueProfileFromState>
+    type UpsertVenueRow = {
+      id: string
+      name: string
+      tz: string
+      status: VenueStatus
+      profile: UpsertVenueProfile
+    }
     const { error } = await supabase
       .from("venues")
-      .upsert(
+      .upsert<UpsertVenueRow>(
         {
           id: venueId,
           name: normalizedState.displayName || normalizedState.internalName || "Venue",
