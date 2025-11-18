@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import QRCode from 'react-qr-code'
 import { fetchMemberBookingById } from '@/lib/bookings/member'
 import { formatPassLabel, formatPassPrice } from '@/lib/passes/helpers'
+import { buildScanUrl } from '@/lib/scan-link'
 import CancelBookingForm from './cancel-booking-form'
 
 type Params = Promise<{ id: string }>
@@ -82,6 +83,7 @@ export default async function BookingDetailPage({ params }: { params: Params }) 
     ? `${passLabel} included with minimum spend of ${formattedMinSpend} per person on food or beverages`
     : booking.price_display ?? 'Price to be confirmed'
   const showQr = booking.status === 'issued' && Boolean(booking.qr_jti)
+  const qrCodeValue = showQr && booking.qr_jti ? buildScanUrl(booking.id, booking.qr_jti) : null
   const arrivalWindow = formatArrivalWindow(booking.arrival_window_start, booking.arrival_window_end)
   const bookingDate = formatDisplayDate(booking.date)
   const showCancelAction = !['cancelled', 'declined', 'redeemed', 'redeemed_late', 'no_show'].includes(booking.status)
@@ -185,11 +187,11 @@ export default async function BookingDetailPage({ params }: { params: Params }) 
             </p>
           </div>
 
-          {showQr ? (
+          {showQr && qrCodeValue ? (
             <div className="space-y-4 rounded-3xl bg-white p-6 text-center shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">Show on arrival</p>
               <div className="mx-auto w-fit rounded-2xl bg-white p-4 shadow-inner">
-                <QRCode value={booking.qr_jti!} size={192} />
+                <QRCode value={qrCodeValue} size={192} />
               </div>
               <p className="text-sm text-gray-600">We’ll scan this code to redeem your pass.</p>
             </div>

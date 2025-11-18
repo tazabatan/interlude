@@ -2,6 +2,7 @@ import { fetchGuestProfileById } from '@/lib/guest-profile'
 import { formatPassLabel } from '@/lib/passes/helpers'
 import { serviceRoleFetch } from '@/lib/supabase/service-role'
 import { formatTimezoneLabel } from '@/lib/timezone'
+import { buildScanUrl } from '@/lib/scan-link'
 import type {
   BookingApprovedEmailPayload,
   BookingRequestedEmailPayload,
@@ -203,7 +204,7 @@ async function buildBookingContext(bookingId: string): Promise<BookingEmailConte
     manageUrl: new URL(`/app/bookings/${booking.id}`, siteUrl).toString(),
     walletUrl: new URL('/app', siteUrl).toString(),
     supportUrl: new URL('/support', siteUrl).toString(),
-    qrCodeValue: booking.qr_jti ?? null,
+    qrCodeValue: booking.qr_jti ? buildScanUrl(booking.id, booking.qr_jti) : null,
   }
 }
 
