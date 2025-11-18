@@ -124,14 +124,14 @@ function BookingCard({ booking }: { booking: GuestBookingView }) {
 
   return (
     <div
-      className="mx-auto w-full max-w-[24rem] cursor-pointer rounded-[32px] focus:outline-none focus:ring-2 focus:ring-[#02374D]/40 focus:ring-offset-2 focus:ring-offset-[#F4F1E7] sm:max-w-[25.5rem] lg:max-w-[26.5rem] xl:max-w-[27.5rem]"
+      className="mx-auto w-full max-w-[24rem] cursor-pointer rounded-[32px] px-3 focus:outline-none focus:ring-2 focus:ring-[#02374D]/40 focus:ring-offset-2 focus:ring-offset-[#F4F1E7] sm:max-w-[25.5rem] lg:max-w-[26.5rem] xl:max-w-[27.5rem] sm:px-0"
       role="link"
       tabIndex={0}
       onClick={handleCardClick}
       onKeyDown={handleKeyDown}
     >
-      <div className="flex min-h-[22rem] w-full flex-col items-center justify-center gap-4 rounded-[32px] border border-[#E8E4D7] bg-[#F9F6ED] px-7 py-5 text-center shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] lg:min-h-[24rem] xl:min-h-[26rem]">
-        <div className="flex flex-col items-center text-[0.62rem] uppercase tracking-[0.22em] text-[#6F716D]">
+      <div className="flex min-h-[22rem] w-full flex-col items-center justify-center gap-4 rounded-[32px] border border-[#E8E4D7] bg-[#F9F6ED] px-4 py-6 text-center shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] sm:px-7 sm:py-7 lg:min-h-[24rem] xl:min-h-[26rem]">
+        <div className="flex flex-col items-center text-[0.58rem] uppercase tracking-[0.22em] text-[#6F716D] sm:text-[0.62rem]">
           <span className="tracking-[0.25em] text-[#6F716D]">{headingLine}</span>
           <span
             className={`mt-1 inline-flex rounded-full px-3 py-1 text-[0.65rem] font-semibold tracking-tight ${badgeStyle}`}
@@ -141,7 +141,7 @@ function BookingCard({ booking }: { booking: GuestBookingView }) {
         </div>
 
         <div className="flex flex-col items-center gap-3">
-          <div className="h-32 w-32 overflow-hidden rounded-full border-4 border-[#DBD8C9] bg-white shadow-[0px_10px_22px_rgba(0,0,0,0.12)] lg:h-36 lg:w-36">
+          <div className="h-28 w-28 overflow-hidden rounded-full border-4 border-[#DBD8C9] bg-white shadow-[0px_10px_22px_rgba(0,0,0,0.12)] sm:h-32 sm:w-32 lg:h-36 lg:w-36">
             {imageSrc ? (
               <Image
                 src={imageSrc}
@@ -168,12 +168,12 @@ function BookingCard({ booking }: { booking: GuestBookingView }) {
         </div>
 
         {!isCancelled && (
-          <div className="flex min-h-[2.5rem] items-center justify-center gap-3 text-sm">
+          <div className="flex w-full flex-col gap-3 px-2 text-sm sm:min-h-[2.5rem] sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
             {showPrimaryCta && (
               <Link
                 href={`/app/booking/${booking.id}`}
                 onClick={(event) => event.stopPropagation()}
-                className="rounded-full bg-[#02374D] px-5 py-2 font-medium text-white transition hover:bg-[#02486A]"
+                className="w-full rounded-full bg-[#02374D] px-5 py-2 text-center font-medium text-white transition hover:bg-[#02486A] sm:w-auto sm:min-w-[140px]"
               >
                 {primaryCta}
               </Link>
@@ -182,7 +182,7 @@ function BookingCard({ booking }: { booking: GuestBookingView }) {
               <Link
                 href={`/app/booking/${booking.id}`}
                 onClick={(event) => event.stopPropagation()}
-                className="rounded-full border border-[#F5B8B8] px-5 py-2 font-medium text-[#B4231F] transition hover:border-[#f29393]"
+                className="w-full rounded-full border border-[#F5B8B8] px-5 py-2 text-center font-medium text-[#B4231F] transition hover:border-[#f29393] sm:w-auto sm:min-w-[140px]"
               >
                 Cancel
               </Link>
@@ -270,7 +270,7 @@ export default function WalletClient({ bookings }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-[84rem] space-y-12 px-4 sm:px-8 lg:px-12 xl:px-16 2xl:max-w-[92rem]">
-      <div className="flex justify-center gap-2 pb-6">
+      <div className="flex flex-wrap items-center justify-center gap-2 pb-6">
         {(Object.keys(segmentLabels) as Segment[]).map((key) => (
           <button
             key={key}
@@ -287,11 +287,11 @@ export default function WalletClient({ bookings }: Props) {
       </div>
 
       <header className="pb-4 text-center">
-        <h1 className="text-3xl font-medium uppercase tracking-[0.02em] text-black">{headlineText}</h1>
+        <h1 className="text-2xl font-medium uppercase tracking-[0.02em] text-black sm:text-3xl">{headlineText}</h1>
       </header>
 
       {activeList.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-[#DBD8C9] bg-white/80 p-12 text-center text-[#4F514D]">
+        <div className="rounded-3xl border border-dashed border-[#DBD8C9] bg-white/80 p-6 text-center text-[#4F514D] sm:p-12">
           {segment === 'past'
             ? 'No past reservations yet.'
             : segment === 'cancelled'
@@ -299,7 +299,7 @@ export default function WalletClient({ bookings }: Props) {
               : 'No reservations yet. Request a pass to get started.'}
         </div>
       ) : (
-        <div className="grid items-stretch justify-items-center gap-[1.1rem] sm:grid-cols-2 xl:grid-cols-3 xl:gap-[1.2rem]">
+        <div className="grid items-stretch justify-items-center gap-4 sm:grid-cols-2 xl:grid-cols-3 xl:gap-[1.2rem]">
           {activeList.map((booking) => (
             <BookingCard key={booking.id} booking={booking} />
           ))}

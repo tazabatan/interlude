@@ -306,53 +306,55 @@ export function CalendarClient({
   }
 
   return (
-    <div className="flex min-h-screen gap-8">
+    <div className="flex min-h-screen flex-col gap-8 lg:flex-row">
       {/* Calendar Grid - Left Side */}
       <div className="min-w-0 flex-1 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={goToPreviousMonth}
-            className="rounded-full bg-[#DBD8C9] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#d0ccba]"
+            className="w-full rounded-full bg-[#DBD8C9] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#d0ccba] sm:w-auto"
           >
             ← Previous
           </button>
-          <h2 className="text-3xl font-medium uppercase tracking-[0.02em] text-black">
+          <h2 className="text-center text-3xl font-medium uppercase tracking-[0.02em] text-black sm:text-left">
             {monthName} {currentYear}
           </h2>
           <button
             type="button"
             onClick={goToNextMonth}
-            className="rounded-full bg-[#DBD8C9] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#d0ccba]"
+            className="w-full rounded-full bg-[#DBD8C9] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#d0ccba] sm:w-auto"
           >
             Next →
           </button>
         </div>
 
-        <div className="grid auto-rows-fr grid-cols-7 gap-3">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-            <div
-              key={day}
-              className="py-2 text-center text-xs font-semibold uppercase tracking-[0.1em] text-[#6F716D]"
-            >
-              {day}
-            </div>
-          ))}
+        <div className="overflow-x-auto pb-4 sm:overflow-visible sm:pb-0">
+          <div className="grid min-w-[640px] auto-rows-fr grid-cols-7 gap-3 sm:min-w-0">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+              <div
+                key={day}
+                className="py-2 text-center text-xs font-semibold uppercase tracking-[0.1em] text-[#6F716D]"
+              >
+                {day}
+              </div>
+            ))}
 
-          {daysWithData.map((day) => (
-            <DayCell
-              key={day.date}
-              day={day}
-              isSelected={selectedDate === day.date}
-              onClick={() => setSelectedDate(day.date)}
-            />
-          ))}
+            {daysWithData.map((day) => (
+              <DayCell
+                key={day.date}
+                day={day}
+                isSelected={selectedDate === day.date}
+                onClick={() => setSelectedDate(day.date)}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Summary Panel - Right Side (Fixed) */}
-      <div className="w-[420px] flex-shrink-0">
-        <div className="sticky top-8">
+      <div className="w-full lg:w-[420px] lg:flex-shrink-0">
+        <div className="lg:sticky lg:top-8">
           {selectedDayData ? (
             <DateDetailPanel
               key={`${selectedDayData.date}-${selectedDayData.cap ?? 0}`}
@@ -482,7 +484,7 @@ function DayCell({
       type="button"
       onClick={onClick}
       className={`
-        relative w-full rounded-[24px] border p-3 text-left transition shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]
+        relative w-full rounded-[24px] border p-3 text-left transition shadow-none sm:shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]
         focus:outline-none focus-visible:ring-2 focus-visible:ring-[#02374D] focus-visible:ring-offset-2
         ${colorClasses}
         ${!day.isCurrentMonth && 'opacity-30'}

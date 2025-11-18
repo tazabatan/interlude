@@ -138,10 +138,10 @@ export default function RequestFlow({
   }
 
   if (step === "account") {
-  return (
-    <div className="space-y-8">
-      <StepIndicator current={1} />
-        <section className="rounded-[32px] border border-[#E8E4D7] bg-[#F9F6ED] p-10 shadow-[0px_4px_23px_rgba(0,0,0,0.12)]">
+    return (
+      <div className="space-y-8">
+        <StepIndicator current={1} />
+        <section className="rounded-[32px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 shadow-[0px_4px_23px_rgba(0,0,0,0.12)] sm:p-10">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6F716D]">Make the most of Interlude</p>
           <h1 className="mt-4 text-3xl font-semibold uppercase tracking-[0.05em] text-black">
             Create a free account to track every request.
@@ -172,16 +172,18 @@ export default function RequestFlow({
 
   return (
     <div className="space-y-12">
-      <div className="relative flex items-center">
-        <BackButton href={backHref} />
-        <div className="absolute left-1/2 -translate-x-1/2">
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="self-start sm:self-auto">
+          <BackButton href={backHref} />
+        </div>
+        <div className="w-full sm:flex-1">
           <StepIndicator current={trackerStep} />
         </div>
       </div>
 
       {step === "confirm" ? (
-        <section className="flex gap-6 w-full">
-          <div className="flex-[2] space-y-6 min-w-0">
+        <section className="flex w-full flex-col gap-6 lg:flex-row">
+          <div className="flex-[2] min-w-0 space-y-6 rounded-[28px] border border-[#E8E4D7] bg-white/90 p-6 shadow-sm lg:rounded-none lg:border-none lg:bg-transparent lg:p-0 lg:shadow-none">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">{summary.destination}</p>
               <h1 className="text-3xl font-medium uppercase tracking-[0.02em] text-black break-words">{summary.venueName}</h1>
@@ -221,7 +223,7 @@ export default function RequestFlow({
               </p>
             )}
           </div>
-          <div className="flex-[1] min-w-0">
+          <div className="flex-[1] min-w-0 w-full">
             <SummaryPanel
               summary={summary}
               primaryCtaLabel="Confirm booking"
@@ -231,9 +233,9 @@ export default function RequestFlow({
           </div>
         </section>
       ) : (
-        <section className="flex gap-6 w-full">
+        <section className="flex w-full flex-col gap-6 lg:flex-row">
           <form
-            className="flex-[2] space-y-8 rounded-[32px] border border-[#E8E4D7] bg-[#FFFCF5] p-8 shadow-[0px_4px_23px_rgba(0,0,0,0.15)] min-w-0 overflow-hidden"
+            className="flex-[2] min-w-0 space-y-8 rounded-[32px] border border-[#E8E4D7] bg-[#FFFCF5] p-6 shadow-[0px_4px_23px_rgba(0,0,0,0.15)] overflow-hidden sm:p-8"
             onSubmit={handleCompleteBooking}
           >
             <div className="space-y-6">
@@ -313,7 +315,7 @@ export default function RequestFlow({
               {submitting ? 'Processing…' : 'Complete booking'}
             </button>
           </form>
-          <div className="flex-[1] min-w-0">
+          <div className="flex-[1] min-w-0 w-full">
             <SummaryPanel summary={summary} primaryCtaLabel="Complete booking" onPrimaryClick={() => {}} hideButton />
           </div>
         </section>
@@ -336,7 +338,7 @@ function StepIndicator({ current }: { current: number }) {
 
     // Add circle
     elements.push(
-      <div key={`circle-${step.id}`} className="flex w-20 flex-col items-center gap-2">
+      <div key={`circle-${step.id}`} className="flex w-16 flex-col items-center gap-2 sm:w-20">
         <span
           className={`flex h-10 w-10 items-center justify-center rounded-full text-base font-semibold ${
             state === "complete"
@@ -355,13 +357,13 @@ function StepIndicator({ current }: { current: number }) {
     // Add line (except after last step)
     if (i < steps.length - 1) {
       elements.push(
-        <div key={`line-${step.id}`} className="mx-3 mb-6 h-px w-28 bg-[#DBD8C9]" aria-hidden="true" />
+        <div key={`line-${step.id}`} className="hidden h-px w-16 bg-[#DBD8C9] sm:mx-3 sm:block sm:w-28" aria-hidden="true" />
       )
     }
   }
 
   return (
-    <div className="flex items-center justify-center text-sm">
+    <div className="flex w-full flex-wrap items-center justify-center gap-y-4 text-sm">
       {elements}
     </div>
   )
@@ -381,7 +383,7 @@ function SummaryPanel({
   ctaDisabled?: boolean
 }) {
   return (
-    <div className="sticky top-6 self-start rounded-[28px] border border-[#E8E4D7] bg-[#02374D] p-6 text-white shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
+    <div className="w-full self-start rounded-[28px] border border-[#E8E4D7] bg-[#02374D] p-6 text-white shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] lg:sticky lg:top-6">
       <div className="text-sm uppercase tracking-[0.2em] text-white/70">Summary</div>
       <div className="mt-4 space-y-1.5 text-sm text-white">
         <p>{summary.venueName}</p>

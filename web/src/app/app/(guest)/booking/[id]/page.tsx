@@ -115,7 +115,7 @@ export default async function BookingDetailPage({ params }: { params: Params }) 
       </Link>
 
       <div className="grid gap-10 lg:grid-cols-[2fr,1fr]">
-        <section className="space-y-8 rounded-3xl bg-white/70 p-8 shadow-sm backdrop-blur">
+        <section className="space-y-8 rounded-3xl bg-white/80 p-6 shadow-sm backdrop-blur sm:p-8">
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-gray-500">Booking</p>
             <h1 className="text-3xl font-semibold uppercase tracking-wide">{booking.venue_name ?? 'Venue TBD'}</h1>
@@ -128,9 +128,9 @@ export default async function BookingDetailPage({ params }: { params: Params }) 
           </div>
 
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
               {timeline.map((step, index) => (
-                <div key={step.key} className="flex items-center gap-2">
+                <div key={step.key} className="flex flex-col items-center gap-2 text-center sm:flex-row sm:items-center sm:text-left">
                   <span
                     className={`inline-flex h-3 w-3 rounded-full ${
                       step.complete ? 'bg-emerald-600' : 'bg-gray-300'
@@ -161,7 +161,7 @@ export default async function BookingDetailPage({ params }: { params: Params }) 
             ))}
           </dl>
 
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
             {booking.hold_banner && (
               <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-700">{booking.hold_banner}</div>
             )}

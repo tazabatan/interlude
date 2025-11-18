@@ -34,7 +34,7 @@ export default async function GuestLayout({ children }: { children: ReactNode })
   return (
     <div className={`${montserrat.className} min-h-screen bg-[#F4F1E7] text-gray-900`}>
       <header className="relative z-50 bg-[#F4F1E7]/90 backdrop-blur">
-        <div className="relative flex w-full items-center px-6 py-6 sm:px-10 lg:px-[5rem]">
+        <div className="relative flex w-full items-center px-4 py-6 sm:px-10 lg:px-[5rem]">
           <div className="flex flex-1 lg:flex-initial" />
           <Link
             href="/app"
@@ -66,7 +66,7 @@ export default async function GuestLayout({ children }: { children: ReactNode })
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl px-8 py-10 md:px-12 lg:max-w-7xl lg:px-16 xl:px-20 2xl:max-w-[105rem] 2xl:px-24">{children}</main>
+      <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-8 md:px-12 lg:max-w-7xl lg:px-16 xl:px-20 2xl:max-w-[105rem] 2xl:px-24">{children}</main>
       <Footer />
     </div>
   )
