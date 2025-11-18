@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getUserRole } from '@/lib/get-user-role'
-import { LEDGER_ENTRY_TYPES, createLedgerEntry } from '@/lib/ledger'
+import { LEDGER_ENTRY_TYPES, createLedgerEntry, type LedgerEntryType } from '@/lib/ledger'
 
-const ENTRY_TYPE_SET = new Set(LEDGER_ENTRY_TYPES)
+const ENTRY_TYPE_SET = new Set<LedgerEntryType>(LEDGER_ENTRY_TYPES)
 
 const displayLabels: Record<string, string> = {
   fee_due: 'Platform fee due',
@@ -36,7 +36,8 @@ export async function POST(req: NextRequest) {
     description?: string | null
   } | null
 
-  if (!body?.venueId || !ENTRY_TYPE_SET.has(body.entryType as string)) {
+  const entryType = body?.entryType as LedgerEntryType | undefined
+  if (!body?.venueId || !entryType || !ENTRY_TYPE_SET.has(entryType)) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
 
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   const entry = await createLedgerEntry({
     venueId: body.venueId,
-    entryType: body.entryType as (typeof LEDGER_ENTRY_TYPES)[number],
+    entryType,
     amountCents,
     currency: body.currency ?? 'USD',
     bookingId: body.bookingId ?? null,
