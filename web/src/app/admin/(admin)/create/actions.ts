@@ -210,7 +210,7 @@ export async function savePassAction(formData: FormData) {
       return { ok: false, message: "Pass payload missing venueId" } as const
     }
     const passId = payload.passId?.trim() || randomUUID()
-    const supabase = getSupabaseAdminClient()
+    const supabase = getSupabaseAdminClient() as ReturnType<typeof getSupabaseAdminClient> & { from: any }
 
     const heroDescriptor = await uploadImageIfNeeded(
       payload.formState.heroImage,
@@ -247,8 +247,31 @@ export async function savePassAction(formData: FormData) {
     const interludePerk = normalizedState.interludePerk.trim() || null
 
     const profile = buildPassProfileFromState(normalizedState)
+    type UpsertPassProfile = ReturnType<typeof buildPassProfileFromState>
+    type UpsertPassRow = {
+      id: string
+      venue_id: string
+      kind: string
+      status: PassFormState["status"]
+      currency: string
+      min_spend_amount: number | null
+      display_price_text: string | null
+      interlude_perk: string | null
+      visibility: PassFormState["visibility"]
+      auto_approve_enabled: boolean
+      default_arrival_start_local: string | null
+      default_arrival_window_minutes: number
+      service_hours_open_local: string | null
+      service_hours_close_local: string | null
+      arrival_grace_minutes: number
+      default_daily_cap: number
+      no_show_amount_per_person: number
+      cancellation_window_days: number
+      cancellation_cutoff_local: string
+      profile: UpsertPassProfile
+    }
 
-    const passPayload = {
+    const passPayload: UpsertPassRow = {
       id: passId,
       venue_id: payload.venueId,
       kind: backendKind,
