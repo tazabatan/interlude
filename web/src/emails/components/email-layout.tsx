@@ -100,7 +100,7 @@ export function EmailLayout({ previewText, title, intro, children, footerNote }:
         <Font
           fontFamily="Montserrat"
           fontWeight={400}
-          fallbackFontFamily={['Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif']}
+          fallbackFontFamily={['Helvetica', 'Arial', 'sans-serif']}
           webFont={{
             url: montserratUrl,
             format: 'woff2',
@@ -109,7 +109,7 @@ export function EmailLayout({ previewText, title, intro, children, footerNote }:
         <Font
           fontFamily="Montserrat"
           fontWeight={500}
-          fallbackFontFamily={['Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif']}
+          fallbackFontFamily={['Helvetica', 'Arial', 'sans-serif']}
           webFont={{
             url: montserratUrl,
             format: 'woff2',
@@ -118,7 +118,7 @@ export function EmailLayout({ previewText, title, intro, children, footerNote }:
         <Font
           fontFamily="Montserrat"
           fontWeight={600}
-          fallbackFontFamily={['Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif']}
+          fallbackFontFamily={['Helvetica', 'Arial', 'sans-serif']}
           webFont={{
             url: montserratUrl,
             format: 'woff2',
