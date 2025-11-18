@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { randomUUID } from 'node:crypto'
 import { approveBooking, declineBooking, deskAction, fetchPassById, redeemBooking, undoDeclineBooking } from '@/lib/desk'
+import { notifyBookingApproved, notifyBookingDeclined, notifyBookingCancelled } from '@/lib/email/triggers'
+import { recordFeeDueEntryForBooking } from '@/lib/ledger'
 import { getUserRole } from '@/lib/get-user-role'
 import { serviceRoleFetch } from '@/lib/supabase/service-role'
 
@@ -137,6 +139,7 @@ export async function approveDefaultAction(formData: FormData) {
   const inlineResult = shouldReturnInlineResult(formData)
   try {
     await approveBooking({ bookingId, windowStart: null, windowEnd: null, issueNow: true })
+    await notifyBookingApproved(bookingId)
   } catch (error) {
     const errorMessage = formatRequestError(error)
     if (inlineResult) {
@@ -167,6 +170,7 @@ export async function approveCustomAction(formData: FormData) {
   const context = readRequestContext(formData)
   try {
     await approveBooking({ bookingId, windowStart, windowEnd, issueNow: true })
+    await notifyBookingApproved(bookingId)
   } catch (error) {
     const errorMessage = formatRequestError(error)
     if (inlineResult) {
@@ -191,6 +195,7 @@ export async function declineAction(formData: FormData) {
   await ensureBookingAccess(bookingId, venueId)
   const reason = formData.get('reason')?.toString().trim() || null
   await declineBooking({ bookingId, reason })
+  await notifyBookingDeclined(bookingId, reason)
   revalidatePath('/desk')
 }
 
@@ -206,7 +211,36 @@ export async function markArrivedAction(formData: FormData) {
     user?.email ??
     'Desk staff'
   await redeemBooking({ qrJti, serverName, tableRef: null })
+  recordFeeDueEntryForBooking(bookingId).catch((error) => {
+    console.error('[ledger] failed to record fee entry', error)
+  })
   revalidatePath('/desk')
+}
+
+export async function markNoShowAction(formData: FormData) {
+  const bookingId = formData.get('bookingId')?.toString()
+  if (!bookingId) throw new Error('bookingId missing')
+  const { venueId } = await requireDeskAccess()
+  const booking = await fetchBookingState(bookingId, venueId)
+  if (!booking) throw new Error('Booking not found')
+  if (!['issued', 'pending_verification'].includes(booking.status)) {
+    throw new Error('Only issued bookings can be marked as a no-show')
+  }
+  const todayIso = new Date().toISOString().slice(0, 10)
+  if (booking.date !== todayIso) {
+    throw new Error('No-shows can only be reported on the arrival date')
+  }
+
+  if (booking.hold_status === 'authorized') {
+    await serviceRoleFetch('/functions/v1/hold_capture', {
+      method: 'POST',
+      body: JSON.stringify({ booking_id: bookingId }),
+    })
+  } else {
+    await markNoShowWithoutHold(bookingId, booking.status)
+  }
+  revalidatePath('/desk')
+  revalidatePath(`/desk/bookings/${bookingId}`)
 }
 
 export async function cancelDeskBookingAction(formData: FormData) {
@@ -241,6 +275,7 @@ export async function cancelDeskBookingAction(formData: FormData) {
     actorId,
     actorName,
   })
+  await notifyBookingCancelled(bookingId, 'venue', actorName)
 
   revalidatePath('/desk')
   revalidatePath(`/desk/bookings/${bookingId}`)
@@ -457,23 +492,75 @@ export async function setDayCapacityAction(params: { date: string; cap: number; 
 }
 
 export async function forceAuthorizeAction(formData: FormData) {
-  const { venueId } = await requireVenueManager()
+  const { venueId } = await requireDeskAccess()
   const bookingId = formData.get('bookingId')?.toString()
   if (!bookingId) throw new Error('bookingId missing')
   await ensureBookingAccess(bookingId, venueId)
-  await deskAction('force_authorize_now', { p_booking_id: bookingId })
+  await serviceRoleFetch('/rest/v1/rpc/fn_force_authorize_now', {
+    method: 'POST',
+    body: JSON.stringify({ p_booking_id: bookingId }),
+  })
   revalidatePath('/desk')
+  revalidatePath(`/desk/bookings/${bookingId}`)
+}
+
+async function markNoShowWithoutHold(bookingId: string, currentStatus: string) {
+  let latestStatus = currentStatus
+  if (currentStatus === 'issued') {
+    await updateBookingStatusWithAudit(bookingId, 'issued', 'pending_verification', { reason: 'manual_no_show' })
+    latestStatus = 'pending_verification'
+  }
+  if (latestStatus !== 'pending_verification') {
+    throw new Error('Invalid transition')
+  }
+  await updateBookingStatusWithAudit(bookingId, 'pending_verification', 'no_show', { reason: 'manual_no_show' })
+}
+
+async function updateBookingStatusWithAudit(
+  bookingId: string,
+  fromStatus: string,
+  toStatus: string,
+  meta: Record<string, unknown>
+) {
+  const params = new URLSearchParams({
+    id: `eq.${bookingId}`,
+    status: `eq.${fromStatus}`,
+  })
+  const res = await serviceRoleFetch(`/rest/v1/bookings?${params.toString()}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({ status: toStatus }),
+  })
+  const updated = (await res.json()) as unknown
+  if (!Array.isArray(updated) || updated.length === 0) {
+    throw new Error('booking_state_conflict')
+  }
+  await serviceRoleFetch('/rest/v1/booking_audit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: randomUUID(),
+      booking_id: bookingId,
+      from_status: fromStatus,
+      to_status: toStatus,
+      actor: null,
+      meta,
+    }),
+  })
 }
 
 async function fetchBookingState(bookingId: string, venueId: string) {
   const params = new URLSearchParams({
     id: `eq.${bookingId}`,
-    select: 'id,status,hold_status,venue_id',
+    select: 'id,status,hold_status,venue_id,date',
     limit: '1',
   })
   params.set('venue_id', `eq.${venueId}`)
   const res = await serviceRoleFetch(`/rest/v1/bookings?${params.toString()}`)
-  const rows = (await res.json()) as Array<{ id: string; status: string; hold_status: string | null; venue_id: string }>
+  const rows = (await res.json()) as Array<{ id: string; status: string; hold_status: string | null; venue_id: string; date: string | null }>
   const booking = rows[0]
   if (!booking) return null
   if (booking.venue_id !== venueId) return null

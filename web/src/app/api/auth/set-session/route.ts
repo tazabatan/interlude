@@ -41,6 +41,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: error.status ?? 400 })
   }
 
-  console.log('Cookies set:', setCookies)
+  const accessExpiry = 60 * 60 // 1 hour
+  const refreshExpiry = 60 * 60 * 24 * 14 // 14 days
+  response.cookies.set({
+    name: 'sb-access-token',
+    value: access_token,
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: accessExpiry,
+    path: '/',
+  })
+  response.cookies.set({
+    name: 'sb-refresh-token',
+    value: refresh_token,
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: refreshExpiry,
+    path: '/',
+  })
+
+  console.log('Cookies set:', [...setCookies, 'sb-access-token', 'sb-refresh-token'])
   return response
 }

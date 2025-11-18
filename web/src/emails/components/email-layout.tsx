@@ -4,12 +4,14 @@ import {
   Head,
   Hr,
   Html,
+  Img,
   Preview,
   Section,
   Tailwind,
   Text,
 } from '@react-email/components'
-import type { ReactNode } from 'react'
+import { Font } from '@react-email/font'
+import type { CSSProperties, ReactNode } from 'react'
 
 type EmailLayoutProps = {
   previewText: string
@@ -20,33 +22,140 @@ type EmailLayoutProps = {
 }
 
 const currentYear = new Date().getFullYear()
+const BRAND_CREAM = '#F4F1E7'
+const BORDER_COLOR = '#E1D9C8'
+const TEXT_COLOR = '#000000'
+const MUTED_TEXT = '#6F716D'
+const HEADING_COLOR = '#050505'
+
+function getAssetBaseUrl() {
+  const envBase =
+    process.env.NEXT_PUBLIC_EMAIL_ASSET_BASE_URL ??
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    'https://interludepass.com'
+  return envBase.replace(/\/$/, '')
+}
+
+const assetBaseUrl = getAssetBaseUrl()
+const logoUrl = `${assetBaseUrl}/interlude-logo.png`
+const montserratUrl = `${assetBaseUrl}/emails/fonts/montserrat-latin.woff2`
+
+const bodyStyle: CSSProperties = {
+  backgroundColor: BRAND_CREAM,
+  margin: 0,
+  padding: '32px 0',
+  fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+  color: TEXT_COLOR,
+  width: '100%',
+}
+
+const containerStyle: CSSProperties = {
+  width: '100%',
+  maxWidth: '560px',
+  backgroundColor: BRAND_CREAM,
+  padding: '48px 44px',
+  margin: '0 auto',
+}
+
+const headerSectionStyle: CSSProperties = {
+  marginBottom: '16px',
+}
+
+const headingStyle: CSSProperties = {
+  fontSize: '26px',
+  lineHeight: '34px',
+  color: HEADING_COLOR,
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+  fontWeight: 400,
+  margin: '0',
+}
+
+const introStyle: CSSProperties = {
+  margin: '16px 0 0',
+  fontSize: '16px',
+  lineHeight: '26px',
+  color: TEXT_COLOR,
+}
+
+const footerNoteStyle: CSSProperties = {
+  fontSize: '14px',
+  lineHeight: '22px',
+  color: MUTED_TEXT,
+  margin: 0,
+}
+
+const footerMetaStyle: CSSProperties = {
+  marginTop: '16px',
+  fontSize: '11px',
+  letterSpacing: '0.3em',
+  textTransform: 'uppercase',
+  color: '#888378',
+}
 
 export function EmailLayout({ previewText, title, intro, children, footerNote }: EmailLayoutProps) {
   return (
     <Html>
-      <Head />
+      <Head>
+        <Font
+          fontFamily="Montserrat"
+          fontWeight={400}
+          fallbackFontFamily={['Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif']}
+          webFont={{
+            url: montserratUrl,
+            format: 'woff2',
+          }}
+        />
+        <Font
+          fontFamily="Montserrat"
+          fontWeight={500}
+          fallbackFontFamily={['Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif']}
+          webFont={{
+            url: montserratUrl,
+            format: 'woff2',
+          }}
+        />
+        <Font
+          fontFamily="Montserrat"
+          fontWeight={600}
+          fallbackFontFamily={['Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif']}
+          webFont={{
+            url: montserratUrl,
+            format: 'woff2',
+          }}
+        />
+      </Head>
       <Preview>{previewText}</Preview>
       <Tailwind>
-        <Body className="bg-[#F6F3EE] font-sans text-[#1D1F1E]">
-          <Container className="mx-auto my-10 w-full max-w-[540px] rounded-[32px] bg-white px-8 py-10 shadow-[0_20px_90px_rgba(2,55,77,0.08)]">
-            <Section className="mb-6">
-              <Text className="text-[11px] font-semibold uppercase tracking-[0.4em] text-[#6F716D]">Interlude</Text>
-              <Text className="mt-3 text-3xl font-semibold leading-tight text-[#02374D]">{title}</Text>
-              {intro ? <Text className="mt-4 text-base leading-6 text-[#1D1F1E]">{intro}</Text> : null}
+        <Body style={bodyStyle}>
+          <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} style={{ backgroundColor: BRAND_CREAM }}>
+            <tbody>
+              <tr>
+                <td>
+                  <Container style={containerStyle}>
+            <Section style={headerSectionStyle}>
+              <Img src={logoUrl} alt="Interlude" width={180} style={{ display: 'block', margin: '0 auto 24px', height: 'auto' }} />
+              <Hr style={{ borderColor: BORDER_COLOR, margin: '0 0 24px' }} />
+              <Text style={headingStyle}>{title.toUpperCase()}</Text>
+              {intro ? <Text style={introStyle}>{intro}</Text> : null}
             </Section>
 
             {children}
 
-            <Section className="mt-8">
-              <Hr className="my-6 border border-[#E8E4D7]" />
+            <Section style={{ marginTop: '32px' }}>
+              <Hr style={{ borderColor: BORDER_COLOR, margin: '24px 0' }} />
               {footerNote ?? (
-                <Text className="text-sm leading-6 text-[#6F716D]">
+                <Text style={footerNoteStyle}>
                   Need help? Reply to this email or visit the support page in the Interlude app.
                 </Text>
               )}
-              <Text className="mt-4 text-xs uppercase tracking-[0.3em] text-[#C2BEB3]">{`© ${currentYear} Interlude`}</Text>
+              <Text style={footerMetaStyle}>{`© ${currentYear} Interlude`}</Text>
             </Section>
-          </Container>
+                  </Container>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </Body>
       </Tailwind>
     </Html>

@@ -1,9 +1,7 @@
 "use client"
 import { useState, FormEvent } from 'react'
 import { supabaseBrowser } from '@/lib/supabase/client'
-import { useRouter, useSearchParams } from 'next/navigation'
-
-const REDIRECT_BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+import { useSearchParams } from 'next/navigation'
 
 export default function AuthPage() {
   const params = useSearchParams()
@@ -16,10 +14,11 @@ export default function AuthPage() {
   const [signupError, setSignupError] = useState<string | null>(null)
   const [signupSent, setSignupSent] = useState(false)
   const [signupLoading, setSignupLoading] = useState(false)
+  const [resetStatus, setResetStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [resetMessage, setResetMessage] = useState<string | null>(null)
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>(() =>
     (params?.get('mode') ?? '') === 'signup' ? 'signup' : 'signin'
   )
-  const router = useRouter()
   const nextParam = params.get('next')
   const supabase = supabaseBrowser()
 
@@ -67,26 +66,47 @@ export default function AuthPage() {
     window.location.href = redirect
   }
 
+  const handlePasswordReset = async () => {
+    if (!email) {
+      setResetStatus('error')
+      setResetMessage('Enter your email above, then tap reset.')
+      return
+    }
+    setResetStatus('loading')
+    setResetMessage(null)
+    const res = await fetch('/api/auth/password-reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    const data = (await res.json().catch(() => null)) as { error?: string } | null
+    if (!res.ok) {
+      setResetStatus('error')
+      setResetMessage(data?.error ?? 'Unable to send reset email.')
+    } else {
+      setResetStatus('success')
+      setResetMessage('Check your inbox for a reset link.')
+    }
+  }
+
   const onSignupSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setSignupError(null)
     setSignupSent(false)
     setSignupLoading(true)
-    const redirectUrl = new URL(`${REDIRECT_BASE}/auth/callback`)
-    if (nextParam) redirectUrl.searchParams.set('next', nextParam)
-    const { error } = await supabase.auth.signUp({
-      email: signupEmail,
-      password: signupPassword,
-      options: {
-        emailRedirectTo: redirectUrl.toString(),
-        data: {
-          app_role: 'member',
-          full_name: signupName || undefined,
-        },
-      },
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: signupEmail,
+        password: signupPassword,
+        name: signupName,
+        next: nextParam,
+      }),
     })
-    if (error) {
-      setSignupError(error.message)
+    const data = (await res.json().catch(() => null)) as { error?: string } | null
+    if (!res.ok) {
+      setSignupError(data?.error ?? 'Unable to create your account. Try again or contact support.')
     } else {
       setSignupSent(true)
     }
@@ -135,6 +155,23 @@ export default function AuthPage() {
                 <button className="w-full rounded-full bg-black px-5 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-gray-800">
                   Sign in
                 </button>
+                <p className="text-center text-xs text-[#4F514D]">
+                  Forgot your password?{' '}
+                  <button
+                    type="button"
+                    onClick={handlePasswordReset}
+                    className="font-semibold text-[#02374D] underline underline-offset-4"
+                    disabled={resetStatus === 'loading'}
+                  >
+                    Reset it
+                  </button>
+                </p>
+                {resetStatus === 'error' ? (
+                  <p className="text-center text-xs text-[#B4231F]">{resetMessage ?? 'Unable to send reset email.'}</p>
+                ) : null}
+                {resetStatus === 'success' ? (
+                  <p className="text-center text-xs text-[#035C4C]">{resetMessage ?? 'Reset email sent.'}</p>
+                ) : null}
               </form>
             </>
           ) : signupSent ? (

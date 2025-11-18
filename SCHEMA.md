@@ -8,7 +8,7 @@
 -- booking_status:   requested | approved | issued | redeemed | redeemed_late | pending_verification | no_show | cancelled | declined
 -- hold_status:      none | authorized | canceled | captured
 -- invoice_status:   draft | sent | paid | void
--- ledger_type:      fee_due | venue_credit_no_show | platform_admin_no_show | refund | adjustment
+-- ledger_entry_type: fee_due | venue_credit_no_show | platform_admin_no_show | refund | adjustment
 
 ## Tables
 
@@ -92,34 +92,42 @@ due_jobs
   INDEX (status, run_at)
 
 venue_ledger
-  id uuid primary key
-  venue_id uuid references venues not null
-  type ledger_type not null
+  id uuid primary key default gen_random_uuid()
+  venue_id uuid references venues on delete cascade not null
+  entry_type ledger_entry_type not null
   amount_cents int not null
-  currency text default 'USD'
-  booking_id uuid references bookings
-  created_at timestamptz default now()
+  currency text not null default 'USD'
+  booking_id uuid references bookings on delete set null
+  description text
+  invoice_id uuid references invoices on delete set null
+  created_at timestamptz not null default now()
   -- Index for statements
   INDEX (venue_id, created_at)
 
 invoices
-  id uuid primary key
-  venue_id uuid references venues not null
+  id uuid primary key default gen_random_uuid()
+  venue_id uuid references venues on delete cascade not null
   period_start date not null
   period_end date not null
+  currency text not null default 'USD'
   total_cents int not null
-  currency text default 'USD'
   status invoice_status not null default 'draft'
+  recipient_name text
+  recipient_email text
+  notes text
   pdf_url text
-  payment_intent_id text
-  created_at timestamptz default now()
+  payment_reference text
+  sent_at timestamptz
+  paid_at timestamptz
+  created_at timestamptz not null default now()
 
 invoice_line_items
-  id uuid primary key
-  invoice_id uuid references invoices not null
-  ledger_id uuid references venue_ledger
+  id uuid primary key default gen_random_uuid()
+  invoice_id uuid references invoices on delete cascade not null
+  ledger_id uuid references venue_ledger on delete set null
   description text
   amount_cents int not null
+  created_at timestamptz not null default now()
 
 ops_idempotency
   key text primary key

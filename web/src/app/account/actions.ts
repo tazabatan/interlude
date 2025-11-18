@@ -1,8 +1,12 @@
 "use server"
 
 import { Buffer } from "node:buffer"
+import { createClient } from "@supabase/supabase-js"
 import { getSupabaseServer } from "@/lib/supabase/server"
+import { sendPasswordChangedEmail } from "@/emails"
 import type { AccountFormState } from "./types"
+
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "")
 
 export async function updateMemberProfileAction(
   _prevState: AccountFormState,
@@ -100,4 +104,68 @@ export async function updateStaffProfileAction(
   }
 
   return { status: "success", message: "Profile updated" }
+}
+
+export async function changePasswordAction(
+  _prevState: AccountFormState,
+  formData: FormData
+): Promise<AccountFormState> {
+  const supabase = await getSupabaseServer()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user || !user.email) {
+    return { status: "error", message: "Not signed in" }
+  }
+
+  const currentPassword = formData.get("currentPassword")?.toString() ?? ""
+  const newPassword = formData.get("newPassword")?.toString() ?? ""
+  const confirmPassword = formData.get("confirmPassword")?.toString() ?? ""
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return { status: "error", message: "All fields are required." }
+  }
+
+  if (newPassword.length < 8) {
+    return { status: "error", message: "Password must be at least 8 characters." }
+  }
+
+  if (newPassword !== confirmPassword) {
+    return { status: "error", message: "New passwords do not match." }
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !anonKey) {
+    return { status: "error", message: "Supabase is not configured." }
+  }
+
+  const verifier = createClient(supabaseUrl, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+
+  const { error: verifyError } = await verifier.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  })
+
+  if (verifyError) {
+    return { status: "error", message: "Current password is incorrect." }
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: newPassword,
+  })
+
+  if (updateError) {
+    return { status: "error", message: updateError.message }
+  }
+
+  await sendPasswordChangedEmail({
+    recipient: { email: user.email, name: (user.user_metadata?.full_name as string | undefined) ?? null },
+    supportUrl: `${SITE_URL}/support`,
+  })
+
+  return { status: "success", message: "Password updated" }
 }

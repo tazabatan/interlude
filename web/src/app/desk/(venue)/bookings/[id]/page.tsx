@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { fetchDeskBookingById, type DeskBooking } from '@/lib/desk'
 import { getUserRole } from '@/lib/get-user-role'
-import { cancelDeskBookingAction, forceAuthorizeAction, markArrivedAction, undoDeclineAction } from '../../actions'
+import { cancelDeskBookingAction, forceAuthorizeAction, markArrivedAction, markNoShowAction, undoDeclineAction } from '../../actions'
 import { buildGuestProfile, fetchGuestProfileById } from '@/lib/guest-profile'
 import { buildArrivalDisplay } from '@/lib/arrival'
 import { computePartyCountsFromAges, formatPartySummary } from '@/lib/party'
@@ -25,7 +25,7 @@ const STATUS_PROGRESS: Record<string, number> = {
   pending_verification: 2,
   redeemed: 3,
   redeemed_late: 3,
-  no_show: 3,
+  no_show: 2,
   cancelled: 3,
   declined: 3,
 }
@@ -144,6 +144,10 @@ export default async function BookingDetailPage({
   const guestAvatarUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
   const partySummary = resolvePartySummary(booking)
   const canMarkArrived = booking.status === 'issued' && Boolean(booking.qr_jti)
+  const todayIso = new Date().toISOString().slice(0, 10)
+  const canMarkNoShow =
+    (booking.status === 'issued' || booking.status === 'pending_verification') &&
+    booking.date === todayIso
   const canForceAuthorize = booking.hold_status !== 'authorized' && booking.status !== 'cancelled'
   const canUndoDecline = booking.status === 'declined'
   const canDeskCancel = ['approved', 'issued', 'pending_verification'].includes(booking.status)
@@ -154,6 +158,7 @@ export default async function BookingDetailPage({
     complete: index <= progressIndex,
     current: index === progressIndex,
   }))
+  const isNoShow = booking.status === 'no_show'
 
   const backLink =
     search.from === 'calendar' && search.date
@@ -232,6 +237,13 @@ const detailRows = [
                   )}
                 </div>
               ))}
+              {isNoShow && (
+                <div className="flex items-center gap-2">
+                  <span className="hidden h-px w-10 bg-red-200 sm:block" />
+                  <span className="inline-flex h-3 w-3 rounded-full bg-red-600" />
+                  <span className="text-sm font-semibold text-red-700">No-show</span>
+                </div>
+              )}
             </div>
             {FINAL_STATUS_COPY[booking.status] && (
               <p className="text-sm text-gray-600">{FINAL_STATUS_COPY[booking.status]}</p>
@@ -294,7 +306,7 @@ const detailRows = [
           </div>
 
           <div className="space-y-4">
-            {(canMarkArrived || canDeskCancel) && (
+            {(canMarkArrived || canDeskCancel || canMarkNoShow) && (
               <div className="flex flex-wrap gap-3">
                 {canMarkArrived && (
                   <form action={markArrivedAction}>
@@ -302,6 +314,14 @@ const detailRows = [
                     <input type="hidden" name="qrJti" value={booking.qr_jti ?? ''} />
                     <button className="rounded-full bg-[#02374D] px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-[#02486A]">
                       Mark guest arrived
+                    </button>
+                  </form>
+                )}
+                {canMarkNoShow && (
+                  <form action={markNoShowAction}>
+                    <input type="hidden" name="bookingId" value={booking.id} />
+                    <button className="rounded-full border border-red-800 bg-red-700 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-red-800">
+                      Mark no-show
                     </button>
                   </form>
                 )}

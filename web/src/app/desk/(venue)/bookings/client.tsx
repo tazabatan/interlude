@@ -11,6 +11,7 @@ const SEGMENT_OPTIONS = [
   { value: 'upcoming', label: 'Upcoming' },
   { value: 'past', label: 'Past' },
   { value: 'cancelled', label: 'Cancelled' },
+  { value: 'no_show', label: 'No-shows' },
 ] as const
 
 const STATUS_OPTIONS = [
@@ -60,10 +61,14 @@ export function BookingsClient({ bookings }: { bookings: BookingCardPayload[] })
 
   const filtered = useMemo(() => {
     return bookings.filter((booking) => {
-      const matchesSegment =
-        segment === 'upcoming'
-          ? booking.segment === 'upcoming' || booking.segment === 'today'
-          : booking.segment === segment
+      let matchesSegment = false
+      if (segment === 'upcoming') {
+        matchesSegment = booking.segment === 'upcoming' || booking.segment === 'today'
+      } else if (segment === 'no_show') {
+        matchesSegment = booking.segment === 'no_show'
+      } else {
+        matchesSegment = booking.segment === segment
+      }
       if (!matchesSegment) return false
       if (statusFilter !== 'all' && booking.status !== statusFilter) return false
       if (passFilter !== 'all' && booking.category !== passFilter) return false

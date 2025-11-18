@@ -15,7 +15,7 @@ create type booking_status as enum (
 );
 create type hold_status as enum ('none', 'authorized', 'canceled', 'captured');
 create type invoice_status as enum ('draft', 'sent', 'paid', 'void');
-create type ledger_type as enum (
+create type ledger_entry_type as enum (
   'fee_due',
   'venue_credit_no_show',
   'platform_admin_no_show',
@@ -113,39 +113,62 @@ create index if not exists due_jobs_status_run_at_idx on public.due_jobs (status
 
 -- Table: venue_ledger
 create table if not exists public.venue_ledger (
-  id uuid primary key,
+  id uuid primary key default gen_random_uuid(),
   venue_id uuid references public.venues (id) on delete cascade not null,
-  type ledger_type not null,
+  entry_type ledger_entry_type not null,
   amount_cents int not null,
-  currency text default 'USD',
-  booking_id uuid references public.bookings (id),
-  created_at timestamptz default now()
+  currency text not null default 'USD',
+  booking_id uuid references public.bookings (id) on delete set null,
+  description text,
+  invoice_id uuid,
+  created_at timestamptz not null default now()
 );
 
 create index if not exists venue_ledger_venue_created_at_idx on public.venue_ledger (venue_id, created_at);
 
 -- Table: invoices
 create table if not exists public.invoices (
-  id uuid primary key,
+  id uuid primary key default gen_random_uuid(),
   venue_id uuid references public.venues (id) on delete cascade not null,
   period_start date not null,
   period_end date not null,
+  currency text not null default 'USD',
   total_cents int not null,
-  currency text default 'USD',
   status invoice_status not null default 'draft',
+  recipient_name text,
+  recipient_email text,
+  notes text,
   pdf_url text,
-  payment_intent_id text,
-  created_at timestamptz default now()
+  payment_reference text,
+  sent_at timestamptz,
+  paid_at timestamptz,
+  created_at timestamptz not null default now()
 );
 
 -- Table: invoice_line_items
 create table if not exists public.invoice_line_items (
-  id uuid primary key,
+  id uuid primary key default gen_random_uuid(),
   invoice_id uuid references public.invoices (id) on delete cascade not null,
-  ledger_id uuid references public.venue_ledger (id),
+  ledger_id uuid references public.venue_ledger (id) on delete set null,
   description text,
-  amount_cents int not null
+  amount_cents int not null,
+  created_at timestamptz not null default now()
 );
+
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.table_constraints
+    where constraint_name = 'venue_ledger_invoice_id_fkey'
+      and table_name = 'venue_ledger'
+      and table_schema = 'public'
+  ) then
+    alter table if exists public.venue_ledger
+      add constraint venue_ledger_invoice_id_fkey
+        foreign key (invoice_id) references public.invoices (id) on delete set null;
+  end if;
+end
+$$;
 
 -- Table: ops_idempotency
 create table if not exists public.ops_idempotency (

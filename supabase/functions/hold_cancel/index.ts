@@ -17,6 +17,8 @@ type StripePaymentIntent = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
+const EMAIL_DISPATCH_URL = Deno.env.get("EMAIL_DISPATCH_URL") ?? Deno.env.get("SITE_URL");
+const INTERNAL_EMAIL_SECRET = Deno.env.get("INTERNAL_EMAIL_SECRET");
 
 const supabaseHeaders = SERVICE_ROLE_KEY
   ? {
@@ -90,6 +92,28 @@ async function stripeCancel(
   return json;
 }
 
+async function dispatchHoldStatusEmail(bookingId: string, variant: "authorized" | "released" | "captured") {
+  if (!EMAIL_DISPATCH_URL || !INTERNAL_EMAIL_SECRET) return;
+  try {
+    const endpoint = EMAIL_DISPATCH_URL.replace(/\/$/, "");
+    await fetch(`${endpoint}/api/internal/email/dispatch`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${INTERNAL_EMAIL_SECRET}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        template: "hold-status",
+        bookingId,
+        variant,
+        statusDate: new Date().toISOString(),
+      }),
+    });
+  } catch (error) {
+    console.error("hold_cancel email dispatch failed", error);
+  }
+}
+
 serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -115,6 +139,7 @@ serve(async (req) => {
     }
 
     if (booking.hold_status === "canceled") {
+      await dispatchHoldStatusEmail(bookingId, "released");
       return new Response(JSON.stringify({ ok: true, idem: true }), {
         headers: { "Content-Type": "application/json" },
       });
@@ -137,6 +162,7 @@ serve(async (req) => {
         );
       }
 
+      await dispatchHoldStatusEmail(bookingId, "released");
       return new Response(JSON.stringify({ ok: true, noop: true }), {
         headers: { "Content-Type": "application/json" },
       });
@@ -181,6 +207,8 @@ serve(async (req) => {
         { status: 500 },
       );
     }
+
+    await dispatchHoldStatusEmail(bookingId, "released");
 
     return new Response(
       JSON.stringify({ ok: true, payment_intent: paymentIntent.id, stripe: paymentIntent }),

@@ -9,6 +9,9 @@ export const adminNavLinks = [
   { href: "/admin/create", label: "Venues", match: "startsWith" as const },
   { href: "/admin/dashboard", label: "Dashboard", match: "startsWith" as const },
   { href: "/admin/user-login", label: "User Login", match: "startsWith" as const },
+  { href: "/admin/dev/email-preview", label: "Email Preview", match: "startsWith" as const },
+  { href: "/admin/ledger", label: "Ledger", match: "startsWith" as const },
+  { href: "/admin/statements", label: "Statements", match: "startsWith" as const },
 ] as const
 
 export default function AdminNav() {

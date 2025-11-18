@@ -2,6 +2,7 @@ import { Section, Text } from '@react-email/components'
 import { EmailLayout } from '@/emails/components/email-layout'
 import { DetailList } from '@/emails/components/detail-list'
 import { CtaButton } from '@/emails/components/cta-button'
+import { EmailQrCode } from '@/emails/components/qr-code'
 import type { DayOfReminderEmailPayload } from '@/emails/types'
 
 export function DayOfReminderEmail(props: DayOfReminderEmailPayload) {
@@ -25,6 +26,9 @@ export function DayOfReminderEmail(props: DayOfReminderEmailPayload) {
           Scan your QR code at arrival. If plans change, please cancel before your arrival window to avoid a no-show hold.
         </Text>
         <DetailList items={details} />
+        {props.qrCodeValue ? (
+          <EmailQrCode value={props.qrCodeValue} helperText="Have staff scan this QR when you arrive." />
+        ) : null}
         <CtaButton href={props.walletUrl} label="Open wallet" />
         <Text className="text-sm leading-6 text-[#6F716D]">
           Holds authorize at 14:00 the day before your experience. They release automatically when staff scans your pass.

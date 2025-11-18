@@ -1,4 +1,5 @@
 import { Section, Text } from '@react-email/components'
+import type { CSSProperties } from 'react'
 
 type DetailItem = {
   label: string
@@ -9,18 +10,45 @@ type DetailListProps = {
   items: DetailItem[]
 }
 
+const containerStyle: CSSProperties = {
+  paddingTop: '12px',
+  paddingBottom: '12px',
+}
+
+const itemStyle: CSSProperties = {
+  paddingTop: '12px',
+  paddingBottom: '12px',
+  borderTop: '1px solid #E1DDD2',
+}
+
+const labelStyle: CSSProperties = {
+  display: 'block',
+  fontSize: '11px',
+  lineHeight: '24px',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.3em',
+  color: '#6F716D',
+  margin: 0,
+  marginBottom: '4px',
+}
+
+const valueStyle: CSSProperties = {
+  display: 'block',
+  fontSize: '16px',
+  lineHeight: '24px',
+  fontWeight: 400,
+  color: '#000000',
+  margin: 0,
+}
+
 export function DetailList({ items }: DetailListProps) {
   return (
-    <Section className="rounded-[24px] bg-[#F6F3EE] px-6 py-5">
+    <Section style={containerStyle}>
       {items.map((item, index) => (
-        <div
-          key={item.label}
-          className={`flex flex-col gap-1 border-[#E1DDD2] py-3 text-sm text-[#1D1F1E] ${index === 0 ? '' : 'border-t'}`}
-        >
-          <Text className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#6F716D]">
-            {item.label}
-          </Text>
-          <Text className="text-base font-medium text-[#02374D]">{item.value}</Text>
+        <div key={item.label} style={{ ...itemStyle, borderTop: index === 0 ? 'none' : itemStyle.borderTop }}>
+          <Text style={labelStyle}>{item.label}</Text>
+          <Text style={valueStyle}>{item.value}</Text>
         </div>
       ))}
     </Section>

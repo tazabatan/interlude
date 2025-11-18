@@ -173,7 +173,7 @@ export async function fetchDashboardData(filters: DashboardFilters): Promise<Das
 
     // Fetch platform commission from venue_ledger
     let ledgerQuery = `created_at=gte.${startDate}T00:00:00&created_at=lte.${endDate}T23:59:59`
-    ledgerQuery += `&type=in.(fee_due,platform_admin_no_show)`
+    ledgerQuery += `&entry_type=in.(fee_due,platform_admin_no_show)`
 
     if (filters.venueId) {
       ledgerQuery += `&venue_id=eq.${filters.venueId}`

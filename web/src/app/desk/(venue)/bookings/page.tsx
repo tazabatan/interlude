@@ -89,11 +89,14 @@ function mapBooking(booking: DeskBooking, profileMap: Record<string, GuestProfil
   const isToday = booking.date === todayIso
   const isDeclined = booking.status === 'declined'
   const isCancelled = booking.status === 'cancelled'
+  const isNoShow = booking.status === 'no_show'
   const segment = isDeclined || isCancelled
     ? 'cancelled'
-    : isToday
-      ? 'today'
-      : new Date(booking.date) > new Date(todayIso)
+    : isNoShow
+      ? 'no_show'
+      : isToday
+        ? 'today'
+        : new Date(booking.date) > new Date(todayIso)
         ? 'upcoming'
         : 'past'
 
@@ -172,7 +175,10 @@ export default async function DeskBookingsPage() {
 
   const todayIso = new Date().toISOString().slice(0, 10)
   const [primaryRaw, pendingRaw] = await Promise.all([
-    fetchDeskBookingsByStatuses(['approved', 'issued', 'redeemed', 'redeemed_late', 'declined', 'cancelled'], venueId),
+    fetchDeskBookingsByStatuses(
+      ['approved', 'issued', 'redeemed', 'redeemed_late', 'declined', 'cancelled', 'no_show'],
+      venueId
+    ),
     fetchDeskBookings('pending_verification', venueId),
   ])
 

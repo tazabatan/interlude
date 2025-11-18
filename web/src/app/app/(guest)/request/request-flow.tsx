@@ -111,7 +111,7 @@ export default function RequestFlow({
     setError(null)
     try {
       const supabase = supabaseBrowser()
-      const { error: rpcError } = await supabase.rpc("fn_request_booking", {
+      const { data: bookingId, error: rpcError } = await supabase.rpc("fn_request_booking", {
         _pass_id: passId,
         _date: dateIso,
         _party_size: partySize,
@@ -120,6 +120,13 @@ export default function RequestFlow({
       })
       if (rpcError) {
         throw rpcError
+      }
+      if (typeof bookingId === "string") {
+        fetch("/api/request/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingId }),
+        }).catch((notifyError) => console.error("request notify error", notifyError))
       }
       router.push("/app")
     } catch (err) {

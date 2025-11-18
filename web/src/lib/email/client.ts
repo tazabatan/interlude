@@ -19,6 +19,7 @@ export type SendEmailParams = {
 const resendApiKey = process.env.RESEND_API_KEY
 const fromAddress = process.env.EMAIL_FROM_ADDRESS
 const fromName = process.env.EMAIL_FROM_NAME ?? 'Interlude'
+const replyToAddress = process.env.EMAIL_REPLY_TO ?? null
 const deliveryDisabled = process.env.EMAIL_DELIVERY_DISABLED === 'true'
 
 let cachedClient: Resend | null = null
@@ -69,12 +70,13 @@ export async function sendTransactionalEmail(params: SendEmailParams) {
   }
 
   const resend = getResendClient()
+  const resolvedReplyTo = params.replyTo ?? replyToAddress ?? undefined
   await resend.emails.send({
     from: getFromAddress(),
     to: formattedRecipients,
     subject: params.subject,
     react: params.react,
-    replyTo: params.replyTo,
+    replyTo: resolvedReplyTo,
     tags: params.tags,
   })
 }

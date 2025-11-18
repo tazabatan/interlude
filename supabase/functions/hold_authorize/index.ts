@@ -20,6 +20,8 @@ type StripePaymentIntent = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
+const EMAIL_DISPATCH_URL = Deno.env.get("EMAIL_DISPATCH_URL") ?? Deno.env.get("SITE_URL");
+const INTERNAL_EMAIL_SECRET = Deno.env.get("INTERNAL_EMAIL_SECRET");
 
 const supabaseHeaders = SERVICE_ROLE_KEY
   ? {
@@ -95,6 +97,28 @@ async function stripeRequest(
   }
 
   return json;
+}
+
+async function dispatchHoldStatusEmail(bookingId: string, variant: "authorized" | "released" | "captured") {
+  if (!EMAIL_DISPATCH_URL || !INTERNAL_EMAIL_SECRET) return;
+  try {
+    const endpoint = EMAIL_DISPATCH_URL.replace(/\/$/, "");
+    await fetch(`${endpoint}/api/internal/email/dispatch`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${INTERNAL_EMAIL_SECRET}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        template: "hold-status",
+        bookingId,
+        variant,
+        statusDate: new Date().toISOString(),
+      }),
+    });
+  } catch (error) {
+    console.error("hold_authorize email dispatch failed", error);
+  }
 }
 
 serve(async (req) => {
@@ -187,10 +211,11 @@ serve(async (req) => {
       );
     }
 
-    return new Response(
-      JSON.stringify({ ok: true, payment_intent: paymentIntent.id, stripe: paymentIntent }),
-      { headers: { "Content-Type": "application/json" } },
-    );
+    await dispatchHoldStatusEmail(bookingId, "authorized");
+
+    return new Response(JSON.stringify({ ok: true, payment_intent: paymentIntent.id, stripe: paymentIntent }), {
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     return new Response(String(error), { status: 500 });
   }

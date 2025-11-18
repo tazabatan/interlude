@@ -8,6 +8,7 @@ function AuthCallbackInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const nextParam = searchParams.get('next')
+  const typeParam = searchParams.get('type')
 
   const defaultRouteForRole = (role: string | undefined) => {
     if (role === 'admin') return '/admin'
@@ -31,6 +32,10 @@ function AuthCallbackInner() {
     // Listen for auth state change (magic link tokens are processed automatically)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
+        if (typeParam === 'recovery') {
+          router.replace('/auth/reset-password')
+          return
+        }
         const role = session.user.user_metadata?.app_role as string | undefined
         const target = nextParam ?? defaultRouteForRole(role)
         router.replace(target)
@@ -42,7 +47,7 @@ function AuthCallbackInner() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [router, nextParam])
+  }, [router, nextParam, typeParam])
 
   return <p>Signing you in…</p>
 }

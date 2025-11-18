@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'node:crypto'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import { serviceRoleFetch } from '@/lib/supabase/service-role'
+import { notifyBookingCancelled } from '@/lib/email/triggers'
 
 export type CancelBookingActionState = {
   ok: boolean
@@ -63,6 +64,7 @@ export async function cancelBookingAction(
       holdStatus: booking.hold_status,
       memberId: user.id,
     })
+    await notifyBookingCancelled(booking.id, 'guest', null)
   } catch (error) {
     console.error('cancelBookingAction failed', error)
     const message = error instanceof Error ? error.message : String(error)

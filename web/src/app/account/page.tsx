@@ -2,6 +2,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import MemberAccountForm from "./member-form"
 import StaffAccountForm from "./staff-form"
+import ChangePasswordForm from "./change-password-form"
 import { getUserRole } from "@/lib/get-user-role"
 import { serviceRoleFetch } from "@/lib/supabase/service-role"
 import { montserrat } from "@/app/fonts"
@@ -105,6 +106,7 @@ export default async function AccountPage() {
 
         <div className="rounded-[32px] border border-[#E8E4D7] bg-[#F9F6ED] p-8 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
           {formContent}
+          <ChangePasswordForm />
         </div>
       </div>
     </div>
