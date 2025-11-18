@@ -288,7 +288,7 @@ export async function cancelDeskBookingAction(formData: FormData) {
     actorId,
     actorName,
   })
-  await notifyBookingCancelled(bookingId, 'venue', actorName)
+  await notifyBookingCancelled(bookingId, 'venue')
 
   revalidatePath('/desk')
   revalidatePath(`/desk/bookings/${bookingId}`)
