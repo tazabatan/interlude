@@ -52,8 +52,8 @@ export function parseDeviceCookieValue(value: string | undefined) {
   return decodePayload(payload)
 }
 
-export function getDeviceCookie() {
-  const cookieStore = cookies()
+export async function getDeviceCookie() {
+  const cookieStore = await cookies()
   const raw = cookieStore.get(DEVICE_COOKIE_NAME)?.value
   return parseDeviceCookieValue(raw)
 }

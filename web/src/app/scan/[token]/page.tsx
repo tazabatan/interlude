@@ -116,7 +116,7 @@ export default async function ScanPage({ params }: { params: ScanParams }) {
     venueId = (user.user_metadata?.venue_id as string | undefined) ?? null
     staffLabel = resolveStaffName(user)
   } else {
-    const cookie = getDeviceCookie()
+    const cookie = await getDeviceCookie()
     if (cookie) {
       const venueRow = await fetchVenueDeviceRow(cookie.venueId)
       if (venueRow && venueRow.scan_device_token && venueRow.scan_device_token === cookie.token) {
