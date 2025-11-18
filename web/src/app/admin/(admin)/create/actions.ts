@@ -172,16 +172,15 @@ export async function saveVenueAction(formData: FormData) {
       status: VenueStatus
       profile: UpsertVenueProfile
     }
-    const { error } = await supabase.from("venues").upsert<UpsertVenueRow>(
-      {
-        id: venueId,
-        name: normalizedState.displayName || normalizedState.internalName || "Venue",
-        tz: normalizedState.timezone || "America/Anguilla",
-        status: normalizedState.status,
-        profile,
-      },
-      { onConflict: "id" }
-    )
+    const upsertPayload: UpsertVenueRow = {
+      id: venueId,
+      name: normalizedState.displayName || normalizedState.internalName || "Venue",
+      tz: normalizedState.timezone || "America/Anguilla",
+      status: normalizedState.status,
+      profile,
+    }
+
+    const { error } = await supabase.from("venues").upsert(upsertPayload, { onConflict: "id" })
 
     if (error) {
       return { ok: false, message: error.message } as const
