@@ -278,6 +278,11 @@ export async function finalizeStatementAndSend(args: {
     throw new Error('No ledger entries available for this period.')
   }
 
+  const existingInvoice = await findInvoiceForPeriod(args.venueId, preview.period.start, preview.period.end)
+  if (existingInvoice) {
+    throw new Error('Statement already exists for this period. Use resend instead.')
+  }
+
   const invoicePayload = {
     id: randomUUID(),
     venue_id: args.venueId,
@@ -336,23 +341,68 @@ function formatPeriodLabel(start: string, end: string) {
 }
 export async function sendStatementEmail(args: {
   invoiceId: string
-  preview: StatementPreviewResult
+  periodStart: string
+  periodEnd: string
+  venueName: string
+  totalLabel: string
   recipientEmail: string
   recipientName?: string | null
 }) {
-  const periodLabel = formatPeriodLabel(args.preview.period.start, args.preview.period.end)
+  const periodLabel = formatPeriodLabel(args.periodStart, args.periodEnd)
   const emailPayload: StatementReadyEmailPayload = {
     recipient: {
       email: args.recipientEmail,
-      name: args.recipientName ?? args.preview.venue.name,
+      name: args.recipientName ?? args.venueName,
     },
-    venueName: args.preview.venue.name,
+    venueName: args.venueName,
     periodLabel,
-    totalDueLabel: args.preview.totalLabel,
+    totalDueLabel: args.totalLabel,
     statementUrl: `${SITE_URL}/desk/statements/${args.invoiceId}`,
   }
 
   await sendStatementReadyEmail(emailPayload)
+}
+
+export async function findInvoiceForPeriod(venueId: string, periodStart: string, periodEnd: string) {
+  const params = new URLSearchParams()
+  params.set('venue_id', `eq.${venueId}`)
+  params.set('period_start', `eq.${periodStart}`)
+  params.set('period_end', `eq.${periodEnd}`)
+  params.set('select', 'id,status,period_start,period_end,total_cents,currency,created_at')
+  params.set('limit', '1')
+  const res = await serviceRoleFetch(`/rest/v1/invoices?${params.toString()}`)
+  const rows = (await res.json()) as Array<{
+    id: string
+    status: string
+    period_start: string
+    period_end: string
+    total_cents: number
+    currency: string | null
+    created_at: string
+  }>
+  return rows[0] ?? null
+}
+
+export async function sendExistingInvoiceEmail(args: {
+  venueId: string
+  invoiceId: string
+  periodStart: string
+  periodEnd: string
+  totalCents: number
+  currency: string | null
+  recipientEmail: string
+  recipientName?: string | null
+}) {
+  const venue = await fetchVenueMeta(args.venueId)
+  await sendStatementEmail({
+    invoiceId: args.invoiceId,
+    periodStart: args.periodStart,
+    periodEnd: args.periodEnd,
+    venueName: venue.name ?? 'Venue',
+    totalLabel: formatCurrency(args.totalCents, args.currency ?? 'USD'),
+    recipientEmail: args.recipientEmail,
+    recipientName: args.recipientName ?? venue.name ?? null,
+  })
 }
 
 function formatPeriodRange(start: string, end: string) {
