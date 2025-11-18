@@ -248,33 +248,30 @@ export async function savePassAction(formData: FormData) {
 
     const profile = buildPassProfileFromState(normalizedState)
 
-    const { error } = await supabase
-      .from("passes")
-      .upsert(
-        {
-          id: passId,
-          venue_id: payload.venueId,
-          kind: backendKind,
-          status: normalizedState.status,
-          currency: normalizedState.currency,
-          min_spend_amount: minSpendAmountCents,
-          display_price_text: displayPriceText,
-          interlude_perk: interludePerk,
-          visibility: normalizedState.visibility,
-          auto_approve_enabled: normalizedState.autoApprove,
-          default_arrival_start_local: normalizedState.arrivalStart,
-          default_arrival_window_minutes: arrivalDurationMinutes,
-          service_hours_open_local: normalizedState.serviceOpen,
-          service_hours_close_local: normalizedState.serviceClose,
-          arrival_grace_minutes: graceMinutes,
-          default_daily_cap: defaultDailyCap,
-          no_show_amount_per_person: noShowHoldCents,
-          cancellation_window_days: cancellationWindowDays,
-          cancellation_cutoff_local: cancellationCutoff,
-          profile,
-        },
-        { onConflict: "id" }
-      )
+    const passPayload = {
+      id: passId,
+      venue_id: payload.venueId,
+      kind: backendKind,
+      status: normalizedState.status,
+      currency: normalizedState.currency,
+      min_spend_amount: minSpendAmountCents,
+      display_price_text: displayPriceText,
+      interlude_perk: interludePerk,
+      visibility: normalizedState.visibility,
+      auto_approve_enabled: normalizedState.autoApprove,
+      default_arrival_start_local: normalizedState.arrivalStart,
+      default_arrival_window_minutes: arrivalDurationMinutes,
+      service_hours_open_local: normalizedState.serviceOpen,
+      service_hours_close_local: normalizedState.serviceClose,
+      arrival_grace_minutes: graceMinutes,
+      default_daily_cap: defaultDailyCap,
+      no_show_amount_per_person: noShowHoldCents,
+      cancellation_window_days: cancellationWindowDays,
+      cancellation_cutoff_local: cancellationCutoff,
+      profile,
+    }
+
+    const { error } = await supabase.from("passes").upsert(passPayload, { onConflict: "id" })
 
     if (error) {
       return { ok: false, message: error.message } as const
