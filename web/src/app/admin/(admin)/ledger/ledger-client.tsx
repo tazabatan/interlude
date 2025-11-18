@@ -1,7 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { AdminStatementPreview } from '../statements/page'
+import type { StatementPreviewResult } from '@/lib/ledger'
+
+type AdminStatementPreview = StatementPreviewResult
 
 type VenueOption = {
   id: string
