@@ -131,7 +131,7 @@ export async function saveVenueAction(formData: FormData) {
       return { ok: false, message: "Missing venue payload" } as const
     }
     const payload = JSON.parse(payloadRaw) as VenueSubmitPayload
-    const supabase = getSupabaseAdminClient()
+    const supabase = getSupabaseAdminClient() as ReturnType<typeof getSupabaseAdminClient> & { from: any }
     const venueId = payload.venueId?.trim() || randomUUID()
 
     const heroDescriptor = await uploadImageIfNeeded(
@@ -172,18 +172,16 @@ export async function saveVenueAction(formData: FormData) {
       status: VenueStatus
       profile: UpsertVenueProfile
     }
-    const { error } = await supabase
-      .from("venues")
-      .upsert<UpsertVenueRow>(
-        {
-          id: venueId,
-          name: normalizedState.displayName || normalizedState.internalName || "Venue",
-          tz: normalizedState.timezone || "America/Anguilla",
-          status: normalizedState.status,
-          profile,
-        },
-        { onConflict: "id" }
-      )
+    const { error } = await supabase.from("venues").upsert<UpsertVenueRow>(
+      {
+        id: venueId,
+        name: normalizedState.displayName || normalizedState.internalName || "Venue",
+        tz: normalizedState.timezone || "America/Anguilla",
+        status: normalizedState.status,
+        profile,
+      },
+      { onConflict: "id" }
+    )
 
     if (error) {
       return { ok: false, message: error.message } as const
