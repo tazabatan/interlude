@@ -130,6 +130,19 @@ async function requireVenueManager() {
   return context
 }
 
+export async function generateScannerTokenAction() {
+  const { venueId } = await requireVenueManager()
+  const token = randomUUID().replace(/-/g, '')
+  await serviceRoleFetch(`/rest/v1/venues?id=eq.${venueId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      scan_device_token: token,
+      scan_device_token_generated_at: new Date().toISOString(),
+    }),
+  })
+  revalidatePath('/desk/scanner')
+}
+
 export async function approveDefaultAction(formData: FormData) {
   const bookingId = formData.get('bookingId')?.toString()
   if (!bookingId) throw new Error('bookingId missing')

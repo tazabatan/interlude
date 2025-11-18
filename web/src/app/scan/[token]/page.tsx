@@ -4,6 +4,7 @@ import { getUserRole } from '@/lib/get-user-role'
 import { serviceRoleFetch, serviceRoleRpc } from '@/lib/supabase/service-role'
 import { fetchGuestProfileById } from '@/lib/guest-profile'
 import { buildArrivalDisplay } from '@/lib/arrival'
+import { getDeviceCookie } from '@/lib/scan-device-cookie'
 
 type ScanParams = Promise<{ token: string }>
 
@@ -60,6 +61,16 @@ async function fetchBookingForScan(bookingId: string): Promise<ScanBooking | nul
   return rows[0] ?? null
 }
 
+async function fetchVenueDeviceRow(venueId: string) {
+  const params = new URLSearchParams()
+  params.set('id', `eq.${venueId}`)
+  params.set('select', 'id,name,scan_device_token')
+  params.set('limit', '1')
+  const res = await serviceRoleFetch(`/rest/v1/venues?${params.toString()}`)
+  const rows = (await res.json()) as Array<{ id: string; name: string | null; scan_device_token: string | null }>
+  return rows[0] ?? null
+}
+
 function isWithinArrivalWindow(startIso: string | null, endIso: string | null) {
   if (!startIso || !endIso) return true
   const now = Date.now()
@@ -97,22 +108,34 @@ export default async function ScanPage({ params }: { params: ScanParams }) {
   }
 
   const { user, role } = await getUserRole()
-  if (!user) {
+  let venueId: string | null = null
+  let staffLabel = 'Venue staff'
+  let venueNameOverride: string | null = null
+
+  if (user && ['venue_manager', 'venue_staff'].includes(role)) {
+    venueId = (user.user_metadata?.venue_id as string | undefined) ?? null
+    staffLabel = resolveStaffName(user)
+  } else {
+    const cookie = getDeviceCookie()
+    if (cookie) {
+      const venueRow = await fetchVenueDeviceRow(cookie.venueId)
+      if (venueRow && venueRow.scan_device_token && venueRow.scan_device_token === cookie.token) {
+        venueId = venueRow.id
+        venueNameOverride = venueRow.name ?? null
+        staffLabel = `${venueRow.name ?? 'Venue'} device`
+      }
+    }
+  }
+
+  if (!venueId) {
     return (
       <ScanError
-        title="Sign in required"
-        message="Use your venue desk login once on this device. Future scans will keep you signed in."
-        actionLabel="Sign in"
-        actionHref={`/auth?next=/scan/${token}`}
+        title="Scanner not authorized"
+        message="Sign in to the Desk on this device or use Desk → Scanner to register it before scanning guests."
+        actionLabel="Open Desk"
+        actionHref="/desk"
       />
     )
-  }
-  if (!['venue_manager', 'venue_staff'].includes(role)) {
-    return <ScanError title="Access denied" message="You need venue staff access to check in guests." />
-  }
-  const venueId = (user.user_metadata?.venue_id as string | undefined) ?? null
-  if (!venueId) {
-    return <ScanError title="No venue linked" message="Your account is not assigned to a venue." />
   }
 
   const booking = await fetchBookingForScan(decoded.bookingId)
@@ -139,7 +162,7 @@ export default async function ScanPage({ params }: { params: ScanParams }) {
     try {
       await serviceRoleRpc('fn_redeem', {
         _qr_jti: booking.qr_jti,
-        _server_name: resolveStaffName(user),
+        _server_name: staffLabel,
         _table_ref: null,
       })
       updatedStatus = 'redeemed'
@@ -163,7 +186,7 @@ export default async function ScanPage({ params }: { params: ScanParams }) {
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#6F716D]">Interlude Check-in</p>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-semibold">{booking.venue?.name ?? 'Venue'}</h1>
+              <h1 className="text-2xl font-semibold">{venueNameOverride ?? booking.venue?.name ?? 'Venue'}</h1>
               <p className="text-sm text-[#4F514D]">{bookingDateLabel}</p>
             </div>
             <StatusBadge status={updatedStatus} />

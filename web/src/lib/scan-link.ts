@@ -3,8 +3,15 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000').replace(/\/$/, '')
 const SCAN_LINK_SECRET = process.env.SCAN_LINK_SECRET
 
-if (!SCAN_LINK_SECRET) {
-  throw new Error('SCAN_LINK_SECRET env var is required to generate scan links.')
+function requireScanSecret() {
+  if (!SCAN_LINK_SECRET) {
+    throw new Error('SCAN_LINK_SECRET env var is required for scan links.')
+  }
+  return SCAN_LINK_SECRET
+}
+
+export function getScanSecret() {
+  return requireScanSecret()
 }
 
 function encodePayload(payload: { bookingId: string; qr: string }) {
@@ -21,7 +28,7 @@ function decodePayload(token: string) {
 }
 
 function signPayload(payload: string) {
-  return createHmac('sha256', SCAN_LINK_SECRET!).update(payload).digest('base64url')
+  return createHmac('sha256', requireScanSecret()).update(payload).digest('base64url')
 }
 
 function verifySignature(payload: string, signature: string) {

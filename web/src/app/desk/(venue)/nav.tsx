@@ -12,6 +12,7 @@ export const venueDeskNavLinks = [
   { href: '/desk/passes', label: 'Passes' },
   { href: '/desk/dashboard', label: 'Dashboard' },
   { href: '/desk/statements', label: 'Statements' },
+  { href: '/desk/scanner', label: 'Scanner' },
 ] as const
 
 // All nav links including Team (for mobile menu)
