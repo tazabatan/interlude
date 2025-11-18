@@ -82,7 +82,10 @@ export async function notifyBookingDeclined(bookingId: string, reason?: string |
   }
 }
 
-export async function notifyBookingCancelled(bookingId: string, cancelledBy: string) {
+export async function notifyBookingCancelled(
+  bookingId: string,
+  cancelledBy: BookingCancelledEmailPayload['cancelledBy']
+) {
   try {
     const payload = await buildBookingCancelledEmailPayload(bookingId, cancelledBy)
     if (!payload) return
