@@ -64,7 +64,7 @@ export async function cancelBookingAction(
       holdStatus: booking.hold_status,
       memberId: user.id,
     })
-    await notifyBookingCancelled(booking.id, 'guest', null)
+    await notifyBookingCancelled(booking.id, 'guest')
   } catch (error) {
     console.error('cancelBookingAction failed', error)
     const message = error instanceof Error ? error.message : String(error)
