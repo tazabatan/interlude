@@ -5,7 +5,8 @@ import { notifyBookingRequested } from '@/lib/email/triggers'
 
 export async function POST(req: NextRequest) {
   try {
-    const { bookingId } = (await req.json().catch(() => null)) as { bookingId?: string } | null
+    const payload = (await req.json().catch(() => null)) as { bookingId?: string } | null
+    const bookingId = payload?.bookingId
     if (!bookingId) {
       return NextResponse.json({ error: 'bookingId required' }, { status: 400 })
     }
