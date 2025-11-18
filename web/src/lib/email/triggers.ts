@@ -8,6 +8,7 @@ import {
   sendNoScanNoticeEmail,
   type HoldStatusEmailPayload,
 } from '@/emails'
+import type { BookingCancelledEmailPayload } from '@/emails/types'
 import {
   buildBookingApprovedEmailPayload,
   buildBookingRequestedEmailPayload,
