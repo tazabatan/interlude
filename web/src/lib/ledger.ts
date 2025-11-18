@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { sendStatementReadyEmail } from '@/emails'
 import type { StatementReadyEmailPayload } from '@/emails/types'
 import { serviceRoleFetch } from '@/lib/supabase/service-role'
+import { fetchGuestProfilesByIds } from '@/lib/guest-profile'
 
 export const LEDGER_ENTRY_TYPES = [
   'fee_due',
@@ -37,6 +39,47 @@ export type StatementPreviewResult = {
   >
   totalCents: number
   totalLabel: string
+}
+
+export type VenueStatementRow = {
+  id: string
+  periodStart: string
+  periodEnd: string
+  periodLabel: string
+  currency: string
+  totalCents: number
+  totalLabel: string
+  status: string
+  createdAt: string
+}
+
+export type VenueStatementSummary = {
+  feesCents: number
+  feesLabel: string
+  creditsCents: number
+  creditsLabel: string
+  adjustmentsCents: number
+  adjustmentsLabel: string
+  netDueCents: number
+  netDueLabel: string
+}
+
+export type VenueStatementBookingRow = {
+  id: string
+  bookingId: string | null
+  dateLabel: string
+  guestName: string
+  typeLabel: string
+  statusLabel: string
+  feeLabel: string
+  creditLabel: string
+  description: string | null
+}
+
+export type VenueStatementDetail = {
+  invoice: VenueStatementRow
+  summary: VenueStatementSummary
+  entries: VenueStatementBookingRow[]
 }
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000').replace(/\/$/, '')
@@ -307,8 +350,246 @@ export async function sendStatementEmail(args: {
     venueName: args.preview.venue.name,
     periodLabel,
     totalDueLabel: args.preview.totalLabel,
-    statementUrl: `${SITE_URL}/desk`,
+    statementUrl: `${SITE_URL}/desk/statements/${args.invoiceId}`,
   }
 
   await sendStatementReadyEmail(emailPayload)
+}
+
+function formatPeriodRange(start: string, end: string) {
+  const startDate = new Date(start)
+  const endDate = new Date(end)
+  const sameMonth =
+    startDate.getUTCFullYear() === endDate.getUTCFullYear() &&
+    startDate.getUTCMonth() === endDate.getUTCMonth()
+
+  const dayFormatter = new Intl.DateTimeFormat('en-US', { day: 'numeric' })
+  const monthYearFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' })
+  const shortFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+  if (sameMonth) {
+    const monthYear = monthYearFormatter.format(startDate)
+    return `${dayFormatter.format(startDate)}–${dayFormatter.format(endDate)} ${monthYear}`
+  }
+
+  return `${shortFormatter.format(startDate)} – ${shortFormatter.format(endDate)}`
+}
+
+function formatPassKind(kind?: string | null) {
+  if (!kind) return 'Pass'
+  if (kind === 'MIN_SPEND') return 'Min-spend pass'
+  if (kind === 'DAY_PASS') return 'Day pass'
+  if (kind === 'BEACH_PASS') return 'Beach pass'
+  return kind.replace(/_/g, ' ').toLowerCase()
+}
+
+function formatBookingStatusLabel(status?: string | null) {
+  if (!status) return 'Unknown'
+  return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+export async function fetchVenueStatements(venueId: string): Promise<VenueStatementRow[]> {
+  const params = new URLSearchParams()
+  params.set('select', 'id,period_start,period_end,total_cents,currency,status,created_at')
+  params.set('venue_id', `eq.${venueId}`)
+  params.append('order', 'period_start.desc')
+  params.append('order', 'created_at.desc')
+  const res = await serviceRoleFetch(`/rest/v1/invoices?${params.toString()}`)
+  const rows = (await res.json()) as Array<{
+    id: string
+    period_start: string
+    period_end: string
+    total_cents: number
+    currency: string | null
+    status: string
+    created_at: string
+  }>
+
+  return rows.map((row) => {
+    const currency = row.currency ?? 'USD'
+    return {
+      id: row.id,
+      periodStart: row.period_start,
+      periodEnd: row.period_end,
+      periodLabel: formatPeriodRange(row.period_start, row.period_end),
+      currency,
+      totalCents: row.total_cents,
+      totalLabel: formatCurrency(row.total_cents, currency),
+      status: row.status,
+      createdAt: row.created_at,
+    }
+  })
+}
+
+type LedgerEntryWithBooking = {
+  id: string
+  entry_type: LedgerEntryType
+  amount_cents: number
+  currency: string
+  booking_id: string | null
+  description: string | null
+  created_at: string
+  booking: {
+    id: string
+    date: string | null
+    status: string | null
+    user_id: string | null
+    pass: {
+      kind: string | null
+      display_price_text: string | null
+    } | null
+  } | null
+}
+
+export async function fetchVenueStatementDetail(
+  venueId: string,
+  invoiceId: string
+): Promise<VenueStatementDetail | null> {
+  const invoiceParams = new URLSearchParams()
+  invoiceParams.set('id', `eq.${invoiceId}`)
+  invoiceParams.set('venue_id', `eq.${venueId}`)
+  invoiceParams.set('limit', '1')
+  invoiceParams.set('select', 'id,period_start,period_end,total_cents,currency,status,created_at')
+  const invoiceRes = await serviceRoleFetch(`/rest/v1/invoices?${invoiceParams.toString()}`)
+  const invoiceRows = (await invoiceRes.json()) as Array<{
+    id: string
+    period_start: string
+    period_end: string
+    total_cents: number
+    currency: string | null
+    status: string
+    created_at: string
+  }>
+  const invoiceRow = invoiceRows[0]
+  if (!invoiceRow) return null
+
+  const invoice: VenueStatementRow = {
+    id: invoiceRow.id,
+    periodStart: invoiceRow.period_start,
+    periodEnd: invoiceRow.period_end,
+    periodLabel: formatPeriodRange(invoiceRow.period_start, invoiceRow.period_end),
+    currency: invoiceRow.currency ?? 'USD',
+    totalCents: invoiceRow.total_cents,
+    totalLabel: formatCurrency(invoiceRow.total_cents, invoiceRow.currency ?? 'USD'),
+    status: invoiceRow.status,
+    createdAt: invoiceRow.created_at,
+  }
+
+  const entryParams = new URLSearchParams()
+  entryParams.set('invoice_id', `eq.${invoice.id}`)
+  entryParams.append(
+    'select',
+    'id,entry_type,amount_cents,currency,booking_id,description,created_at,booking:bookings(id,date,status,user_id,pass:passes(kind,display_price_text))'
+  )
+  entryParams.append('order', 'created_at.asc')
+  const entriesRes = await serviceRoleFetch(`/rest/v1/venue_ledger?${entryParams.toString()}`)
+  const rawEntries = (await entriesRes.json()) as LedgerEntryWithBooking[]
+
+  const userIds = rawEntries
+    .map((entry) => entry.booking?.user_id)
+    .filter((value): value is string => Boolean(value))
+  const profileMap = await fetchGuestProfilesByIds(userIds)
+
+  let feesCents = 0
+  let creditsCents = 0
+  let adjustmentsCents = 0
+
+  type Bucket = {
+    id: string
+    bookingId: string | null
+    date: string | null
+    entryCreatedAt: string
+    guestName: string
+    typeLabel: string
+    statusLabel: string
+    feeCents: number
+    creditCents: number
+    description: string | null
+  }
+
+  const entryBuckets = new Map<string, Bucket>()
+
+  for (const entry of rawEntries) {
+    switch (entry.entry_type) {
+      case 'fee_due':
+      case 'platform_admin_no_show':
+        feesCents += entry.amount_cents
+        break
+      case 'venue_credit_no_show':
+        creditsCents += Math.abs(entry.amount_cents)
+        break
+      case 'adjustment':
+        adjustmentsCents += entry.amount_cents
+        break
+      default:
+        break
+    }
+
+    const key = entry.booking_id ?? entry.id
+    let bucket = entryBuckets.get(key)
+    if (!bucket) {
+      const booking = entry.booking
+      const guestId = booking?.user_id ?? null
+      const guestName = guestId ? profileMap[guestId]?.name ?? 'Guest' : booking ? 'Guest' : 'Ledger entry'
+      bucket = {
+        id: entry.id,
+        bookingId: booking?.id ?? null,
+        date: booking?.date ?? null,
+        entryCreatedAt: entry.created_at,
+        guestName,
+        typeLabel: booking?.pass?.kind ? formatPassKind(booking.pass.kind) : entry.entry_type.replace(/_/g, ' '),
+        statusLabel: booking ? formatBookingStatusLabel(booking.status) : 'Adjustment',
+        feeCents: 0,
+        creditCents: 0,
+        description: booking?.pass?.display_price_text ?? entry.description ?? null,
+      }
+      entryBuckets.set(key, bucket)
+    }
+
+    if (entry.entry_type === 'fee_due' || entry.entry_type === 'platform_admin_no_show') {
+      bucket.feeCents += entry.amount_cents
+    } else if (entry.entry_type === 'venue_credit_no_show') {
+      bucket.creditCents += Math.abs(entry.amount_cents)
+    } else if (entry.entry_type === 'adjustment') {
+      bucket.description = entry.description ?? bucket.description
+      if (entry.amount_cents >= 0) {
+        bucket.feeCents += entry.amount_cents
+      } else {
+        bucket.creditCents += Math.abs(entry.amount_cents)
+      }
+    }
+  }
+
+  const summary: VenueStatementSummary = {
+    feesCents,
+    feesLabel: formatCurrency(feesCents, invoice.currency),
+    creditsCents,
+    creditsLabel: formatCurrency(creditsCents, invoice.currency),
+    adjustmentsCents,
+    adjustmentsLabel: formatCurrency(adjustmentsCents, invoice.currency),
+    netDueCents: feesCents - creditsCents + adjustmentsCents,
+    netDueLabel: formatCurrency(feesCents - creditsCents + adjustmentsCents, invoice.currency),
+  }
+
+  const entries: VenueStatementBookingRow[] = Array.from(entryBuckets.values())
+    .sort((a, b) => new Date(a.entryCreatedAt).getTime() - new Date(b.entryCreatedAt).getTime())
+    .map((bucket) => ({
+      id: bucket.id,
+      bookingId: bucket.bookingId,
+      dateLabel: bucket.date
+        ? new Date(bucket.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        : new Date(bucket.entryCreatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      guestName: bucket.guestName,
+      typeLabel: bucket.typeLabel,
+      statusLabel: bucket.statusLabel,
+      feeLabel: bucket.feeCents ? formatCurrency(bucket.feeCents, invoice.currency) : '—',
+      creditLabel: bucket.creditCents ? formatCurrency(bucket.creditCents, invoice.currency) : '—',
+      description: bucket.description,
+    }))
+
+  return {
+    invoice,
+    summary,
+    entries,
+  }
 }
