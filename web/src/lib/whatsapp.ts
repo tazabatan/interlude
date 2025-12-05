@@ -224,7 +224,7 @@ export async function sendBookingRequestWhatsApp(bookingId: string) {
     const partyLabel = formatPartySize(booking.party_size)
     const guestLabel = guest.email ? `${guest.name} (${guest.email})` : guest.name
     const siteUrl = getSiteUrl()
-    const reviewUrl = `${siteUrl}/desk/bookings/${booking.id}`
+    const reviewUrl = `${siteUrl}/desk/requests/${booking.id}`
 
     const staff = await fetchOptedInStaff(booking.pass?.venue?.id ?? booking.venue?.id ?? booking.venue_id)
     if (staff.length === 0) return
