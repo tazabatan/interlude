@@ -55,7 +55,7 @@ function mapBookingToPayload(booking: DeskBooking, profileMap: Record<string, Gu
   const imageUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
   const partySummary = resolvePartySummary(booking)
   const venueTz = booking.pass?.venue?.tz ?? booking.venue?.tz ?? 'America/Anguilla'
-  const isExpired = isPastArrivalCutoff(booking.date, booking.arrival_window_start, 60)
+  const isExpired = isPastArrivalCutoff(booking.date, booking.arrival_window_start, venueTz, 60)
   return {
     id: booking.id,
     status: booking.status,
