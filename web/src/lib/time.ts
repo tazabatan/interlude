@@ -8,3 +8,19 @@ export function isPastDate(dateIso: string | null | undefined) {
   return bookingDate < today
 }
 
+export function isPastArrivalCutoff(
+  dateIso: string | null | undefined,
+  arrivalStartIso: string | null | undefined,
+  cutoffMinutes: number = 60,
+) {
+  // If we have an arrival window start time, use it as the anchor
+  if (arrivalStartIso) {
+    const arrivalStart = new Date(arrivalStartIso)
+    if (!Number.isNaN(arrivalStart.getTime())) {
+      const cutoff = arrivalStart.getTime() - cutoffMinutes * 60 * 1000
+      return Date.now() > cutoff
+    }
+  }
+  // Fallback to simple date comparison (treat missing times as past once the day has passed)
+  return isPastDate(dateIso)
+}

@@ -6,7 +6,7 @@ import { formatArrivalValue } from '@/lib/arrival'
 import { getUserRole } from '@/lib/get-user-role'
 import { computePartyCountsFromAges, formatPartySummary } from '@/lib/party'
 import { formatPassPrice } from '@/lib/passes/helpers'
-import { isPastDate } from '@/lib/time'
+import { isPastArrivalCutoff } from '@/lib/time'
 
 function formatDateLabel(value: string) {
   const date = new Date(value)
@@ -54,7 +54,8 @@ function mapBookingToPayload(booking: DeskBooking, profileMap: Record<string, Gu
   const imageSrc = guestProfile.avatarUrl ?? '/icons/user-circle.svg'
   const imageUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
   const partySummary = resolvePartySummary(booking)
-  const isExpired = isPastDate(booking.date)
+  const venueTz = booking.pass?.venue?.tz ?? booking.venue?.tz ?? 'America/Anguilla'
+  const isExpired = isPastArrivalCutoff(booking.date, booking.arrival_window_start, 60)
   return {
     id: booking.id,
     status: booking.status,
