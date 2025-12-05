@@ -154,7 +154,7 @@ export default async function DeskRequestDetailPage({
   const holdStatus = booking.hold_status ? booking.hold_status.replace(/_/g, ' ') : 'not authorized'
   const guestProfile = (await fetchGuestProfileById(booking.user_id)) ?? buildGuestProfile()
   const guestLabel = `${guestProfile.firstName || guestProfile.name}'s group of ${booking.party_size}`
-  const guestAvatarSrc = guestProfile.avatarUrl ?? pickGuestImage(booking.id)
+  const guestAvatarSrc = guestProfile.avatarUrl ?? '/icons/user-circle.svg'
   const guestAvatarUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
   const partySummary = resolvePartySummary(booking)
   const guestContactRows = [

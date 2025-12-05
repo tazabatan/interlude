@@ -140,7 +140,7 @@ export default async function BookingDetailPage({
   const venueName = booking.pass?.venue?.name ?? 'Venue TBD'
   const guestProfile = (await fetchGuestProfileById(booking.user_id)) ?? buildGuestProfile()
   const guestLabel = `${guestProfile.firstName || guestProfile.name}'s group of ${booking.party_size}`
-  const guestAvatarSrc = guestProfile.avatarUrl ?? pickGuestImage(booking.id)
+  const guestAvatarSrc = guestProfile.avatarUrl ?? '/icons/user-circle.svg'
   const guestAvatarUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
   const partySummary = resolvePartySummary(booking)
   const canMarkArrived = booking.status === 'issued' && Boolean(booking.qr_jti)

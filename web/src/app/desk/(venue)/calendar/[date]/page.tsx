@@ -28,26 +28,6 @@ function formatPassLabel(kind: string | null) {
   return 'Pass'
 }
 
-function pickGuestImage(seed: string) {
-  const placeholders: readonly string[] = [
-    '/guest-photos/guest-1.jpg',
-    '/guest-photos/guest-2.jpg',
-    '/guest-photos/guest-3.jpg',
-    '/guest-photos/guest-4.png',
-    '/guest-photos/guest-5.png',
-    '/guest-photos/guest-6.png',
-    '/guest-photos/guest-7.png',
-  ]
-  if (placeholders.length === 0) return ''
-  let hash = 0
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash << 5) - hash + seed.charCodeAt(i)
-    hash |= 0
-  }
-  const index = Math.abs(hash) % placeholders.length
-  return placeholders[index]
-}
-
 function formatStatusLabel(status: string) {
   return status === 'issued' ? 'Pass issued' : status.replace(/_/g, ' ')
 }
@@ -102,7 +82,7 @@ export default async function DayDetailPage({ params }: DayDetailPageProps) {
     )
     const guestProfile = guestProfiles[booking.user_id] ?? buildGuestProfile()
     const guestLabel = `${guestProfile.firstName || guestProfile.name}'s group of ${booking.party_size}`
-    const imageSrc = guestProfile.avatarUrl ?? pickGuestImage(booking.id)
+    const imageSrc = guestProfile.avatarUrl ?? '/icons/user-circle.svg'
     const imageUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
     const paymentState = mapPaymentState(booking.hold_status)
     const category = mapCategory(booking.pass?.kind ?? null)
