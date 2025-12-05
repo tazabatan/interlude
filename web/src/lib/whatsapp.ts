@@ -119,11 +119,7 @@ function pickProfileString(profile: Record<string, unknown> | null | undefined, 
 
 function resolvePassName(pass: BookingNotificationRow["pass"]) {
   if (!pass) return "Pass request"
-  const profile = pass.profile ?? {}
-  const displayName = pickProfileString(profile, "displayName")
-  const internalName = pickProfileString(profile, "internalName")
-  if (displayName) return displayName
-  if (internalName) return internalName
+  // WhatsApp needs the pass type (Pool/Beach/etc.), not the venue name or internal pass name
   return formatPassLabel(pass.kind ?? null)
 }
 
