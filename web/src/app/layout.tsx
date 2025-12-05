@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   title: 'Interlude',
   description: 'Private, QR-verified access',
   icons: {
-    icon: '/icon.svg',
-    apple: '/icon.svg',
+    icon: '/icon.png',
+    apple: '/icon.png',
   },
 }
 

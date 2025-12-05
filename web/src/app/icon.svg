@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Interlude symbol">
-  <rect width="256" height="256" rx="56" fill="#7FCFC2" />
-  <g fill="#000">
-    <rect x="76" y="48" width="24" height="160" rx="12" />
-    <rect x="156" y="48" width="24" height="160" rx="12" />
-    <circle cx="88" cy="32" r="18" />
-    <circle cx="88" cy="224" r="18" />
-  </g>
-</svg>
