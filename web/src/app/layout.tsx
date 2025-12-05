@@ -8,6 +8,10 @@ import ImpersonationTracker from '@/components/impersonation-tracker'
 export const metadata: Metadata = {
   title: 'Interlude',
   description: 'Private, QR-verified access',
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icon.svg',
+  },
 }
 
 export default async function RootLayout({
