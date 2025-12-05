@@ -375,7 +375,7 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
                       type="time"
                       name="open"
                       defaultValue={serviceOpen}
-                      className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
+                      className="w-full rounded border border-[#DBD8C9] bg-white px-3 py-2 text-sm text-black"
                     />
                   </label>
                   <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
@@ -384,7 +384,7 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
                       type="time"
                       name="close"
                       defaultValue={serviceClose}
-                      className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
+                      className="w-full rounded border border-[#DBD8C9] bg-white px-3 py-2 text-sm text-black"
                     />
                   </label>
                 </div>
@@ -456,7 +456,7 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
                       type="time"
                       name="start"
                       defaultValue={arrivalStart}
-                      className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
+                      className="w-full rounded border border-[#DBD8C9] bg-white px-3 py-2 text-sm text-black"
                     />
                   </label>
                   <label className="space-y-1 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
@@ -465,7 +465,7 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
                       type="time"
                       name="end"
                       defaultValue={arrivalEnd}
-                      className="w-full rounded border border-[#DBD8C9] px-3 py-2 text-sm text-black"
+                      className="w-full rounded border border-[#DBD8C9] bg-white px-3 py-2 text-sm text-black"
                     />
                   </label>
                 </div>
@@ -615,7 +615,7 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
                   <input
                     type="date"
                     name="date"
-                    className="w-full rounded border border-[#DBD8C9] px-3 py-2"
+                    className="w-full rounded border border-[#DBD8C9] bg-white px-3 py-2"
                     defaultValue={todayIso}
                   />
                 </label>
@@ -624,7 +624,7 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
                   <input
                     type="number"
                     name="cap"
-                    className="w-full rounded border border-[#DBD8C9] px-3 py-2"
+                    className="w-full rounded border border-[#DBD8C9] bg-white px-3 py-2"
                     placeholder="20"
                     min={0}
                     required
@@ -653,7 +653,7 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
                 <input
                   type="date"
                   name="date"
-                  className="w-full rounded border border-[#DBD8C9] px-3 py-2"
+                  className="w-full rounded border border-[#DBD8C9] bg-white px-3 py-2"
                   defaultValue={todayIso}
                 />
               </label>

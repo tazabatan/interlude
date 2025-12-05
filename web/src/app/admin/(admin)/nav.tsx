@@ -17,7 +17,7 @@ export default function AdminNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="flex items-center gap-10 text-sm font-medium uppercase tracking-[0.2em] text-[#777]">
+    <nav className="flex flex-wrap items-center justify-center gap-4 text-sm font-medium uppercase tracking-[0.2em] text-[#777] md:justify-start md:gap-10">
       {adminNavLinks.map((link) => {
         const isActive =
           link.match === "startsWith" ? pathname.startsWith(link.href) : pathname === link.href

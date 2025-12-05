@@ -69,6 +69,8 @@ export default async function AccountPage() {
     email: user.email ?? "",
     phone: metadata.phone ?? "",
     title: metadata.job_title ?? "",
+    whatsappOptIn: Boolean(metadata.whatsapp_opt_in),
+    whatsappPhone: metadata.whatsapp_phone ?? metadata.phone ?? "",
   }
 
   const backHref =

@@ -131,23 +131,25 @@ export default function EmailPreviewClient({ templates, currentEmail }: Props) {
               <tr key={template.key}>
                 <td className="px-4 py-3 font-medium text-[#02374D]">{template.label}</td>
                 <td className="px-4 py-3 font-mono text-xs text-[#6F716D]">{template.key}</td>
-                <td className="px-4 py-3 text-right space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => handlePreview(template.key)}
-                    disabled={Boolean(loadingKey)}
-                    className="rounded-full border border-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#02374D] transition hover:bg-[#02374D] hover:text-white disabled:opacity-50"
-                  >
-                    {loadingKey === template.key + '-preview' ? 'Loading…' : 'Preview HTML'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSend(template.key)}
-                    disabled={Boolean(loadingKey)}
-                    className="rounded-full bg-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#02486A] disabled:opacity-50"
-                  >
-                    {loadingKey === template.key + '-send' ? 'Sending…' : 'Send to me'}
-                  </button>
+                <td className="px-4 py-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handlePreview(template.key)}
+                      disabled={Boolean(loadingKey)}
+                      className="rounded-full border border-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#02374D] transition hover:bg-[#02374D] hover:text-white disabled:opacity-50"
+                    >
+                      {loadingKey === template.key + '-preview' ? 'Loading…' : 'Preview HTML'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSend(template.key)}
+                      disabled={Boolean(loadingKey)}
+                      className="rounded-full bg-[#02374D] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#02486A] disabled:opacity-50"
+                    >
+                      {loadingKey === template.key + '-send' ? 'Sending…' : 'Send to me'}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

@@ -254,7 +254,7 @@ export default function LedgerClient({ venues }: Props) {
         </div>
       </aside>
       <section className="flex-1 space-y-6 rounded-3xl border border-[#E8E4D7] bg-white p-6 shadow-sm">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">
             Period start
             <input

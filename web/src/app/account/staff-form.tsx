@@ -12,6 +12,8 @@ type StaffAccountFormProps = {
     email: string
     phone: string
     title: string
+    whatsappOptIn: boolean
+    whatsappPhone: string
   }
 }
 
@@ -59,9 +61,13 @@ export default function StaffAccountForm({ role, initialData }: StaffAccountForm
           <input
             type="tel"
             name="phone"
-            defaultValue={initialData.phone}
+            defaultValue={initialData.whatsappPhone || initialData.phone}
+            placeholder="+44 7123 456789"
             className="mt-2 w-full rounded border border-[#DBD8C9] bg-white px-4 py-3 text-sm font-normal tracking-normal text-[#31332f] placeholder:font-normal placeholder:tracking-normal placeholder:text-[#6F716D]"
           />
+          <p className="mt-2 text-xs font-normal uppercase tracking-[0.08em] text-[#6F716D]">
+            Use an E.164 format number (country code + number). This will be used for WhatsApp alerts if enabled.
+          </p>
         </label>
 
         <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">
@@ -73,6 +79,22 @@ export default function StaffAccountForm({ role, initialData }: StaffAccountForm
             defaultValue={initialData.title}
             className="mt-2 w-full rounded border border-[#DBD8C9] bg-white px-4 py-3 text-sm font-normal tracking-normal text-[#31332f] placeholder:font-normal placeholder:tracking-normal placeholder:text-[#6F716D]"
           />
+        </label>
+
+        <label className="flex items-start gap-3 rounded-lg border border-[#E8E4D7] bg-white p-4">
+          <input
+            type="checkbox"
+            name="whatsappOptIn"
+            defaultChecked={initialData.whatsappOptIn}
+            className="mt-1 h-4 w-4 rounded border-[#02374D] text-[#02374D] focus:ring-[#02374D]"
+          />
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#02374D]">WhatsApp alerts</p>
+            <p className="text-sm text-[#4F514D]">
+              Send new booking requests to this number via WhatsApp. Standard WhatsApp business messaging fees may apply.
+              You can opt out anytime.
+            </p>
+          </div>
         </label>
       </section>
 

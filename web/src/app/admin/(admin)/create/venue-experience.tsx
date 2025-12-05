@@ -605,27 +605,30 @@ export default function AdminVenueExperience({ initialVenues }: AdminVenueExperi
             </button>
           </div>
 
-          <div className="relative py-8">
-            <input
-              type="text"
-              placeholder="Search venues..."
-              value={venueSearchQuery}
-              onChange={(e) => setVenueSearchQuery(e.target.value)}
-              className="w-64 rounded-full border border-[#E8E4D7] bg-white px-5 py-2.5 text-sm text-[#02374D] placeholder:text-[#6F716D] focus:border-[#02374D] focus:outline-none focus:ring-2 focus:ring-[#02374D]/20"
-            />
-            <header className="absolute left-1/2 top-1/2 mx-auto w-full max-w-5xl -translate-x-1/2 -translate-y-1/2">
-              <h1 className="text-center text-3xl font-medium uppercase tracking-[0.05em] text-black">Venues</h1>
+          <div className="flex flex-col gap-4 py-8 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2 text-center sm:text-left">
+              <h1 className="text-3xl font-medium uppercase tracking-[0.05em] text-black">Venues</h1>
+              <p className="text-xs uppercase tracking-[0.25em] text-[#6F716D]">Manage drafts & contacts</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <input
+                type="text"
+                placeholder="Search venues..."
+                value={venueSearchQuery}
+                onChange={(e) => setVenueSearchQuery(e.target.value)}
+                className="w-full rounded-full border border-[#E8E4D7] bg-white px-5 py-2.5 text-sm text-[#02374D] placeholder:text-[#6F716D] focus:border-[#02374D] focus:outline-none focus:ring-2 focus:ring-[#02374D]/20 sm:w-64"
+              />
               <button
                 type="button"
                 aria-label="Add venue"
                 onClick={openForCreate}
-                className="absolute right-0 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-[#DBD8C9] text-black transition hover:bg-[#d0ccba] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#02374D]"
+                className="flex h-12 w-full items-center justify-center rounded-full bg-[#DBD8C9] text-black transition hover:bg-[#d0ccba] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#02374D] sm:w-12"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               </button>
-            </header>
+            </div>
           </div>
 
           {hasVenues ? (

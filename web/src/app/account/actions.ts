@@ -88,14 +88,23 @@ export async function updateStaffProfileAction(
   }
 
   const fullName = formData.get("fullName")?.toString() ?? ""
-  const phone = formData.get("phone")?.toString() ?? ""
+  const phoneInput = formData.get("phone")?.toString() ?? ""
   const title = formData.get("title")?.toString() ?? ""
+  const whatsappOptIn = formData.get("whatsappOptIn") === "on"
+
+  const normalizedPhone = phoneInput.trim().replace(/\s+/g, "")
+
+  if (whatsappOptIn && !normalizedPhone) {
+    return { status: "error", message: "Add a mobile number to enable WhatsApp alerts." }
+  }
 
   const { error } = await supabase.auth.updateUser({
     data: {
       full_name: fullName || null,
-      phone: phone || null,
+      phone: normalizedPhone || null,
       job_title: title || null,
+      whatsapp_opt_in: whatsappOptIn,
+      whatsapp_phone: normalizedPhone || null,
     },
   })
 

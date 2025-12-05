@@ -38,25 +38,25 @@ export function Filters({ filters, onChange }: FiltersProps) {
   }
 
   return (
-    <div className="rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 shadow-[0px_4px_18px_rgba(0,0,0,0.08)]">
-      <h2 className="mb-6 text-xs font-semibold uppercase tracking-[0.25em] text-[#6F716D]">
+    <div className="rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-4 shadow-[0px_4px_18px_rgba(0,0,0,0.08)] sm:p-6">
+      <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-[#6F716D] sm:mb-6">
         Filters
       </h2>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
         {/* Time Period */}
         <div>
           <label className="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-[#4F514D]">
             Time Period
           </label>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {(['day', 'week', 'month', 'custom'] as (TimePeriod | 'custom')[]).map((period) => (
               <button
                 key={period}
                 type="button"
                 onClick={() => handleTimePeriodChange(period)}
                 className={clsx(
-                  'flex-1 rounded-full px-3 py-2 text-xs font-medium uppercase tracking-[0.15em] transition',
+                  'flex-1 rounded-full px-3 py-2 text-xs font-medium uppercase tracking-[0.15em] transition min-w-[48%] sm:min-w-0',
                   filters.timePeriod === period
                     ? 'bg-[#02374D] text-white'
                     : 'bg-[#F4F1E7] text-[#777] hover:bg-[#E8E4D7]'
@@ -69,8 +69,8 @@ export function Filters({ filters, onChange }: FiltersProps) {
 
           {/* Custom Date Range */}
           {filters.timePeriod === 'custom' && (
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-col">
                 <label
                   htmlFor="start-date"
                   className="mb-1 block text-xs text-[#6F716D]"
@@ -132,14 +132,14 @@ export function Filters({ filters, onChange }: FiltersProps) {
           <label className="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-[#4F514D]">
             User Type
           </label>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {(['all', 'member', 'guest'] as UserType[]).map((type) => (
               <button
                 key={type}
                 type="button"
                 onClick={() => handleUserTypeChange(type)}
                 className={clsx(
-                  'flex-1 rounded-full px-3 py-2 text-xs font-medium uppercase tracking-[0.15em] transition',
+                  'flex-1 rounded-full px-3 py-2 text-xs font-medium uppercase tracking-[0.15em] transition min-w-[48%] sm:min-w-0',
                   filters.userType === type
                     ? 'bg-[#02374D] text-white'
                     : 'bg-[#F4F1E7] text-[#777] hover:bg-[#E8E4D7]'

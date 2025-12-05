@@ -86,9 +86,9 @@ export default async function SupportPage() {
     )
 
   return (
-    <div className={`${montserrat.className} min-h-screen bg-[#F4F1E7] text-[#02374D]`}>
+    <div className={`${montserrat.className} min-h-screen bg-[#F4F1E7] text-[#02374D] overflow-x-hidden`}>
       <header className="relative z-50 bg-[#F4F1E7]/90 backdrop-blur">
-        <div className="flex w-full flex-col gap-4 px-6 py-6 sm:px-10 lg:px-[5rem]">
+        <div className="flex w-full flex-col gap-4 px-4 py-6 sm:px-10 lg:px-[5rem]">
           <div className="flex w-full items-center gap-4">
             <div className="flex flex-1 md:hidden" aria-hidden="true" />
             <Link
@@ -129,8 +129,8 @@ export default async function SupportPage() {
             </h1>
           </div>
 
-          <section className="rounded-[36px] border border-[#E8E4D7] bg-[#FBF7ED] p-8 shadow-[0px_20px_45px_rgba(0,0,0,0.15)]">
-            <div className="grid gap-8 sm:grid-cols-2">
+          <section className="rounded-[36px] border border-[#E8E4D7] bg-[#FBF7ED] p-6 shadow-[0px_20px_45px_rgba(0,0,0,0.15)] sm:p-8">
+            <div className="grid gap-6 sm:grid-cols-2 sm:gap-8">
               <div className="space-y-4 rounded-[28px] border border-[#ECE8DA] bg-white/60 p-6 backdrop-blur">
                 <div className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6F716D]">Call us</div>
                 <p className="text-sm text-[#4F514D]">

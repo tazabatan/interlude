@@ -18,12 +18,14 @@ import {
   buildHoldStatusEmailPayload,
   buildNoScanEmailPayload,
 } from './payload-builders'
+import { sendBookingRequestWhatsApp } from '@/lib/whatsapp'
 
 export async function notifyBookingRequested(bookingId: string) {
   try {
     const payload = await buildBookingRequestedEmailPayload(bookingId)
     if (!payload) return
     await sendBookingRequestedEmail(payload)
+    await sendBookingRequestWhatsApp(bookingId)
   } catch (error) {
     console.error('[email] failed to send booking requested email', error)
   }

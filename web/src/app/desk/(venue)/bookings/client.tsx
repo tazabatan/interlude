@@ -85,7 +85,7 @@ export function BookingsClient({ bookings }: { bookings: BookingCardPayload[] })
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-center gap-2 pb-4">
+      <div className="flex flex-wrap items-center justify-center gap-2 pb-4">
         {SEGMENT_OPTIONS.map((option) => (
           <button
             key={option.value}

@@ -133,7 +133,7 @@ export default function PassRequestForm({ passId, minDate, maxDate, defaultDate,
                 max={MAX_PARTY_SIZE}
                 value={partySize}
                 onChange={(event) => handlePartySizeChange(event.target.value)}
-                className="mt-2 w-full sm:w-32 rounded-2xl border border-[#E8E4D7] bg-[#FFFCF5] px-4 py-3 text-sm text-[#02374D] shadow-[0px_2px_8px_rgba(0,0,0,0.05)] focus:outline-none focus:ring-2 focus:ring-[#02374D]/30"
+                className="mt-2 w-full rounded-2xl border border-[#E8E4D7] bg-[#FFFCF5] px-4 py-3 text-sm text-[#02374D] shadow-[0px_2px_8px_rgba(0,0,0,0.05)] focus:outline-none focus:ring-2 focus:ring-[#02374D]/30 sm:w-32"
               />
             </label>
           </div>

@@ -89,19 +89,19 @@ export default function RewardsClient({ data }: { data: RewardsData }) {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-12 text-center lg:gap-24">
+          <div className="flex flex-col items-center justify-center gap-8 text-center sm:flex-row sm:flex-wrap sm:gap-12 lg:gap-24">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-[#6F716D]">Earn Rate</p>
               <p className="mt-2 text-3xl font-semibold text-[#02374D]">{benefits.earnRate}</p>
             </div>
-            <div className="h-12 w-px bg-[#E8E4D7]" />
+            <div className="hidden h-12 w-px bg-[#E8E4D7] sm:block" />
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-[#6F716D]">Book</p>
               <p className="mt-2 text-xl font-semibold uppercase tracking-[0.02em] text-[#02374D]">Members Only Properties</p>
             </div>
             {benefits.earlyAccess && (
               <>
-                <div className="h-12 w-px bg-[#E8E4D7]" />
+                <div className="hidden h-12 w-px bg-[#E8E4D7] sm:block" />
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-[#6F716D]">Early Access</p>
                   <p className="mt-2 text-3xl font-semibold text-[#02374D]">{benefits.earlyAccess}</p>
