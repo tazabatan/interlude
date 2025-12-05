@@ -31,6 +31,7 @@ export type RequestCardPayload = {
   guestLabel: string
   imageSrc: string
   imageUnoptimized: boolean
+  isExpired: boolean
 }
 
 const FILTER_OPTIONS: { value: PassCategory; label: string }[] = [
@@ -44,10 +45,13 @@ const FILTER_OPTIONS: { value: PassCategory; label: string }[] = [
 export function RequestsClient({ bookings, heading }: { bookings: RequestCardPayload[]; heading: string }) {
   const [filter, setFilter] = useState<PassCategory>('all')
 
+  const active = useMemo(() => bookings.filter((booking) => !booking.isExpired), [bookings])
+  const missed = useMemo(() => bookings.filter((booking) => booking.isExpired), [bookings])
+
   const filtered = useMemo(() => {
-    if (filter === 'all') return bookings
-    return bookings.filter((booking) => booking.category === filter)
-  }, [bookings, filter])
+    if (filter === 'all') return active
+    return active.filter((booking) => booking.category === filter)
+  }, [active, filter])
 
   const currentLabel = FILTER_OPTIONS.find((option) => option.value === filter)?.label ?? 'All'
   const currentHeading =
@@ -83,6 +87,17 @@ export function RequestsClient({ bookings, heading }: { bookings: RequestCardPay
           <RequestCard key={booking.id} booking={booking} />
         ))}
       </div>
+
+      {missed.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold uppercase tracking-[0.08em] text-[#02374D]">Missed requests</h2>
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {missed.map((booking) => (
+              <RequestCard key={booking.id} booking={booking} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -134,6 +149,12 @@ function RequestCard({ booking }: { booking: RequestCardPayload }) {
         </div>
       )}
 
+      {booking.isExpired && (
+        <div className="rounded-2xl border border-[#E8E4D7] bg-white/70 px-4 py-3 text-sm text-[#6F716D]">
+          This request has passed. Approvals are disabled.
+        </div>
+      )}
+
       <div className="flex gap-3 pt-2">
         <form
           action={async (formData) => {
@@ -160,7 +181,7 @@ function RequestCard({ booking }: { booking: RequestCardPayload }) {
                 ? 'cursor-not-allowed bg-[#9bded3]'
                 : 'bg-[#7fcfc2] hover:bg-[#6ac4b6]'
             }`}
-            disabled={state.status === 'submitting'}
+            disabled={state.status === 'submitting' || booking.isExpired}
           >
             Approve
           </button>

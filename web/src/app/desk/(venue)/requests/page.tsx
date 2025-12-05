@@ -6,6 +6,7 @@ import { formatArrivalValue } from '@/lib/arrival'
 import { getUserRole } from '@/lib/get-user-role'
 import { computePartyCountsFromAges, formatPartySummary } from '@/lib/party'
 import { formatPassPrice } from '@/lib/passes/helpers'
+import { isPastDate } from '@/lib/time'
 
 function formatDateLabel(value: string) {
   const date = new Date(value)
@@ -53,6 +54,7 @@ function mapBookingToPayload(booking: DeskBooking, profileMap: Record<string, Gu
   const imageSrc = guestProfile.avatarUrl ?? '/icons/user-circle.svg'
   const imageUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
   const partySummary = resolvePartySummary(booking)
+  const isExpired = isPastDate(booking.date)
   return {
     id: booking.id,
     status: booking.status,
@@ -72,6 +74,7 @@ function mapBookingToPayload(booking: DeskBooking, profileMap: Record<string, Gu
     guestLabel,
     imageSrc,
     imageUnoptimized,
+    isExpired,
   }
 }
 
@@ -85,8 +88,8 @@ export default async function DeskRequestsPage() {
   const requestedRaw = await fetchDeskBookings('requested', venueId)
   const guestProfiles = await fetchGuestProfilesByIds(requestedRaw.map((booking) => booking.user_id))
   const requested = requestedRaw.map((booking) => mapBookingToPayload(booking, guestProfiles))
-  const totalRequests = requested.length
-  const heading = `YOU HAVE ${totalRequests} REQUEST${totalRequests === 1 ? '' : 'S'} TO REVIEW`
+  const activeCount = requested.filter((booking) => !booking.isExpired).length
+  const heading = `YOU HAVE ${activeCount} REQUEST${activeCount === 1 ? '' : 'S'} TO REVIEW`
 
   return (
     <div className="mx-auto w-full max-w-[84rem] space-y-12 px-4 text-[#02374D] sm:px-8 lg:px-12 xl:px-16 2xl:max-w-[92rem]">
