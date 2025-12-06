@@ -5,7 +5,7 @@ export default async function HomePage() {
   const { user, role } = await getUserRole()
 
   if (!user) {
-    redirect('/auth')
+    redirect('/app/explore')
   }
 
   if (role === 'admin') {
@@ -16,5 +16,5 @@ export default async function HomePage() {
     redirect('/desk')
   }
 
-  redirect('/app')
+  redirect('/app/explore')
 }
