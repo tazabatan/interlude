@@ -44,7 +44,7 @@ const CONCIERGE_TILES = [
     description:
       'Charter a private yacht for a bespoke day on the water — island hopping, sunset cruises, offshore fishing, or water toys with a crew that handles everything.',
     cta: 'Plan a boat day',
-    href: '/support?service=boat',
+    href: '/app/concierge?experience=boat',
     image: '/images/explore-yacht.png',
     objectPosition: 'center center',
   },
@@ -54,7 +54,7 @@ const CONCIERGE_TILES = [
     description:
       'Invite a local chef to shop, cook, and plate a tailored menu in the comfort of your villa or penthouse.',
     cta: 'Book a private chef',
-    href: '/support?service=chef',
+    href: '/app/concierge?experience=chef',
     image: '/images/explore-chef-5.png',
     objectPosition: '60% 25%',
   },

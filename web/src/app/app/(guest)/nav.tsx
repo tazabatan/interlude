@@ -7,6 +7,7 @@ import clsx from 'clsx'
 export const guestNavLinks = [
   { href: '/app', label: 'Wallet' },
   { href: '/app/explore', label: 'Explore' },
+  { href: '/app/concierge', label: 'Concierge' },
   { href: '/app/rewards', label: 'Rewards' },
 ] as const
 
@@ -16,7 +17,7 @@ export default function GuestNav() {
   return (
     <nav className="flex items-center gap-10 text-sm font-medium uppercase tracking-[0.2em] text-[#777]">
       {guestNavLinks.map((link) => {
-        const isActive = pathname === link.href
+        const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`)
         return (
           <Link
             key={link.href}
