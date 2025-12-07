@@ -34,7 +34,7 @@ export default async function ExplorePage() {
       >
         <div className="relative h-full w-full">
           <Image
-            src="/images/explore-hero.png"
+            src="/images/explore-hero-header4.png"
             alt="Private beach with umbrellas overlooking turquoise water"
             fill
             sizes="100vw"
@@ -42,15 +42,16 @@ export default async function ExplorePage() {
             className="object-cover object-[center_70%]"
           />
 
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.18)_0%,rgba(0,0,0,0.14)_45%,rgba(0,0,0,0.06)_70%,rgba(0,0,0,0)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.32)_0%,rgba(0,0,0,0.18)_40%,rgba(0,0,0,0.1)_62%,rgba(0,0,0,0.04)_76%,rgba(0,0,0,0)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.24)_0%,rgba(0,0,0,0.18)_30%,rgba(0,0,0,0)_65%)]" />
 
           <div className="absolute inset-0 flex items-center justify-center bg-transparent text-center">
             <div className="w-full max-w-5xl px-6 text-white sm:px-10">
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/70">Day access for the in-between</p>
-              <h1 className="mt-5 text-4xl font-normal uppercase leading-tight tracking-[0.05em] text-white drop-shadow-[0_15px_40px_rgba(0,0,0,0.45)] sm:text-5xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/80">Day access for the in-between</p>
+              <h1 className="mt-5 text-4xl font-normal uppercase leading-tight tracking-[0.05em] text-white drop-shadow-[0_12px_30px_rgba(0,0,0,0.48)] sm:text-5xl">
                 Access the world&apos;s best hotels — no room required
               </h1>
-              <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/85">
+              <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/90 drop-shadow-[0_8px_20px_rgba(0,0,0,0.35)]">
                 Book day access to private beaches, rooftop pools, and signature spa rituals for a{' '}
                 <strong className="font-semibold text-white">fraction of the room rate.</strong>
               </p>
