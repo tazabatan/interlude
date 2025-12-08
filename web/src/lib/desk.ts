@@ -75,21 +75,7 @@ export type DeskBooking = {
   hold_status: string | null
   created_at: string | null
   qr_jti: string | null
-  pass: {
-    kind: string | null
-    currency: string | null
-    min_spend_amount: number | null
-    display_price_text: string | null
-    interlude_perk: string | null
-    auto_approve_enabled: boolean
-    default_arrival_start_local: string | null
-    default_arrival_window_minutes: number | null
-    profile: PassProfilePayload | null
-    venue: {
-      name: string | null
-      tz: string | null
-    } | null
-  } | null
+  pass: DeskPass | null
 }
 
 export type DeskPass = {
