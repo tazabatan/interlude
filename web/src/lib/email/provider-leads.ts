@@ -1,4 +1,5 @@
-import { send } from '@/emails'
+import React from 'react'
+import { sendTransactionalEmail } from '@/lib/email/client'
 
 type LeadEmailPayload = {
   name?: string | null
@@ -26,9 +27,9 @@ export async function sendProviderLeadEmail(lead: LeadEmailPayload) {
 
   const text = lines.join('\n')
 
-  await send({
-    to: 'daniel@interludepass.com',
+  await sendTransactionalEmail({
+    to: { email: 'daniel@interludepass.com', name: 'Interlude Provider Leads' },
     subject,
-    text,
+    react: React.createElement('pre', null, text),
   })
 }

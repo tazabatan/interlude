@@ -40,7 +40,16 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(payload),
     })
 
-    await sendProviderLeadEmail(payload)
+    await sendProviderLeadEmail({
+      name: payload.name,
+      email: payload.email,
+      company: payload.company,
+      providerType: payload.provider_type,
+      location: payload.location,
+      website: payload.website,
+      message: payload.message,
+      phone: payload.phone,
+    })
 
     return NextResponse.json({ ok: true })
   } catch (error) {
