@@ -17,7 +17,9 @@ export default function GuestNav() {
   return (
     <nav className="flex items-center gap-10 text-sm font-medium uppercase tracking-[0.2em] text-[#777]">
       {guestNavLinks.map((link) => {
-        const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`)
+        const isActive =
+          pathname === link.href ||
+          (link.href !== '/app' && pathname.startsWith(`${link.href}/`))
         return (
           <Link
             key={link.href}

@@ -16,6 +16,7 @@ type Summary = {
   partySize: number
   partySizeLabel: string
   guestAgeDetails?: string[] | null
+  guestNotes: string | null
   guestAgesComplete: boolean
   priceLabel: string
   taxLabel: string
@@ -76,6 +77,9 @@ export default function RequestFlow({
   const trackerStep = step === "account" ? 1 : step === "confirm" ? 2 : 3
   const backHref = `/app/venue/${summary.passId}?date=${summary.dateIso}`
   const guestAgesMissing = !summary.guestAgesComplete
+  const contactMissing =
+    !isAuthenticated &&
+    (!contact.firstName.trim() || !contact.lastName.trim() || !contact.email.trim())
 
   const summaryList = useMemo(() => {
     const rows = [
@@ -87,6 +91,9 @@ export default function RequestFlow({
     if (summary.guestAgeDetails && summary.guestAgeDetails.length > 0) {
       rows.push({ label: "Guest ages", value: summary.guestAgeDetails.join(', ') })
     }
+    if (summary.guestNotes) {
+      rows.push({ label: "Notes", value: summary.guestNotes })
+    }
     rows.push(
       { label: "Price", value: summary.priceLabel },
       { label: "Tax", value: summary.taxLabel },
@@ -97,7 +104,7 @@ export default function RequestFlow({
   }, [summary])
 
   const startPaymentStep = () => {
-    if (guestAgesMissing) {
+    if (guestAgesMissing || contactMissing) {
       window.scrollTo({ top: 0, behavior: "smooth" })
       return
     }
@@ -117,6 +124,15 @@ export default function RequestFlow({
         _party_size: partySize,
         _arrival_time: arrivalTime,
         _guest_ages: guestAges.join(","),
+        _guest_contact: isAuthenticated
+          ? null
+          : {
+              first_name: contact.firstName,
+              last_name: contact.lastName,
+              email: contact.email,
+              phone: contact.phone,
+            },
+        _guest_notes: summary.guestNotes,
       })
       if (rpcError) {
         throw rpcError
@@ -198,6 +214,33 @@ export default function RequestFlow({
               ))}
             </dl>
             <div className="h-px bg-[#DBD8C9]" />
+            {!isAuthenticated && (
+              <div className="space-y-4 rounded-[20px] border border-[#E8E4D7] bg-white/80 p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">Your details</p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <InputField
+                    label="First name"
+                    value={contact.firstName}
+                    onChange={(value) => setContact((prev) => ({ ...prev, firstName: value }))}
+                  />
+                  <InputField
+                    label="Last name"
+                    value={contact.lastName}
+                    onChange={(value) => setContact((prev) => ({ ...prev, lastName: value }))}
+                  />
+                  <InputField
+                    label="Email"
+                    value={contact.email}
+                    onChange={(value) => setContact((prev) => ({ ...prev, email: value }))}
+                  />
+                  <InputField
+                    label="Phone"
+                    value={contact.phone}
+                    onChange={(value) => setContact((prev) => ({ ...prev, phone: value }))}
+                  />
+                </div>
+              </div>
+            )}
             <div className="flex flex-col gap-4 text-black">
               <div className="flex items-baseline justify-between">
                 <p className="text-xl uppercase tracking-[0.05em]">Total Price (inc. taxes and fees)</p>
@@ -212,7 +255,7 @@ export default function RequestFlow({
             <button
               type="button"
               onClick={startPaymentStep}
-              disabled={guestAgesMissing}
+              disabled={guestAgesMissing || contactMissing}
               className="self-start rounded-full bg-[#02374D] px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#02486A] disabled:cursor-not-allowed disabled:bg-[#6F716D]"
             >
               Confirm booking
@@ -222,13 +265,16 @@ export default function RequestFlow({
                 Add an age for each guest before confirming. Use the back arrow to edit your party details.
               </p>
             )}
+            {contactMissing && (
+              <p className="text-sm text-[#B4231F]">Please add your name and email so the team can reach you.</p>
+            )}
           </div>
           <div className="flex-[1] min-w-0 w-full">
             <SummaryPanel
               summary={summary}
               primaryCtaLabel="Confirm booking"
               onPrimaryClick={startPaymentStep}
-              ctaDisabled={guestAgesMissing}
+              ctaDisabled={guestAgesMissing || contactMissing}
             />
           </div>
         </section>

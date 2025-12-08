@@ -10,6 +10,7 @@ type OptionRole = "venue_manager" | "venue_staff"
 type VenueOption = {
   id: string
   name: string | null
+  provider_type?: string | null
 }
 
 function SubmitButton({ disabled }: { disabled: boolean }) {
@@ -39,8 +40,8 @@ export function RoleInviteForm({
     initialInviteFormState
   )
   const roleOptions: Array<{ value: OptionRole; label: string }> = [
-    { value: "venue_staff", label: "Venue staff" },
-    { value: "venue_manager", label: "Venue manager" },
+    { value: "venue_staff", label: "Provider staff" },
+    { value: "venue_manager", label: "Provider manager" },
   ]
   const venueDisabled = mode === "admin" && venues.length === 0
 
@@ -59,12 +60,12 @@ export function RoleInviteForm({
         </label>
       </div>
 
-      <label className="block text-xs font-semibold uppercase tracking-[0.25em] text-[#6F716D]">
-        Assign role
-        <select
-          name="role"
-          className="mt-2 w-full rounded border border-[#DBD8C9] bg-white px-4 py-2 text-sm text-black"
-          defaultValue="venue_staff"
+        <label className="block text-xs font-semibold uppercase tracking-[0.25em] text-[#6F716D]">
+          Assign role
+          <select
+            name="role"
+            className="mt-2 w-full rounded border border-[#DBD8C9] bg-white px-4 py-2 text-sm text-black"
+            defaultValue="venue_staff"
         >
           {roleOptions.map((option) => (
             <option key={option.value} value={option.value}>
@@ -76,7 +77,7 @@ export function RoleInviteForm({
 
       {mode === "admin" ? (
         <label className="block text-xs font-semibold uppercase tracking-[0.25em] text-[#6F716D]">
-          Venue
+          Provider
           <select
             name="venueId"
             required
@@ -85,11 +86,11 @@ export function RoleInviteForm({
             defaultValue={venues[0]?.id ?? ""}
           >
             {venues.length === 0 ? (
-              <option value="">No venues available</option>
+              <option value="">No providers available</option>
             ) : (
               venues.map((venue) => (
                 <option key={venue.id} value={venue.id}>
-                  {venue.name ?? "Unnamed venue"}
+                  {venue.name ?? "Unnamed provider"}
                 </option>
               ))
             )}
@@ -99,7 +100,7 @@ export function RoleInviteForm({
         <>
           <input type="hidden" name="venueId" value={managedVenue?.id ?? ""} />
           <p className="text-xs uppercase tracking-[0.15em] text-[#6F716D]">
-            Invites join: <span className="font-semibold text-black">{managedVenue?.name ?? "Your venue"}</span>
+            Invites join: <span className="font-semibold text-black">{managedVenue?.name ?? "Your provider"}</span>
           </p>
         </>
       )}

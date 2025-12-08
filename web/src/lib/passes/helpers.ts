@@ -17,6 +17,8 @@ const PASS_KIND_LABELS: Record<string, { base: string; detail?: string }> = {
   POOL_PASS: { base: 'Pool Pass' },
   GYM_PASS: { base: 'Gym Pass' },
   SPA_PASS: { base: 'Spa Pass' },
+  BOAT_DAY: { base: 'Boat Day' },
+  PRIVATE_CHEF: { base: 'Private Chef' },
   MIN_SPEND: { base: 'Beach Club Pass', detail: 'Beach Club Pass — Min-spend' },
   DAY_PASS: { base: 'Pool Pass', detail: 'Day Pass — Hotel' },
 }

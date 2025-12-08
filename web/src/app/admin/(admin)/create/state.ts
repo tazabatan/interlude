@@ -18,6 +18,7 @@ export const createEmptyVenueFormState = (): VenueFormState => ({
   internalName: "",
   shortDescription: "",
   status: "draft",
+  providerType: "hotel",
   address: {
     street: "",
     city: "",

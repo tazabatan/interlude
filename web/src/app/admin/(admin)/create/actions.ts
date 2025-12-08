@@ -170,6 +170,7 @@ export async function saveVenueAction(formData: FormData) {
       name: string
       tz: string
       status: VenueStatus
+      provider_type: string
       profile: UpsertVenueProfile
     }
     const upsertPayload: UpsertVenueRow = {
@@ -177,6 +178,7 @@ export async function saveVenueAction(formData: FormData) {
       name: normalizedState.displayName || normalizedState.internalName || "Venue",
       tz: normalizedState.timezone || "America/Anguilla",
       status: normalizedState.status,
+      provider_type: normalizedState.providerType,
       profile,
     }
 

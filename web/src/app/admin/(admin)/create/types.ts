@@ -40,6 +40,7 @@ export type VenueFormState = {
   internalName: string
   shortDescription: string
   status: VenueStatus
+  providerType: 'hotel' | 'restaurant' | 'private_chef' | 'boat_company'
   address: {
     street: string
     city: string
@@ -79,7 +80,7 @@ export type PassVisibility = "members" | "guest_only" | "both"
 export type PassFormState = {
   status: "draft" | "active" | "paused"
   name: string
-  kind: "BEACH_PASS" | "POOL_PASS" | "GYM_PASS" | "SPA_PASS"
+  kind: "BEACH_PASS" | "POOL_PASS" | "GYM_PASS" | "SPA_PASS" | "BOAT_DAY" | "PRIVATE_CHEF"
   shortDescription: string
   interludePerk: string
   economicsType: PassEconomicsType

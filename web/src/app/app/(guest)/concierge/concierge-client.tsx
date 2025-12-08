@@ -27,8 +27,8 @@ const EXPERIENCE_OPTIONS: Array<{
   kinds: string[] | null
 }> = [
   { key: 'all', label: 'All', icon: '/images/hotel-icon.png', kinds: CONCIERGE_KINDS },
-  { key: 'boat', label: 'Boat', icon: '/images/boat-icon.png', kinds: ['BOAT_DAY'] },
-  { key: 'chef', label: 'Chef', icon: '/images/chef-icon.png', kinds: ['PRIVATE_CHEF'] },
+  { key: 'boat', label: 'Boat', icon: '/images/boat-icon-new.png', kinds: ['BOAT_DAY'] },
+  { key: 'chef', label: 'Chef', icon: '/images/chef-icon-2.png', kinds: ['PRIVATE_CHEF'] },
 ]
 
 export default function ConciergeClient({ passes }: { passes: ConciergePass[] }) {
@@ -114,7 +114,7 @@ export default function ConciergeClient({ passes }: { passes: ConciergePass[] })
                     alt={`${option.label} icon`}
                     width={72}
                     height={72}
-                    className={option.key === 'all' ? 'h-14 w-14' : 'h-12 w-12'}
+                    className={`${option.key === 'all' ? 'h-14 w-14' : 'h-12 w-12'} aspect-square object-contain`}
                   />
                 </div>
                 <span>{option.label}</span>
@@ -140,14 +140,14 @@ export default function ConciergeClient({ passes }: { passes: ConciergePass[] })
                   }`}
                 >
                   <div className={`flex flex-shrink-0 items-center justify-center ${option.key === 'all' ? 'h-24 w-24' : 'h-16 w-16'}`}>
-                    <Image
-                      src={option.icon}
-                      alt={`${option.label} icon`}
-                      width={iconSize}
-                      height={iconSize}
-                      className={option.key === 'all' ? 'h-24 w-24' : 'h-16 w-16'}
-                    />
-                  </div>
+                  <Image
+                    src={option.icon}
+                    alt={`${option.label} icon`}
+                    width={iconSize}
+                    height={iconSize}
+                    className={`${option.key === 'all' ? 'h-24 w-24' : 'h-16 w-16'} aspect-square object-contain`}
+                  />
+                </div>
                   <span className="whitespace-nowrap text-sm font-semibold uppercase tracking-[0.3em] text-current">
                     {option.label}
                   </span>

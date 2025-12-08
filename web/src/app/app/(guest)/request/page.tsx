@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getUserRole } from '@/lib/get-user-role'
 import { fetchPassById } from '@/lib/desk'
+import { derivePresentationKind } from '@/lib/explore'
 import { formatPassLabel } from '@/lib/passes/helpers'
 import { formatRequestedArrival } from '@/lib/arrival'
 import RequestFlow from './request-flow'
@@ -41,6 +42,7 @@ type PageProps = {
     arrivalTime?: string
     partyAge?: string
     guestAges?: string
+    notes?: string
   }>
 }
 
@@ -57,6 +59,7 @@ export default async function RequestPage({ searchParams }: PageProps) {
   const partySize = Number(params.partySize ?? 2) || 2
   const arrivalTime = params.arrivalTime ?? null
   const partyAgeNote = params.partyAge?.trim() ?? ''
+  const notes = params.notes?.trim() ?? ''
   const guestAgeValues = normalizeGuestAges(params.guestAges, partySize)
   const guestAgeNumbers = guestAgeValues.map((value) => (value ? Number(value) : null))
   const guestAgeDetails = buildGuestAgeDetails(guestAgeValues)
@@ -71,10 +74,12 @@ export default async function RequestPage({ searchParams }: PageProps) {
 
   const currency = (pass.currency ?? 'USD').toUpperCase()
   const venueName = pass.venue?.name ?? 'Unnamed Venue'
-  const passLabel = formatPassLabel(pass.kind, { detail: true })
-  const perGuestPriceCents = pass.min_spend_amount ?? 0
+  const derivedKind = derivePresentationKind(pass)
+  const passLabel = formatPassLabel(derivedKind ?? pass.kind, { detail: true })
+  const isConcierge = derivedKind === 'BOAT_DAY' || derivedKind === 'PRIVATE_CHEF'
+  const perGuestPriceCents = isConcierge ? 0 : pass.min_spend_amount ?? 0
   const priceCents = perGuestPriceCents * partySize
-  const taxCents = Math.round(priceCents * DEFAULT_TAX_RATE)
+  const taxCents = isConcierge ? 0 : Math.round(priceCents * DEFAULT_TAX_RATE)
   const totalCents = priceCents + taxCents
 
   const summary = {
@@ -88,11 +93,12 @@ export default async function RequestPage({ searchParams }: PageProps) {
     partySize,
     partySizeLabel: formatPartySummary(counts.adults, counts.children, partySize),
     guestAgeDetails: guestAgeDetails.length > 0 ? guestAgeDetails : partyAgeNote ? [partyAgeNote] : null,
+    guestNotes: notes || null,
     guestAgesComplete: guestAgeValues.every((value) => value.trim() !== ''),
-    priceLabel: formatCurrency(priceCents, currency),
-    taxLabel: formatCurrency(taxCents, currency),
-    totalLabel: formatCurrency(totalCents, currency),
-    dueNowLabel: formatCurrency(0, currency),
+    priceLabel: isConcierge ? 'Price on request' : formatCurrency(priceCents, currency),
+    taxLabel: isConcierge ? '—' : formatCurrency(taxCents, currency),
+    totalLabel: isConcierge ? 'Price on request' : formatCurrency(totalCents, currency),
+    dueNowLabel: '0.00',
     currency,
     cancellationCopy: `Free cancellation before ${previousDayCopy(requestedDate)}, 11:59pm property local time.`,
     paymentCopy: 'Payment details are securely stored. Your card is only charged once the venue issues your pass.',
@@ -117,6 +123,9 @@ export default async function RequestPage({ searchParams }: PageProps) {
   })
   if (arrivalTime) {
     authParams.set('arrivalTime', arrivalTime)
+  }
+  if (notes) {
+    authParams.set('notes', notes)
   }
   const serializedGuestAges = serializeGuestAges(guestAgeValues)
   if (serializedGuestAges) {

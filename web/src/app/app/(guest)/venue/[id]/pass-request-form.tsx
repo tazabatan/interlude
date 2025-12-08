@@ -10,6 +10,7 @@ type PassRequestFormProps = {
   pausedDates: string[]
   arrivalStart: string
   arrivalEnd: string
+  kind: string | null
 }
 
 function generateTimeOptions(start: string, end: string, intervalMinutes: number = 30) {
@@ -36,13 +37,15 @@ const MAX_PARTY_SIZE = 12
 const ADULT_VALUE = '30'
 const CHILD_VALUE = '10'
 
-export default function PassRequestForm({ passId, minDate, maxDate, defaultDate, pausedDates, arrivalStart, arrivalEnd }: PassRequestFormProps) {
+export default function PassRequestForm({ passId, minDate, maxDate, defaultDate, pausedDates, arrivalStart, arrivalEnd, kind }: PassRequestFormProps) {
   const pausedSet = useMemo(() => new Set(pausedDates), [pausedDates])
   const [selectedDate, setSelectedDate] = useState(defaultDate)
   const [selectedTime, setSelectedTime] = useState(arrivalStart)
   const [partySize, setPartySize] = useState(2)
   const [guestAges, setGuestAges] = useState<string[]>(() => Array.from({ length: 2 }, () => ADULT_VALUE))
+  const isConcierge = kind === 'PRIVATE_CHEF' || kind === 'BOAT_DAY'
   const isPaused = pausedSet.has(selectedDate)
+  const [notes, setNotes] = useState('')
 
   const timeOptions = useMemo(() => generateTimeOptions(arrivalStart, arrivalEnd), [arrivalStart, arrivalEnd])
   const guestAgesValue = guestAges.join(',')
@@ -87,8 +90,14 @@ export default function PassRequestForm({ passId, minDate, maxDate, defaultDate,
       <input type="hidden" name="guestAges" value={guestAgesValue} />
       <section className="space-y-6 rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6F716D]">Choose your date & time</p>
-          <p className="mt-1 text-sm text-[#4F514D]">Pick the day and arrival time you plan to arrive. Requests go straight to the venue desk.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6F716D]">
+            {isConcierge ? 'Choose your date & preferred time' : 'Choose your date & time'}
+          </p>
+          <p className="mt-1 text-sm text-[#4F514D]">
+            {isConcierge
+              ? 'Pick your day and preferred time. The concierge team will confirm availability.'
+              : 'Pick the day and arrival time you plan to arrive. Requests go straight to the venue desk.'}
+          </p>
         </div>
         <div className="space-y-4">
           <label className="block text-xs uppercase tracking-[0.15em] text-[#6F716D]">
@@ -105,7 +114,7 @@ export default function PassRequestForm({ passId, minDate, maxDate, defaultDate,
           </label>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
             <label className="block text-xs uppercase tracking-[0.15em] text-[#6F716D]">
-              Arrival time
+              {isConcierge ? 'Preferred time' : 'Arrival time'}
               <div className="relative mt-2 w-full sm:w-40">
                 <select
                   name="arrivalTime"
@@ -138,7 +147,7 @@ export default function PassRequestForm({ passId, minDate, maxDate, defaultDate,
             </label>
           </div>
         </div>
-        {partySize > 1 && (
+        {partySize > 1 && !isConcierge && (
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">Who's coming?</p>
             <p className="text-sm text-[#4F514D]">We assume you’re an adult. Mark each additional guest so venues can prep properly.</p>
@@ -171,6 +180,17 @@ export default function PassRequestForm({ passId, minDate, maxDate, defaultDate,
             This date is sold out. Please pick another day.
           </p>
         )}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">Notes (optional)</p>
+          <textarea
+            name="notes"
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder={isConcierge ? 'Menu preferences, allergies, meeting point…' : 'Anything you’d like the team to know?'}
+            className="w-full rounded-2xl border border-[#E8E4D7] bg-[#FFFCF5] px-4 py-3 text-sm text-[#02374D] shadow-[0px_2px_8px_rgba(0,0,0,0.05)] focus:outline-none focus:ring-2 focus:ring-[#02374D]/30"
+            rows={3}
+          />
+        </div>
       </section>
 
       <button

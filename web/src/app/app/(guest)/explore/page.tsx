@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { getPassHeroImageUrl } from '@/lib/desk'
-import { audienceFromRole, fetchExplorePasses } from '@/lib/explore'
+import { audienceFromRole, derivePresentationKind, fetchExplorePasses } from '@/lib/explore'
 import { getUserRole } from '@/lib/get-user-role'
 import { formatTimezoneLabel } from '@/lib/timezone'
 import ExploreClient, { type ExplorePass } from './explore-client'
@@ -13,12 +13,13 @@ export default async function ExplorePage() {
   const passes = await fetchExplorePasses(audience)
 
   const explorePasses: ExplorePass[] = passes.map((pass) => {
+    const presentationKind = derivePresentationKind(pass)
     const fallbackAmount = pass.min_spend_amount ?? pass.profile?.prepaidCreditAmountCents ?? null
     return {
       id: pass.id,
-      name: pass.venue?.name ?? pass.kind ?? 'Private Pass',
+      name: pass.venue?.name ?? presentationKind ?? 'Private Pass',
       location: pass.venue?.tz ? formatTimezoneLabel(pass.venue.tz) : null,
-      kind: pass.kind,
+      kind: presentationKind,
       displayPriceText: pass.display_price_text,
       minSpendAmount: fallbackAmount,
       currency: pass.currency,
@@ -34,7 +35,7 @@ export default async function ExplorePage() {
       >
         <div className="relative h-full w-full">
           <Image
-            src="/images/explore-hero-header4.png"
+            src="/images/explore-hero-header8-optimized.jpg"
             alt="Private beach with umbrellas overlooking turquoise water"
             fill
             sizes="100vw"
@@ -42,8 +43,8 @@ export default async function ExplorePage() {
             className="object-cover object-[center_70%]"
           />
 
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.32)_0%,rgba(0,0,0,0.18)_40%,rgba(0,0,0,0.1)_62%,rgba(0,0,0,0.04)_76%,rgba(0,0,0,0)_100%)]" />
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.24)_0%,rgba(0,0,0,0.18)_30%,rgba(0,0,0,0)_65%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.38)_0%,rgba(0,0,0,0.24)_45%,rgba(0,0,0,0.14)_70%,rgba(0,0,0,0.08)_85%,rgba(0,0,0,0)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.3)_0%,rgba(0,0,0,0.2)_35%,rgba(0,0,0,0)_75%)]" />
 
           <div className="absolute inset-0 flex items-center justify-center bg-transparent text-center">
             <div className="w-full max-w-5xl px-6 text-white sm:px-10">

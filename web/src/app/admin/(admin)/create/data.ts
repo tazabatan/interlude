@@ -32,9 +32,10 @@ export const ADMIN_VENUE_SELECT = [
   "name",
   "tz",
   "status",
+  "provider_type",
   "created_at",
   "profile",
-  `passes(${ADMIN_PASS_SELECT})`,
+  `passes(${ADMIN_PASS_SELECT})`
 ].join(",")
 
 export async function fetchAdminVenueRows(): Promise<VenueRow[]> {

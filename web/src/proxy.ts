@@ -11,6 +11,8 @@ function isPublicAppPath(pathname: string) {
   if (pathname === '/app' || pathname === '/app/') return true
   if (pathname.startsWith('/app/explore')) return true
   if (pathname.startsWith('/app/venue')) return true
+  if (pathname.startsWith('/app/concierge')) return true
+  if (pathname.startsWith('/app/request')) return true
   return false
 }
 
@@ -43,17 +45,33 @@ type SupabaseAuthState =
   | [SupabaseSession | null | undefined, SupabaseAuthUser | null | undefined]
 
 function parseSupabaseAuthCookie(value: string) {
+  const decodeBase64Safely = (input: string) => {
+    let normalized = input.replace(/-/g, '+').replace(/_/g, '/')
+    const pad = normalized.length % 4
+    if (pad) normalized = normalized.padEnd(normalized.length + (4 - pad), '=')
+
+    try {
+      return Buffer.from(normalized, 'base64').toString('utf-8')
+    } catch (_) {
+      try {
+        return atob(normalized)
+      } catch (_) {
+        return null
+      }
+    }
+  }
+
   try {
     // Handle base64-encoded cookies (Supabase SSR format)
     if (value.startsWith('base64-')) {
       const base64String = value.slice(7) // Remove 'base64-' prefix
-      const decoded = atob(base64String) // Decode base64 to string
+      const decoded = decodeBase64Safely(base64String)
+      if (!decoded) return null
       return JSON.parse(decoded) as SupabaseAuthState
     }
     // Try parsing as raw JSON
     return JSON.parse(value) as SupabaseAuthState
-  } catch (err) {
-    console.error('Failed to parse auth cookie:', err)
+  } catch (_) {
     return null
   }
 }

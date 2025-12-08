@@ -52,6 +52,7 @@ export type VenueRow = {
   name: string | null
   tz: string | null
   status: string | null
+  provider_type: string | null
   created_at: string | null
   profile: VenueProfilePayload | null
   passes?: PassRow[]
@@ -105,7 +106,7 @@ export function mapPassRowToRecord(row: PassRow): PassRecord {
   const profile = row.profile ?? null
   const economicsType = profile?.economicsType ?? "min_spend"
   const heroImage = mapStoredImageToAsset(profile?.heroImage ?? null)
-  const presentationKind = profile?.presentationKind ?? "BEACH_PASS"
+  const presentationKind = profile?.presentationKind ?? row.kind ?? "BEACH_PASS"
   const shortDescription = profile?.shortDescription ?? ""
   const prepaidCreditCents = profile?.prepaidCreditAmountCents ?? null
   const displayName = profile?.displayName ?? row.kind ?? "Pass"
@@ -147,6 +148,12 @@ export function mapVenueRowToRecord(row: VenueRow): VenueRecord {
   const merged: VenueFormState = {
     ...base,
     status: coerceVenueStatus(row.status),
+    providerType:
+      row.provider_type === 'restaurant' ||
+      row.provider_type === 'private_chef' ||
+      row.provider_type === 'boat_company'
+        ? row.provider_type
+        : 'hotel',
     displayName: fallback(profile?.displayName, row.name ?? base.displayName),
     internalName: fallback(profile?.internalName, row.name ?? base.internalName),
     shortDescription: fallback(profile?.shortDescription, base.shortDescription),

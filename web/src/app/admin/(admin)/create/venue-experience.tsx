@@ -39,6 +39,8 @@ const PASS_KIND_OPTIONS = [
   { value: "POOL_PASS", label: "Pool Pass" },
   { value: "GYM_PASS", label: "Gym Pass" },
   { value: "SPA_PASS", label: "Spa Pass" },
+  { value: "BOAT_DAY", label: "Boat Day" },
+  { value: "PRIVATE_CHEF", label: "Private Chef" },
 ] as const
 
 const PASS_ECONOMICS_OPTIONS: { value: PassEconomicsType; label: string; caption: string }[] = [
@@ -50,6 +52,13 @@ const PASS_VISIBILITY_OPTIONS = [
   { value: "members", label: "Members only" },
   { value: "guest_only", label: "Guests only" },
   { value: "both", label: "Members & guests" },
+] as const
+
+const PROVIDER_TYPE_OPTIONS = [
+  { value: "hotel", label: "Hotel" },
+  { value: "restaurant", label: "Restaurant" },
+  { value: "private_chef", label: "Private Chef" },
+  { value: "boat_company", label: "Boat Company" },
 ] as const
 
 const TIMEZONE_IDS = [
@@ -109,6 +118,7 @@ type PassBuilderOverlayProps = {
   onFormInteraction: () => void
   isEditing: boolean
   venueName: string
+  providerType: VenueFormState["providerType"]
   isSubmitting: boolean
 }
 
@@ -192,6 +202,7 @@ const cloneFormState = (state: VenueFormState): VenueFormState => ({
   internalName: state.internalName,
   shortDescription: state.shortDescription,
   status: state.status,
+  providerType: state.providerType,
   address: { ...state.address },
   timezone: state.timezone,
   primaryContact: { ...state.primaryContact },
@@ -678,7 +689,7 @@ export default function AdminVenueExperience({ initialVenues }: AdminVenueExperi
             </section>
           ) : (
             <div className="rounded-[32px] border border-dashed border-[#DAD7C7] bg-[#F5F0E3] px-8 py-16 text-center text-sm text-[#4F514D]">
-              Add your first hotel profile to unlock invitations and pass controls.
+              Add your first provider profile to unlock invitations and pass controls.
             </div>
           )}
         </>
@@ -707,6 +718,7 @@ export default function AdminVenueExperience({ initialVenues }: AdminVenueExperi
           onFormInteraction={() => setPassFormError(null)}
           isEditing={Boolean(editingPassId)}
           venueName={activeVenue.displayName || "Venue"}
+          providerType={activeVenue.providerType}
           isSubmitting={isSavingPass}
         />
       ) : null}
@@ -871,6 +883,26 @@ function VenueBuilderOverlay({
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6F716D]">Status</p>
               <div className="grid gap-4 sm:grid-cols-3">{statusButtons}</div>
             </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className={LABEL_CLASSES}>
+                Provider type
+                <select
+                  value={formState.providerType}
+                  onChange={(event) => {
+                    onFormInteraction()
+                    const value = event.target.value as VenueFormState['providerType']
+                    setFormState((prev) => ({ ...prev, providerType: value }))
+                  }}
+                  className={INPUT_CLASSES}
+                >
+                  {PROVIDER_TYPE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
               <div>
                 <div className="relative h-72 w-full overflow-hidden rounded-[32px] border border-dashed border-[#D1CCBD] bg-[#F5F0E3]">
@@ -952,7 +984,7 @@ function VenueBuilderOverlay({
 
           <section className="space-y-5">
             <header>
-              <h3 className="text-xl font-medium uppercase tracking-[0.08em] text-black">VENUE PROFILE</h3>
+              <h3 className="text-xl font-medium uppercase tracking-[0.08em] text-black">PROVIDER PROFILE</h3>
             </header>
             <div className="grid gap-5 md:grid-cols-2">
               <label className={LABEL_CLASSES}>
@@ -1461,12 +1493,27 @@ function PassBuilderOverlay({
   onFormInteraction,
   isEditing,
   venueName,
+  providerType,
   isSubmitting,
 }: PassBuilderOverlayProps) {
   const descriptionRemaining = 200 - formState.shortDescription.length
   const heroPreview = formState.heroImage?.url ?? ""
   const showMinSpend = formState.economicsType === "min_spend"
   const showPrepaid = formState.economicsType === "prepaid_credit"
+  const isConciergeProvider = providerType === "private_chef" || providerType === "boat_company"
+  const economicsOptions = isConciergeProvider
+    ? PASS_ECONOMICS_OPTIONS.filter((opt) => opt.value === "prepaid_credit")
+    : PASS_ECONOMICS_OPTIONS
+  const allowedPassKindOptions =
+    providerType === "private_chef" || providerType === "boat_company"
+      ? PASS_KIND_OPTIONS.filter((opt) => opt.value === "PRIVATE_CHEF" || opt.value === "BOAT_DAY")
+      : PASS_KIND_OPTIONS.filter((opt) => opt.value !== "PRIVATE_CHEF" && opt.value !== "BOAT_DAY")
+
+  useEffect(() => {
+    if (isConciergeProvider && formState.economicsType !== "prepaid_credit") {
+      setFormState((prev) => ({ ...prev, economicsType: "prepaid_credit", minSpendAmount: "0" }))
+    }
+  }, [isConciergeProvider, formState.economicsType, setFormState])
 
   const handleHeroImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -1605,7 +1652,7 @@ function PassBuilderOverlay({
                   }}
                   className={INPUT_CLASSES}
                 >
-                  {PASS_KIND_OPTIONS.map((option) => (
+                  {allowedPassKindOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -1634,7 +1681,7 @@ function PassBuilderOverlay({
               <h3 className="text-xl font-medium uppercase tracking-[0.08em] text-black">ECONOMICS</h3>
             </header>
             <div className="grid gap-4 sm:grid-cols-2">
-              {PASS_ECONOMICS_OPTIONS.map((option) => (
+              {economicsOptions.map((option) => (
                 <button
                   key={option.value}
                   type="button"

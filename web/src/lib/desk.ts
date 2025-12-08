@@ -6,7 +6,11 @@ function parseSupabaseAuthCookie(value: string) {
   let raw = value
 
   if (raw.startsWith(base64Prefix)) {
-    const base64Payload = raw.slice(base64Prefix.length)
+    let base64Payload = raw.slice(base64Prefix.length)
+    // Normalize base64url strings
+    base64Payload = base64Payload.replace(/-/g, '+').replace(/_/g, '/')
+    const pad = base64Payload.length % 4
+    if (pad) base64Payload = base64Payload.padEnd(base64Payload.length + (4 - pad), '=')
     try {
       const globalBuffer = (globalThis as typeof globalThis & { Buffer?: typeof Buffer }).Buffer
       if (globalBuffer?.from) {
@@ -25,7 +29,6 @@ function parseSupabaseAuthCookie(value: string) {
   try {
     return JSON.parse(raw) as Record<string, unknown>
   } catch (error) {
-    console.warn('deskAction failed to parse auth cookie', error)
     return null
   }
 }
@@ -107,6 +110,7 @@ export type DeskPass = {
   venue: {
     name: string | null
     tz: string | null
+    provider_type?: string | null
   } | null
 }
 
@@ -182,7 +186,7 @@ export const PASS_SELECT = [
   'arrival_grace_minutes',
   'default_daily_cap',
   'profile',
-  'venue:venues(name,tz)',
+  'venue:venues(name,tz,provider_type)',
 ].join(',')
 
 function buildStatusFilter(statuses: string[]) {
@@ -248,6 +252,20 @@ export async function fetchPassesByIds(passIds: string[]) {
     `/rest/v1/passes?id=in.(${quoted})&select=${encodeURIComponent(PASS_SELECT)}`
   )
   return (await res.json()) as DeskPass[]
+}
+
+export async function fetchConciergePassesForUser(userId: string) {
+  const select = [
+    'id',
+    `pass:passes(${PASS_SELECT})`,
+    'role',
+    'created_at',
+  ].join(',')
+  const res = await serviceRoleFetch(
+    `/rest/v1/concierge_pass_assignments?user_id=eq.${userId}&select=${encodeURIComponent(select)}&order=created_at.desc`
+  )
+  type Row = { id: string; role: string | null; pass: DeskPass | null }
+  return (await res.json()) as Row[]
 }
 
 export async function deskAction(action: string, payload: unknown) {

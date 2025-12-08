@@ -10,6 +10,9 @@ const VISIBILITY_RULES: Record<ExploreAudience, Set<string>> = {
   admin: new Set(['members', 'guest_only', 'both']),
 }
 
+const CONCIERGE_PROVIDER_TYPES = new Set(['private_chef', 'boat_company'])
+const CONCIERGE_KINDS = new Set(['PRIVATE_CHEF', 'BOAT_DAY'])
+
 export function audienceFromRole(role: string | null | undefined): ExploreAudience {
   if (role === 'guest') return 'guest'
   if (role === 'admin') return 'admin'
@@ -24,6 +27,16 @@ export function isVisibleForAudience(visibility: string | null, audience: Explor
 
 export function isPassActive(pass: Pick<DeskPass, 'status'>) {
   return (pass.status ?? 'active').toLowerCase() === 'active'
+}
+
+export function derivePresentationKind(pass: DeskPass) {
+  const providerType = pass.venue?.provider_type?.toLowerCase?.()
+  if (providerType === 'boat_company') return 'BOAT_DAY'
+  if (providerType === 'private_chef') return 'PRIVATE_CHEF'
+
+  const profileKind = (pass.profile as { presentationKind?: string | null } | null)?.presentationKind
+  if (profileKind) return profileKind
+  return pass.kind ?? null
 }
 
 export async function fetchExplorePasses(audience: ExploreAudience) {
@@ -43,4 +56,15 @@ export async function fetchExplorePasses(audience: ExploreAudience) {
     const isPaused = pausedPassIds.has(pass.id)
     return isActive && visible && !isPaused
   })
+}
+
+export function isConciergeProvider(pass: DeskPass) {
+  const providerType = pass.venue?.provider_type?.toLowerCase?.() ?? ''
+  if (CONCIERGE_PROVIDER_TYPES.has(providerType)) return true
+  const derived = derivePresentationKind(pass)
+  return derived ? CONCIERGE_KINDS.has(derived) : false
+}
+
+export function isStandardProvider(pass: DeskPass) {
+  return !isConciergeProvider(pass)
 }

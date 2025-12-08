@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { fetchPassById, fetchPassInventoryByDateRange, getPassHeroImageUrl } from '@/lib/desk'
-import { audienceFromRole, isPassActive, isVisibleForAudience } from '@/lib/explore'
+import { audienceFromRole, derivePresentationKind, isPassActive, isVisibleForAudience } from '@/lib/explore'
 import { getUserRole } from '@/lib/get-user-role'
 import { formatPassLabel, formatPassPrice, pickPassImage } from '@/lib/passes/helpers'
 import PassRequestForm from './pass-request-form'
@@ -77,8 +77,9 @@ export default async function VenuePassPage({ params }: VenuePassPageProps) {
         heroImageUrl.startsWith('https://127.0.0.1') ||
         heroImageUrl.startsWith('https://localhost'))
   )
-  const passLabel = formatPassLabel(pass.kind, { detail: true })
-  const simplePassLabel = formatPassLabel(pass.kind)
+  const derivedKind = derivePresentationKind(pass)
+  const passLabel = formatPassLabel(derivedKind ?? pass.kind, { detail: true })
+  const simplePassLabel = formatPassLabel(derivedKind ?? pass.kind)
   const economicsType = pass.profile?.economicsType ?? (pass.kind === 'MIN_SPEND' ? 'min_spend' : 'prepaid_credit')
   const isMinSpend = economicsType === 'min_spend'
   const formattedMinSpend = formatPassPrice(null, pass.min_spend_amount ?? null, pass.currency)
@@ -86,9 +87,12 @@ export default async function VenuePassPage({ params }: VenuePassPageProps) {
   const priceCurrency = formatPassPrice(pass.display_price_text, fallbackPriceCents, pass.currency, {
     venueName: pass.venue?.name ?? null,
   })
-  const priceDisplay = isMinSpend
-    ? `${simplePassLabel} includes a minimum spend of ${formattedMinSpend} per person on food or beverages`
-    : priceCurrency
+  const isConcierge = derivedKind === 'BOAT_DAY' || derivedKind === 'PRIVATE_CHEF'
+  const priceDisplay = isConcierge
+    ? pass.display_price_text?.trim() || 'Price on request'
+    : isMinSpend
+      ? `${simplePassLabel} includes a minimum spend of ${formattedMinSpend} per person on food or beverages`
+      : priceCurrency
 
   const holdDisplay = formatPassPrice(null, pass.no_show_amount_per_person ?? null, pass.currency)
   const serviceOpen = normalizeTime(pass.service_hours_open_local, '09:00')
@@ -106,11 +110,21 @@ export default async function VenuePassPage({ params }: VenuePassPageProps) {
   const pausedSet = new Set(pausedDates)
   const defaultDate = findFirstAvailableDate(todayIso, maxDateIso, pausedSet)
 
-  const arrivalRows = [
-    { label: 'Arrival window', value: `${arrivalStart} – ${arrivalEnd}` },
-    { label: 'Service window', value: `${serviceOpen} – ${serviceClose}` },
-    { label: 'Grace period', value: `${graceMinutes} min` },
-  ]
+  const arrivalRows = isConcierge
+    ? [{ label: 'Service window', value: `${serviceOpen} – ${serviceClose}` }]
+    : [
+        { label: 'Arrival window', value: `${arrivalStart} – ${arrivalEnd}` },
+        { label: 'Service window', value: `${serviceOpen} – ${serviceClose}` },
+        { label: 'Grace period', value: `${graceMinutes} min` },
+      ]
+
+  const shortDescription = pass.profile?.shortDescription?.trim?.() ?? ''
+  const visibilityDisplay =
+    pass.visibility === 'both'
+      ? 'Guests & members'
+      : pass.visibility === 'guest_only'
+        ? 'Guests only'
+        : 'Members only'
 
   return (
     <div className="space-y-8 text-black">
@@ -159,11 +173,9 @@ export default async function VenuePassPage({ params }: VenuePassPageProps) {
           <div className="rounded-[20px] border border-[#F0EBDC] bg-[#FFFCF5] p-6 text-sm leading-6 text-[#4F514D] shadow-inner">
             <p className="font-semibold uppercase tracking-[0.08em] text-black">{pass.venue?.name ?? 'Pass'}</p>
             <p className="text-2xl font-semibold text-black">{priceCurrency}</p>
-            <p className="pt-4 text-[#4F514D]">
-              Escape for the day with an exclusive {pass.venue?.name ?? 'TBD Venue'} day pass, offering full access to our secluded beachfront.
-            </p>
+            {shortDescription ? <p className="pt-4 text-[#4F514D]">{shortDescription}</p> : null}
             <p className="pt-3 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
-              {formatPassLabel(pass.kind)} · {pass.visibility?.replace('_', ' ') ?? 'members only'}
+              {formatPassLabel(derivedKind ?? pass.kind)} · {visibilityDisplay}
             </p>
           </div>
           {pass.interlude_perk && (
@@ -182,6 +194,7 @@ export default async function VenuePassPage({ params }: VenuePassPageProps) {
           pausedDates={pausedDates}
           arrivalStart={arrivalStart}
           arrivalEnd={arrivalEnd}
+          kind={derivedKind}
         />
 
         <section className="space-y-4 rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">

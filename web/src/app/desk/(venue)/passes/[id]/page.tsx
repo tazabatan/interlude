@@ -14,6 +14,7 @@ import {
   updatePassStatusVisibilityAction,
 } from '@/app/desk/(venue)/actions'
 import { formatPassLabel, formatPassPrice, pickPassImage, resolveDisplayPriceText } from '@/lib/passes/helpers'
+import { derivePresentationKind } from '@/lib/explore'
 import { DropdownField } from './DropdownField'
 
 type PassDetailPageProps = {
@@ -85,6 +86,7 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
   const staffFillButtonTone = 'border-[#DBD8C9] bg-[#DBD8C9] text-[#5F6059] cursor-not-allowed opacity-90'
   const staffOutlineButtonTone = 'border-[#DBD8C9] text-[#5F6059] bg-[#F1EEE2] cursor-not-allowed opacity-90'
 
+  const derivedKind = derivePresentationKind(pass)
   const profileEconomics = pass.profile?.economicsType ?? (pass.kind === 'MIN_SPEND' ? 'min_spend' : 'prepaid_credit')
   const prepaidCents = pass.profile?.prepaidCreditAmountCents ?? null
   const resolvedDisplayPriceText = resolveDisplayPriceText(pass.display_price_text ?? null, pass.venue?.name ?? null)
@@ -124,6 +126,14 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
     visibilityValue.replace('_', ' ')
   const arrivalRange = `${arrivalStart} - ${arrivalEnd}`
   const serviceHoursRange = `${serviceOpen} - ${serviceClose}`
+  const shortDescription = pass.profile?.shortDescription?.trim?.() ?? ''
+  const visibilityDisplay =
+    pass.visibility === 'both'
+      ? 'Guests & members'
+      : pass.visibility === 'guest_only'
+        ? 'Guests only'
+        : 'Members only'
+  const isConcierge = derivedKind === 'BOAT_DAY' || derivedKind === 'PRIVATE_CHEF'
 
   return (
     <div className="space-y-8 text-black">
@@ -136,11 +146,11 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
         </Link>
 
         <header className="mt-6 space-y-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-[#6F716D]">{formatPassLabel(pass.kind, { detail: true })}</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-[#6F716D]">{formatPassLabel(derivedKind ?? pass.kind, { detail: true })}</p>
           <h1 className="text-3xl font-medium uppercase tracking-[0.02em] text-black">
-            {pass.venue?.name?.toUpperCase() ?? 'Unnamed Venue'}
+            {pass.venue?.name?.toUpperCase() ?? 'Unnamed Provider'}
           </h1>
-          <p className="text-sm uppercase tracking-[0.3em] text-[#4F514D]">{pass.venue?.tz ?? 'America/Anguilla'}</p>
+            <p className="text-sm uppercase tracking-[0.3em] text-[#4F514D]">{pass.venue?.tz ?? 'America/Anguilla'}</p>
         </header>
       </div>
 
@@ -166,11 +176,11 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
         </div>
       </div>
 
-          <div className="space-y-4">
-            <section className="rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 text-sm leading-6 text-[#4F514D] shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
-              <p>
-                <span className="font-semibold text-black">Pass type:</span> {formatPassLabel(pass.kind, { detail: true })}
-              </p>
+        <div className="space-y-4">
+          <section className="rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 text-sm leading-6 text-[#4F514D] shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
+            <p>
+                <span className="font-semibold text-black">Pass type:</span> {formatPassLabel(derivedKind ?? pass.kind, { detail: true })}
+            </p>
               <p>
                 <span className="font-semibold text-black">Price:</span> {guestPrice}
               </p>
@@ -188,12 +198,16 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
             </section>
 
             <section className="rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 text-sm leading-6 text-[#4F514D] shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
-              <p>
-                <span className="font-semibold text-black">Arrival window:</span> {arrivalRange}
-              </p>
-              <p>
-                <span className="font-semibold text-black">Grace period:</span> {graceMinutes} min
-              </p>
+              {!isConcierge && (
+                <>
+                  <p>
+                    <span className="font-semibold text-black">Arrival window:</span> {arrivalRange}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-black">Grace period:</span> {graceMinutes} min
+                  </p>
+                </>
+              )}
               <p>
                 <span className="font-semibold text-black">Service window:</span> {serviceHoursRange}
               </p>
@@ -206,9 +220,9 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
             <div className={`rounded-[20px] border p-6 text-sm leading-6 text-[#4F514D] shadow-inner ${innerCardTone}`}>
               <p className="font-semibold uppercase tracking-[0.08em] text-black">{pass.venue?.name ?? 'Pass'}</p>
               <p className="text-2xl font-semibold text-black">{guestPrice}</p>
-              <p className="pt-4 text-[#4F514D]">Escape for the day with an exclusive {pass.venue?.name ?? 'TBD Venue'} day pass, offering you full access to our secluded beach front.</p>
+              {shortDescription ? <p className="pt-4 text-[#4F514D]">{shortDescription}</p> : null}
               <p className="pt-3 text-xs uppercase tracking-[0.15em] text-[#6F716D]">
-                {formatPassLabel(pass.kind)} · {pass.visibility?.replace('_', ' ') ?? 'members only'}
+                {formatPassLabel(derivedKind ?? pass.kind)} · {visibilityDisplay}
               </p>
             </div>
           </section>
