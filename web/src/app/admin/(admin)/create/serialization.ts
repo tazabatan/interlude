@@ -106,7 +106,7 @@ export function mapPassRowToRecord(row: PassRow): PassRecord {
   const profile = row.profile ?? null
   const economicsType = profile?.economicsType ?? "min_spend"
   const heroImage = mapStoredImageToAsset(profile?.heroImage ?? null)
-  const presentationKind = profile?.presentationKind ?? row.kind ?? "BEACH_PASS"
+  const presentationKind = (profile?.presentationKind ?? row.kind ?? "BEACH_PASS") as PassFormState["kind"]
   const shortDescription = profile?.shortDescription ?? ""
   const prepaidCreditCents = profile?.prepaidCreditAmountCents ?? null
   const displayName = profile?.displayName ?? row.kind ?? "Pass"
