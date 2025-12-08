@@ -14,6 +14,9 @@ export type ExplorePass = {
   minSpendAmount: number | null
   currency: string | null
   imageUrl: string | null
+  focalX?: number | null
+  focalY?: number | null
+  zoom?: number | null
 }
 
 type ExperienceFilter = 'all' | 'beach' | 'pool' | 'spa' | 'gym'
@@ -244,6 +247,9 @@ export default function PassesClient({ passes }: { passes: ExplorePass[] }) {
                 srLabel={`View pass for ${pass.name ?? 'pass'}`}
                 showStatusBadge={false}
                 imageUrl={pass.imageUrl}
+                focalX={pass.focalX ?? undefined}
+                focalY={pass.focalY ?? undefined}
+                zoom={pass.zoom ?? undefined}
                 pricePrefix={pass.kind === 'MIN_SPEND' ? '' : undefined}
               />
             ))}

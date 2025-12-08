@@ -157,7 +157,7 @@ export default async function PassDetailPage({ params }: PassDetailPageProps) {
   <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
     <div className="space-y-6">
       <div className="sticky top-0 space-y-6">
-      <div className="relative h-96 w-full overflow-hidden rounded-[32px] border border-[#E8E4D7] bg-white shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
+      <div className="relative h-[28rem] w-full overflow-hidden rounded-[32px] border border-[#E8E4D7] bg-white shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
         <Image
           src={heroImageSrc}
           alt={pass.venue?.name ?? 'Pass'}

@@ -12,6 +12,8 @@ export default async function PassesPage() {
   const explorePasses: ExplorePass[] = passes.map((pass) => {
     const presentationKind = derivePresentationKind(pass)
     const fallbackAmount = pass.min_spend_amount ?? pass.profile?.prepaidCreditAmountCents ?? null
+    const heroMeta = (pass.profile as { heroImage?: { focalX?: number | null; focalY?: number | null; zoom?: number | null } } | null)
+      ?.heroImage
     return {
       id: pass.id,
       name: pass.venue?.name ?? pass.kind ?? 'Private Pass',
@@ -21,6 +23,9 @@ export default async function PassesPage() {
       minSpendAmount: fallbackAmount,
       currency: pass.currency,
       imageUrl: getPassHeroImageUrl(pass),
+      focalX: heroMeta?.focalX ?? null,
+      focalY: heroMeta?.focalY ?? null,
+      zoom: heroMeta?.zoom ?? null,
     }
   })
 

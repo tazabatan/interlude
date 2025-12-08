@@ -1,6 +1,6 @@
 "use client"
 
-import { Dispatch, SetStateAction, useState, useEffect } from "react"
+import { Dispatch, SetStateAction, useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import clsx from "clsx"
@@ -127,6 +127,9 @@ type SerializedImagePayload = {
   name: string
   storagePath: string | null
   uploadKey?: string
+  focalX?: number | null
+  focalY?: number | null
+  zoom?: number | null
 }
 
 const createId = () => {
@@ -142,6 +145,21 @@ const sortByCreatedAt = <T extends { createdAt: string }>(items: T[]) => {
   )
 }
 
+const getObjectPosition = (image?: ImageAsset | null) => {
+  const x = image?.focalX ?? 50
+  const y = image?.focalY ?? 50
+  return `${x}% ${y}%`
+}
+
+const PASS_IMAGE_BASE_SCALE = 1
+
+const getObjectScale = (image?: ImageAsset | null) => {
+  const zoom = image?.zoom ?? 100
+  return (Math.max(50, Math.min(150, zoom)) / 100) * PASS_IMAGE_BASE_SCALE
+}
+
+const EXPLORE_CARD_ASPECT_RATIO = 1
+
 const serializeImageForUpload = (image: ImageAsset | null, formData: FormData, fieldKey: string): SerializedImagePayload | null => {
   if (!image) return null
   let uploadKey: string | undefined
@@ -153,6 +171,9 @@ const serializeImageForUpload = (image: ImageAsset | null, formData: FormData, f
     id: image.id,
     name: image.name,
     storagePath: image.storagePath ?? null,
+    focalX: image.focalX ?? 50,
+    focalY: image.focalY ?? 50,
+    zoom: image.zoom ?? 100,
     ...(uploadKey ? { uploadKey } : {}),
   }
 }
@@ -772,6 +793,8 @@ function VenueBuilderOverlay({
         url,
         storagePath: null,
         file,
+        focalX: 50,
+        focalY: 50,
       },
     }))
     input.value = ""
@@ -905,16 +928,36 @@ function VenueBuilderOverlay({
             </div>
             <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
               <div>
-                <div className="relative h-72 w-full overflow-hidden rounded-[32px] border border-dashed border-[#D1CCBD] bg-[#F5F0E3]">
+                <div className="relative h-[28rem] w-full overflow-hidden rounded-[32px] border border-dashed border-[#D1CCBD] bg-[#F5F0E3]">
                   {heroImagePreview ? (
-                    <Image
-                      src={heroImagePreview}
-                      alt="Hero preview"
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 1024px) 100vw, 800px"
-                      unoptimized
-                    />
+                    <>
+                      <Image
+                        src={heroImagePreview}
+                        alt="Hero preview"
+                        fill
+                        className="object-cover"
+                        style={{
+                          objectPosition: getObjectPosition(formState.heroImage),
+                          transform: `scale(${getObjectScale(formState.heroImage)})`,
+                        }}
+                        sizes="(max-width: 1024px) 100vw, 800px"
+                        unoptimized
+                      />
+                      <div className="pointer-events-none absolute inset-0">
+                        <div className="absolute inset-3 rounded-[28px] border border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.12)]">
+                          <span className="absolute left-4 top-4 rounded-full bg-black/65 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-white">
+                            Detail view
+                          </span>
+                        </div>
+                        <div className="absolute left-1/2 top-3 bottom-3 w-[45%] -translate-x-1/2">
+                          <div className="h-full rounded-[22px] border-l-2 border-r-2 border-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.15)]">
+                            <span className="absolute left-1/2 bottom-4 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/65 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-white">
+                              Card thumbnail
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
                   ) : (
                     <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-sm text-[#6F716D]">
                       <span>Hero image</span>
@@ -945,6 +988,48 @@ function VenueBuilderOverlay({
                 ) : (
                   <p className="text-xs text-[#6F716D]">Single landscape image (JPG/PNG).</p>
                 )}
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="flex flex-col gap-1 text-[0.7rem] font-semibold uppercase tracking-[0.25em] text-[#6F716D]">
+                    Horizontal focus
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={formState.heroImage?.focalX ?? 50}
+                      onChange={(event) => {
+                        if (!formState.heroImage) return
+                        const next = Number(event.target.value)
+                        onFormInteraction()
+                        setFormState((prev) => ({
+                          ...prev,
+                          heroImage: prev.heroImage ? { ...prev.heroImage, focalX: next } : prev.heroImage,
+                        }))
+                      }}
+                      disabled={!formState.heroImage}
+                      className="accent-[#02374D]"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-[0.7rem] font-semibold uppercase tracking-[0.25em] text-[#6F716D]">
+                    Vertical focus
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={formState.heroImage?.focalY ?? 50}
+                      onChange={(event) => {
+                        if (!formState.heroImage) return
+                        const next = Number(event.target.value)
+                        onFormInteraction()
+                        setFormState((prev) => ({
+                          ...prev,
+                          heroImage: prev.heroImage ? { ...prev.heroImage, focalY: next } : prev.heroImage,
+                        }))
+                      }}
+                      disabled={!formState.heroImage}
+                      className="accent-[#02374D]"
+                    />
+                  </label>
+                </div>
               </div>
             </div>
             <div className="space-y-3">
@@ -1508,12 +1593,37 @@ function PassBuilderOverlay({
     providerType === "private_chef" || providerType === "boat_company"
       ? PASS_KIND_OPTIONS.filter((opt) => opt.value === "PRIVATE_CHEF" || opt.value === "BOAT_DAY")
       : PASS_KIND_OPTIONS.filter((opt) => opt.value !== "PRIVATE_CHEF" && opt.value !== "BOAT_DAY")
+  const heroPreviewRef = useRef<HTMLDivElement>(null)
+  const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 })
 
   useEffect(() => {
     if (isConciergeProvider && formState.economicsType !== "prepaid_credit") {
       setFormState((prev) => ({ ...prev, economicsType: "prepaid_credit", minSpendAmount: "0" }))
     }
   }, [isConciergeProvider, formState.economicsType, setFormState])
+
+  useEffect(() => {
+    const node = heroPreviewRef.current
+    if (!node || typeof ResizeObserver === "undefined") return
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      setPreviewSize({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      })
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  const availablePreviewWidth = Math.max(0, previewSize.width - 32)
+  const targetThumbnailWidth = previewSize.height * EXPLORE_CARD_ASPECT_RATIO
+  const thumbnailScale =
+    targetThumbnailWidth > 0 ? Math.min(1, availablePreviewWidth / targetThumbnailWidth) : 0
+  const thumbnailGuideWidth = Math.max(0, targetThumbnailWidth * thumbnailScale)
+  const thumbnailGuideHeight = Math.max(0, previewSize.height * thumbnailScale)
+  const thumbnailGuideLeft = thumbnailGuideWidth > 0 ? (previewSize.width - thumbnailGuideWidth) / 2 : 0
+  const thumbnailGuideTop = thumbnailGuideHeight > 0 ? (previewSize.height - thumbnailGuideHeight) / 2 : 0
 
   const handleHeroImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -1528,6 +1638,8 @@ function PassBuilderOverlay({
         url,
         storagePath: null,
         file,
+        focalX: 50,
+        focalY: 50,
       },
     }))
     event.target.value = ""
@@ -1535,7 +1647,7 @@ function PassBuilderOverlay({
 
   return (
     <div className="fixed inset-0 z-[200] bg-black/40 px-4 py-10">
-      <div className="mx-auto flex h-full max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[40px] border border-[#E8E4D7] bg-[#FBF7ED] shadow-[0_30px_60px_rgba(0,0,0,0.25)]">
+      <div className="mx-auto flex h-full max-h-[90vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-[40px] border border-[#E8E4D7] bg-[#FBF7ED] shadow-[0_30px_60px_rgba(0,0,0,0.25)]">
         <header className="flex items-center justify-between border-b border-[#E8E4D7] px-8 py-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6F716D]">
@@ -1581,23 +1693,56 @@ function PassBuilderOverlay({
               </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-              <div className="relative h-60 w-full overflow-hidden rounded-[32px] border border-dashed border-[#D1CCBD] bg-[#F5F0E3]">
-                {heroPreview ? (
-                  <Image
-                    src={heroPreview}
-                    alt="Pass hero preview"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 600px"
-                    unoptimized
-                  />
-                ) : (
-                  <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-sm text-[#6F716D]">
-                    <span>Pass hero image</span>
-                    <span className="text-xs uppercase tracking-[0.3em]">2000 × 1400</span>
-                  </div>
-                )}
+            <div className="grid gap-6 lg:grid-cols-[7fr_2.5fr]">
+              <div className="space-y-4">
+                <div
+                  ref={heroPreviewRef}
+                  className="relative w-full overflow-hidden rounded-[32px] border border-dashed border-[#D1CCBD] bg-[#F5F0E3] aspect-[3/2] max-h-[38rem] min-h-[26rem]"
+                >
+                  {heroPreview ? (
+                    <>
+                      <Image
+                        key={`hero-preview-${formState.heroImage?.focalX ?? 0}-${formState.heroImage?.focalY ?? 0}-${formState.heroImage?.zoom ?? 0}`}
+                        src={heroPreview}
+                        alt="Pass hero preview"
+                        fill
+                        className="object-cover"
+                        style={{
+                          objectPosition: getObjectPosition(formState.heroImage),
+                          transformOrigin: getObjectPosition(formState.heroImage),
+                          transform: `scale(${getObjectScale(formState.heroImage)})`,
+                        }}
+                        sizes="(max-width: 1024px) 100vw, 900px"
+                        unoptimized
+                      />
+                      <div className="pointer-events-none absolute inset-0">
+                        <span className="absolute left-4 top-4 rounded-full bg-black/65 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-white">
+                          Detail view
+                        </span>
+                        {thumbnailGuideWidth > 0 && thumbnailGuideHeight > 0 ? (
+                          <div
+                            className="absolute rounded-[22px] border border-white/85 bg-black/5 shadow-[0_0_0_1px_rgba(0,0,0,0.15)] backdrop-blur-[1px]"
+                            style={{
+                              width: `${thumbnailGuideWidth}px`,
+                              height: `${thumbnailGuideHeight}px`,
+                              left: `${thumbnailGuideLeft}px`,
+                              top: `${thumbnailGuideTop}px`,
+                            }}
+                          >
+                            <span className="absolute left-1/2 bottom-4 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/65 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-white">
+                              Explore thumbnail
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-sm text-[#6F716D]">
+                      <span>Pass hero image</span>
+                      <span className="text-xs uppercase tracking-[0.3em]">2000 × 1400</span>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="space-y-4">
                 <label className={LABEL_CLASSES}>
@@ -1621,6 +1766,68 @@ function PassBuilderOverlay({
                 ) : (
                   <p className="text-xs text-[#6F716D]">Use a single statement image for instant recognition.</p>
                 )}
+                <div className="flex flex-col gap-3">
+                  <label className="flex flex-col gap-1 text-[0.7rem] font-semibold uppercase tracking-[0.25em] text-[#6F716D]">
+                    Horizontal focus
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={formState.heroImage?.focalX ?? 50}
+                      onChange={(event) => {
+                        if (!formState.heroImage) return
+                        const next = Number(event.target.value)
+                        onFormInteraction()
+                        setFormState((prev) => ({
+                          ...prev,
+                          heroImage: prev.heroImage ? { ...prev.heroImage, focalX: next } : prev.heroImage,
+                        }))
+                      }}
+                      disabled={!formState.heroImage}
+                      className="accent-[#02374D]"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-[0.7rem] font-semibold uppercase tracking-[0.25em] text-[#6F716D]">
+                    Vertical focus
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={formState.heroImage?.focalY ?? 50}
+                      onChange={(event) => {
+                        if (!formState.heroImage) return
+                        const next = Number(event.target.value)
+                        onFormInteraction()
+                        setFormState((prev) => ({
+                          ...prev,
+                          heroImage: prev.heroImage ? { ...prev.heroImage, focalY: next } : prev.heroImage,
+                        }))
+                      }}
+                      disabled={!formState.heroImage}
+                      className="accent-[#02374D]"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-[0.7rem] font-semibold uppercase tracking-[0.25em] text-[#6F716D]">
+                    Zoom
+                    <input
+                      type="range"
+                      min={50}
+                      max={150}
+                      value={formState.heroImage?.zoom ?? 100}
+                      onChange={(event) => {
+                        if (!formState.heroImage) return
+                        const next = Number(event.target.value)
+                        onFormInteraction()
+                        setFormState((prev) => ({
+                          ...prev,
+                          heroImage: prev.heroImage ? { ...prev.heroImage, zoom: next } : prev.heroImage,
+                        }))
+                      }}
+                      disabled={!formState.heroImage}
+                      className="accent-[#02374D]"
+                    />
+                  </label>
+                </div>
               </div>
             </div>
           </section>

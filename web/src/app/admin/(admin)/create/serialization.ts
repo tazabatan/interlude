@@ -7,6 +7,9 @@ type StoredImageAsset = {
   name: string
   storagePath: string | null
   url?: string | null
+  focalX?: number | null
+  focalY?: number | null
+  zoom?: number | null
 }
 
 export type VenueProfilePayload = Omit<VenueFormState, "status" | "heroImage" | "galleryImages"> & {
@@ -92,6 +95,9 @@ const mapStoredImageToAsset = (image: StoredImageAsset | null): ImageAsset | nul
     name: image.name,
     storagePath: image.storagePath ?? null,
     url,
+    focalX: image.focalX ?? 50,
+    focalY: image.focalY ?? 50,
+    zoom: image.zoom ?? 100,
   }
 }
 
@@ -197,6 +203,9 @@ export function buildVenueProfileFromState(state: VenueFormState): VenueProfileP
           id: heroImage.id,
           name: heroImage.name,
           storagePath: heroImage.storagePath ?? null,
+          focalX: heroImage.focalX ?? 50,
+          focalY: heroImage.focalY ?? 50,
+          zoom: heroImage.zoom ?? 100,
         }
       : null,
     galleryImages: galleryImages.map((image) => ({
@@ -218,6 +227,9 @@ export function buildPassProfileFromState(state: PassFormState): PassProfilePayl
           id: state.heroImage.id,
           name: state.heroImage.name,
           storagePath: state.heroImage.storagePath ?? null,
+          focalX: state.heroImage.focalX ?? 50,
+          focalY: state.heroImage.focalY ?? 50,
+          zoom: state.heroImage.zoom ?? 100,
         }
       : null,
     prepaidCreditAmountCents:

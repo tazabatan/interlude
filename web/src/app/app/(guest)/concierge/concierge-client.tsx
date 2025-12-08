@@ -14,6 +14,9 @@ export type ConciergePass = {
   minSpendAmount: number | null
   currency: string | null
   imageUrl: string | null
+  focalX?: number | null
+  focalY?: number | null
+  zoom?: number | null
 }
 
 type ExperienceFilter = 'all' | 'boat' | 'chef'
@@ -232,6 +235,9 @@ export default function ConciergeClient({ passes }: { passes: ConciergePass[] })
                 srLabel={`View pass for ${pass.name ?? 'concierge pass'}`}
                 showStatusBadge={false}
                 imageUrl={pass.imageUrl}
+                focalX={pass.focalX ?? undefined}
+                focalY={pass.focalY ?? undefined}
+                zoom={pass.zoom ?? undefined}
                 pricePrefix={pass.kind === 'MIN_SPEND' ? '' : undefined}
               />
             ))}

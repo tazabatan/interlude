@@ -3,6 +3,18 @@
 import { serviceRoleFetch } from '@/lib/supabase/service-role'
 import type { DashboardData, DashboardFilters, Venue } from './types'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const filterIds = (ids: unknown[]) =>
+  [
+    ...new Set(
+      ids
+        .filter((id): id is string => typeof id === "string")
+        .map((id) => id.trim())
+        .filter((id) => UUID_RE.test(id))
+    ),
+  ]
+
 // Helper function to get date range based on time period
 function getDateRange(timePeriod: 'day' | 'week' | 'month' | 'custom', customStart?: string, customEnd?: string): { startDate: string; endDate: string } {
   // For custom period, use provided dates
@@ -78,9 +90,11 @@ export async function fetchDashboardData(filters: DashboardFilters): Promise<Das
     const bookings = await res.json()
 
     // Fetch booking audit records for approved bookings to calculate approval time
-    const approvedBookingIds = bookings
-      .filter((b: any) => ['approved', 'issued', 'redeemed', 'redeemed_late'].includes(b.status))
-      .map((b: any) => b.id)
+    const approvedBookingIds = filterIds(
+      bookings
+        .filter((b: any) => ['approved', 'issued', 'redeemed', 'redeemed_late'].includes(b.status))
+        .map((b: any) => b.id)
+    )
 
     let averageApprovalTimeMinutes = 0
 
@@ -111,7 +125,7 @@ export async function fetchDashboardData(filters: DashboardFilters): Promise<Das
     }
 
     // Fetch user metadata for all unique user_ids to determine member vs guest
-    const userIds = [...new Set(bookings.map((b: any) => b.user_id))]
+    const userIds = filterIds(bookings.map((b: any) => b.user_id))
     let userRoleMap = new Map<string, string>()
 
     if (userIds.length > 0) {

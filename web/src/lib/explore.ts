@@ -12,6 +12,7 @@ const VISIBILITY_RULES: Record<ExploreAudience, Set<string>> = {
 
 const CONCIERGE_PROVIDER_TYPES = new Set(['private_chef', 'boat_company'])
 const CONCIERGE_KINDS = new Set(['PRIVATE_CHEF', 'BOAT_DAY'])
+const POPULARITY_STATUSES = ['approved', 'issued', 'redeemed', 'redeemed_late', 'pending_verification', 'requested']
 
 export function audienceFromRole(role: string | null | undefined): ExploreAudience {
   if (role === 'guest') return 'guest'
@@ -56,6 +57,28 @@ export async function fetchExplorePasses(audience: ExploreAudience) {
     const isPaused = pausedPassIds.has(pass.id)
     return isActive && visible && !isPaused
   })
+}
+
+export async function fetchPassPopularityCounts(lookbackDays = 180) {
+  try {
+    const select = 'select=pass_id,count:count()'
+    const statusFilter = `status=in.(${POPULARITY_STATUSES.join(',')})`
+
+    const queryParts = [select, statusFilter, 'order=count.desc.nullslast']
+    if (Number.isFinite(lookbackDays) && lookbackDays > 0) {
+      const cutoff = new Date()
+      cutoff.setDate(cutoff.getDate() - lookbackDays)
+      queryParts.push(`created_at=gte.${cutoff.toISOString()}`)
+    }
+
+    const res = await serviceRoleFetch(`/rest/v1/bookings?${queryParts.join('&')}`)
+    type Row = { pass_id: string | null; count: number | null }
+    const rows = (await res.json()) as Row[]
+    return rows.filter((row) => Boolean(row.pass_id))
+  } catch (error) {
+    console.warn('fetchPassPopularityCounts skipped; falling back to default ordering', error)
+    return []
+  }
 }
 
 export function isConciergeProvider(pass: DeskPass) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -15,11 +15,21 @@ export type ExplorePass = {
   minSpendAmount: number | null
   currency: string | null
   imageUrl: string | null
+  focalX?: number | null
+  focalY?: number | null
+  zoom?: number | null
 }
 
-type ExperienceFilter = 'all' | 'beach' | 'pool' | 'spa' | 'gym'
+export type PopularPassGroup = {
+  key: 'hotel' | 'boat' | 'chef'
+  title: string
+  description: string
+  passes: ExplorePass[]
+}
 
-const EXPERIENCE_OPTIONS: Array<{
+type ExperienceFilter = 'all' | 'beach' | 'pool' | 'spa' | 'gym' | 'boat' | 'chef'
+
+const HOTEL_OPTIONS: Array<{
   key: ExperienceFilter
   label: string
   icon: string
@@ -32,9 +42,15 @@ const EXPERIENCE_OPTIONS: Array<{
   { key: 'gym', label: 'Gym', icon: '/images/gym-pass-icon.png', kinds: ['GYM_PASS'] },
 ]
 
-const SEARCH_FIELDS = [
-  { label: 'Destination', placeholder: 'Where would you like to go?' },
-  { label: 'Dates', placeholder: 'When would you like to visit?' },
+const CONCIERGE_OPTIONS: Array<{
+  key: ExperienceFilter
+  label: string
+  icon: string
+  kinds: string[] | null
+}> = [
+  { key: 'all', label: 'All', icon: '/images/hotel-icon.png', kinds: ['PRIVATE_CHEF', 'BOAT_DAY'] },
+  { key: 'boat', label: 'Boat', icon: '/images/boat-icon-new.png', kinds: ['BOAT_DAY'] },
+  { key: 'chef', label: 'Chef', icon: '/images/chef-icon-2.png', kinds: ['PRIVATE_CHEF'] },
 ]
 
 const CONCIERGE_TILES = [
@@ -44,7 +60,7 @@ const CONCIERGE_TILES = [
     description:
       'Charter a private yacht for a bespoke day on the water — island hopping, sunset cruises, offshore fishing, or water toys with a crew that handles everything.',
     cta: 'Plan a boat day',
-    href: '/app/concierge?experience=boat',
+    href: '/concierge?experience=boat',
     image: '/images/explore-yacht.png',
     objectPosition: 'center center',
   },
@@ -54,22 +70,32 @@ const CONCIERGE_TILES = [
     description:
       'Invite a local chef to shop, cook, and plate a tailored menu in the comfort of your villa or penthouse.',
     cta: 'Book a private chef',
-    href: '/app/concierge?experience=chef',
+    href: '/concierge?experience=chef',
     image: '/images/explore-chef-5.png',
     objectPosition: '60% 25%',
   },
 ]
 
-export default function ExploreClient({ passes }: { passes: ExplorePass[] }) {
+const GROUP_LINKS: Record<PopularPassGroup['key'], { href: string; label: string }> = {
+  hotel: { href: '/passes', label: 'See more hotel passes' },
+  boat: { href: '/concierge?experience=boat', label: 'See more boat days' },
+  chef: { href: '/concierge?experience=chef', label: 'See more private chefs' },
+}
+
+export default function ExploreClient({ popularGroups }: { popularGroups: PopularPassGroup[] }) {
   const router = useRouter()
+  const [mode, setMode] = useState<'hotel' | 'concierge'>('hotel')
   const [experience, setExperience] = useState<ExperienceFilter>('all')
   const [destination, setDestination] = useState('')
   const [dates, setDates] = useState('')
   const dateInputRef = useRef<HTMLInputElement>(null)
-  const activeOption = EXPERIENCE_OPTIONS.find((option) => option.key === experience) ?? EXPERIENCE_OPTIONS[0]
+  const options = useMemo(() => (mode === 'concierge' ? CONCIERGE_OPTIONS : HOTEL_OPTIONS), [mode])
+  const activeOption = options.find((option) => option.key === experience) ?? options[0]
 
   const handleExperienceClick = (key: ExperienceFilter) => {
-    router.push(`/app/passes?experience=${key}`)
+    setExperience(key)
+    const base = mode === 'concierge' ? '/concierge' : '/passes'
+    router.push(`${base}?experience=${key}`)
   }
 
   const handleSearch = () => {
@@ -78,18 +104,13 @@ export default function ExploreClient({ passes }: { passes: ExplorePass[] }) {
     if (trimmedDestination) {
       params.set('search', trimmedDestination)
     }
-    router.push(`/app/passes?${params.toString()}`)
+    const base = mode === 'concierge' ? '/concierge' : '/passes'
+    router.push(`${base}?${params.toString()}`)
   }
-
-  const filteredPasses = useMemo(() => {
-    if (experience === 'all') return passes
-    const allowedKinds = activeOption.kinds ?? []
-    return passes.filter((pass) => (pass.kind ? allowedKinds.includes(pass.kind) : false))
-  }, [experience, passes, activeOption])
 
   return (
     <section className="space-y-24">
-      <div className="space-y-8 pt-8 text-[#1f1f1f] lg:pt-12">
+      <div className="space-y-16 pt-8 text-[#1f1f1f] lg:pt-12">
         <div className="grid items-stretch gap-7 lg:grid-cols-[2fr_1fr]">
           {CONCIERGE_TILES.map((tile) => (
             <div key={tile.key} className="flex h-full flex-col gap-3">
@@ -125,6 +146,7 @@ export default function ExploreClient({ passes }: { passes: ExplorePass[] }) {
             </div>
           ))}
         </div>
+
       </div>
 
       <section
@@ -132,9 +154,9 @@ export default function ExploreClient({ passes }: { passes: ExplorePass[] }) {
         style={{ width: '100vw' }}
       >
         <div className="mx-auto w-full max-w-6xl px-5 sm:px-8 md:px-12 lg:px-14">
-          <div className="space-y-6">
+      <div className="space-y-6">
             <div className="flex items-end justify-between gap-2 md:hidden">
-              {EXPERIENCE_OPTIONS.map((option) => {
+              {options.map((option) => {
                 const isActive = option.key === experience
                 return (
                   <button
@@ -164,35 +186,35 @@ export default function ExploreClient({ passes }: { passes: ExplorePass[] }) {
 
             <div className="flex justify-center">
               <div className="hidden md:flex md:items-center md:gap-8">
-              {EXPERIENCE_OPTIONS.map((option) => {
-                const isActive = option.key === experience
-                const iconSize = option.key === 'all' ? 96 : 64
-                return (
-                  <button
-                    key={option.key}
-                    type="button"
-                    onClick={() => handleExperienceClick(option.key)}
-                    className={`flex items-center gap-9 border-b-2 pb-2 transition ${
-                      isActive
-                        ? 'border-[#02374D] text-[#02374D]'
-                        : 'border-transparent text-[#A1A09B] hover:text-[#4F514D]'
-                    }`}
-                  >
-                    <div className={`flex flex-shrink-0 items-center justify-center ${option.key === 'all' ? 'h-24 w-24' : 'h-16 w-16'}`}>
-                      <Image
-                        src={option.icon}
-                        alt={`${option.label} icon`}
-                        width={iconSize}
-                        height={iconSize}
-                        className={option.key === 'all' ? 'h-24 w-24' : 'h-16 w-16'}
-                      />
-                    </div>
-                    <span className="whitespace-nowrap text-sm font-semibold uppercase tracking-[0.3em] text-current">
-                      {option.label}
-                    </span>
-                  </button>
-                )
-              })}
+                {options.map((option) => {
+                  const isActive = option.key === experience
+                  const iconSize = option.key === 'all' ? 96 : 64
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => handleExperienceClick(option.key)}
+                      className={`flex items-center gap-9 border-b-2 pb-2 transition ${
+                        isActive
+                          ? 'border-[#02374D] text-[#02374D]'
+                          : 'border-transparent text-[#A1A09B] hover:text-[#4F514D]'
+                      }`}
+                    >
+                      <div className={`flex flex-shrink-0 items-center justify-center ${option.key === 'all' ? 'h-24 w-24' : 'h-16 w-16'}`}>
+                        <Image
+                          src={option.icon}
+                          alt={`${option.label} icon`}
+                          width={iconSize}
+                          height={iconSize}
+                          className={option.key === 'all' ? 'h-24 w-24' : 'h-16 w-16'}
+                        />
+                      </div>
+                      <span className="whitespace-nowrap text-sm font-semibold uppercase tracking-[0.3em] text-current">
+                        {option.label}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
@@ -245,48 +267,83 @@ export default function ExploreClient({ passes }: { passes: ExplorePass[] }) {
             </div>
           </div>
         </div>
+
+        <div className="flex justify-center pt-10">
+          <button
+            type="button"
+            onClick={() => {
+              setMode((prev) => (prev === 'hotel' ? 'concierge' : 'hotel'))
+              setExperience('all')
+            }}
+            className="text-[0.75rem] font-semibold uppercase tracking-[0.28em] text-[#2b2b2b] underline decoration-[#2b2b2b]/60 underline-offset-[6px] transition hover:text-black"
+          >
+            {mode === 'concierge' ? 'Switch to hotel passes' : 'Switch to concierge passes'}
+          </button>
+        </div>
       </section>
 
-      <section id="popular-passes" className="mt-[-1rem] space-y-8 sm:mt-[-1.25rem] md:mt-[-1.5rem]">
+      <section id="popular-passes" className="mt-[-1rem] space-y-12 sm:mt-[-1.25rem] md:mt-[-1.5rem]">
         <div className="space-y-3 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6F716D]">Popular Passes</p>
           <h2 className="text-3xl font-normal uppercase tracking-[0.02em] text-black">Plan the perfect day</h2>
         </div>
 
-        {filteredPasses.length === 0 ? (
-          <div className="rounded-[28px] border border-dashed border-[#DBD8C9] bg-white/80 px-8 py-16 text-center text-sm text-[#4F514D]">
-            No passes match this experience yet. Try another filter.
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {filteredPasses.map((pass) => (
-              <PassCard
-                key={pass.id}
-                passId={pass.id}
-                name={pass.name}
-                location={pass.location}
-                kind={pass.kind}
-                displayPriceText={pass.displayPriceText}
-                minSpendAmount={pass.minSpendAmount}
-                currency={pass.currency}
-                href={`/app/venue/${pass.id}`}
-                srLabel={`View pass for ${pass.name ?? 'pass'}`}
-                showStatusBadge={false}
-                imageUrl={pass.imageUrl}
-                pricePrefix={pass.kind === 'MIN_SPEND' ? '' : undefined}
-              />
-            ))}
-          </div>
-        )}
+        <div className="space-y-10">
+          {popularGroups.map((group) => (
+            <div key={group.key} className="space-y-4">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-[#6F716D]">{group.title}</p>
 
-        <div className="flex justify-center pt-8">
-          <button
-            type="button"
-            onClick={() => router.push('/app/passes')}
-            className="inline-flex items-center justify-center rounded-full bg-[#02374D] px-8 py-3 text-xs font-semibold uppercase tracking-[0.4em] text-white transition hover:bg-[#023a52]"
+              {group.passes.length === 0 ? (
+                <div className="rounded-[20px] border border-dashed border-[#DBD8C9] bg-white/70 px-6 py-8 text-sm text-[#4F514D]">
+                  No passes available in this category yet.
+                </div>
+              ) : (
+                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {group.passes.map((pass) => (
+                    <PassCard
+                      key={pass.id}
+                      passId={pass.id}
+                      name={pass.name}
+                      location={pass.location}
+                      kind={pass.kind}
+                      displayPriceText={pass.displayPriceText}
+                      minSpendAmount={pass.minSpendAmount}
+                      currency={pass.currency}
+                      href={`/app/venue/${pass.id}`}
+                      srLabel={`View pass for ${pass.name ?? 'pass'}`}
+                      showStatusBadge={false}
+                      imageUrl={pass.imageUrl}
+                      focalX={pass.focalX ?? undefined}
+                      focalY={pass.focalY ?? undefined}
+                      zoom={pass.zoom ?? undefined}
+                      pricePrefix={pass.kind === 'MIN_SPEND' ? '' : undefined}
+                    />
+                  ))}
+                </div>
+              )}
+              <div className="flex justify-center">
+                <Link
+                  href={GROUP_LINKS[group.key]?.href ?? '/app/passes'}
+                  className="mt-2 inline-flex items-center justify-center rounded-full border border-[#02374D] px-6 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[#02374D] transition hover:bg-[#02374D] hover:text-white"
+                >
+                  See more
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-24 flex flex-col items-center space-y-10 px-4 text-center text-[#1f1f1f]">
+          <h3 className="text-3xl font-normal uppercase tracking-[0.02em] text-black">Become an Interlude Provider</h3>
+          <p className="text-base leading-relaxed text-black">
+            Are you a hotel or luxury experience provider interested in partnering with us?
+          </p>
+          <Link
+            href="/providers"
+            className="inline-flex items-center justify-center text-[0.7rem] font-medium uppercase tracking-[0.28em] text-[#2b2b2b] underline decoration-[#2b2b2b]/60 underline-offset-[6px] transition hover:text-black"
           >
-            See More
-          </button>
+            Find out more
+          </Link>
         </div>
       </section>
     </section>

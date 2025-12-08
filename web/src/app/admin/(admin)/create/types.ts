@@ -31,6 +31,9 @@ export type ImageAsset = {
   url: string
   storagePath?: string | null
   file?: File | null
+  focalX?: number | null
+  focalY?: number | null
+  zoom?: number | null
 }
 
 export type VenueFormState = {

@@ -13,6 +13,9 @@ type SerializableImageInput = {
   name: string
   storagePath: string | null
   uploadKey?: string | null
+  focalX?: number | null
+  focalY?: number | null
+  zoom?: number | null
 }
 
 type SerializedVenueFormState = Omit<VenueFormState, "heroImage" | "galleryImages"> & {
@@ -68,6 +71,9 @@ const toImageAsset = (descriptor: SerializableImageInput | null): ImageAsset | n
     name: descriptor.name,
     url: descriptor.storagePath ? "" : "",
     storagePath: descriptor.storagePath ?? null,
+    focalX: descriptor.focalX ?? 50,
+    focalY: descriptor.focalY ?? 50,
+    zoom: descriptor.zoom ?? 100,
   }
 }
 
@@ -84,6 +90,9 @@ async function uploadImageIfNeeded(
       id: descriptor.id,
       name: descriptor.name,
       storagePath: descriptor.storagePath ?? null,
+      focalX: descriptor.focalX ?? 50,
+      focalY: descriptor.focalY ?? 50,
+      zoom: descriptor.zoom ?? 100,
     }
   }
   const file = formData.get(uploadKey)
@@ -92,6 +101,9 @@ async function uploadImageIfNeeded(
       id: descriptor.id,
       name: descriptor.name,
       storagePath: descriptor.storagePath ?? null,
+      focalX: descriptor.focalX ?? 50,
+      focalY: descriptor.focalY ?? 50,
+      zoom: descriptor.zoom ?? 100,
     }
   }
   const targetPath = `${buildPath(normalizeFileName(file.name))}-${Date.now()}`
@@ -110,6 +122,9 @@ async function uploadImageIfNeeded(
     id: descriptor.id,
     name: descriptor.name || file.name,
     storagePath: targetPath,
+    focalX: descriptor.focalX ?? 50,
+    focalY: descriptor.focalY ?? 50,
+    zoom: descriptor.zoom ?? 100,
   }
 }
 

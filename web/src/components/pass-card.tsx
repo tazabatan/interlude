@@ -23,6 +23,9 @@ type PassCardProps = {
   pricePrefix?: string
   showSubtitle?: boolean
   onClick?: (event: MouseEvent<HTMLAnchorElement>) => void
+  focalX?: number | null
+  focalY?: number | null
+  zoom?: number | null
 }
 
 const DEFAULT_LOCATION = 'ANGUILLA'
@@ -37,6 +40,7 @@ const STATUS_LABELS: Record<PassCardStatus, string> = {
   paused: 'Paused',
   draft: 'Draft',
 }
+const PASS_IMAGE_BASE_SCALE = 1
 
 export default function PassCard({
   passId,
@@ -54,6 +58,9 @@ export default function PassCard({
   pricePrefix = 'From ',
   showSubtitle = true,
   onClick,
+  focalX,
+  focalY,
+  zoom,
 }: PassCardProps) {
   const venueName = name ?? null
   const resolvedName = (name ?? 'Pass').toUpperCase()
@@ -76,6 +83,8 @@ export default function PassCard({
         imageUrl.startsWith('https://127.0.0.1') ||
         imageUrl.startsWith('https://localhost'))
   )
+  const objectPosition = `${focalX ?? 50}% ${focalY ?? 50}%`
+  const objectScale = (Math.max(50, Math.min(150, zoom ?? 100)) / 100) * PASS_IMAGE_BASE_SCALE
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (onClick) {
@@ -90,14 +99,15 @@ export default function PassCard({
         <Link
           href={href}
           onClick={handleClick}
-          className="relative block h-[22rem] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#02374D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F1E7]"
+          className="relative block h-[28rem] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#02374D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F1E7]"
         >
           <span className="sr-only">{srLabel}</span>
           <Image
             src={photoSrc}
             alt={name ?? 'Pass'}
             fill
-            className="object-cover object-center"
+            className="object-cover"
+            style={{ objectPosition, transformOrigin: objectPosition, transform: `scale(${objectScale})` }}
             sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
             unoptimized={needsUnoptimized}
           />

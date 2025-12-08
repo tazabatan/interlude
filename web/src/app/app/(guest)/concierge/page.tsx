@@ -14,10 +14,12 @@ export default async function ConciergePage() {
   const conciergePasses: ConciergePass[] = passes
     .map((pass) => {
       const presentationKind = derivePresentationKind(pass)
-      return { pass, presentationKind }
+      const heroMeta = (pass.profile as { heroImage?: { focalX?: number | null; focalY?: number | null; zoom?: number | null } } | null)
+        ?.heroImage
+      return { pass, presentationKind, heroMeta }
     })
     .filter(({ presentationKind }) => (presentationKind ? CONCIERGE_KINDS.includes(presentationKind) : false))
-    .map(({ pass, presentationKind }) => {
+    .map(({ pass, presentationKind, heroMeta }) => {
       const fallbackAmount = pass.min_spend_amount ?? pass.profile?.prepaidCreditAmountCents ?? null
       return {
         id: pass.id,
@@ -28,6 +30,9 @@ export default async function ConciergePage() {
         minSpendAmount: fallbackAmount,
         currency: pass.currency,
         imageUrl: getPassHeroImageUrl(pass),
+        focalX: heroMeta?.focalX ?? null,
+        focalY: heroMeta?.focalY ?? null,
+        zoom: heroMeta?.zoom ?? null,
       }
     })
 
