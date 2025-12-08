@@ -7,6 +7,7 @@ import type {
   HoldStatusEmailPayload,
   NoScanNoticeEmailPayload,
   BookingRequestedEmailPayload,
+  BookingRequestedVenueEmailPayload,
   BookingDeclinedEmailPayload,
   BookingCancelledEmailPayload,
   AccountWelcomeEmailPayload,
@@ -20,6 +21,7 @@ import { DayOfReminderEmail, dayOfReminderSubject } from '@/emails/templates/day
 import { HoldStatusEmail, holdStatusSubject } from '@/emails/templates/hold-status-email'
 import { NoScanNoticeEmail, noScanSubject } from '@/emails/templates/no-scan-notice-email'
 import { BookingRequestedEmail, bookingRequestedSubject } from '@/emails/templates/booking-requested-email'
+import { BookingRequestedVenueEmail, bookingRequestedVenueSubject } from '@/emails/templates/booking-requested-venue-email'
 import { BookingDeclinedEmail, bookingDeclinedSubject } from '@/emails/templates/booking-declined-email'
 import { BookingCancelledEmail, bookingCancelledSubject } from '@/emails/templates/booking-cancelled-email'
 import { AccountWelcomeEmail, accountWelcomeSubject } from '@/emails/templates/account-welcome-email'
@@ -64,6 +66,11 @@ const templateMap = {
     component: BookingDeclinedEmail,
     subject: bookingDeclinedSubject,
     tagValue: 'booking-declined',
+  },
+  'booking-requested-venue': {
+    component: BookingRequestedVenueEmail,
+    subject: bookingRequestedVenueSubject,
+    tagValue: 'booking-requested-venue',
   },
   'booking-cancelled': {
     component: BookingCancelledEmail,
@@ -123,6 +130,10 @@ export async function sendBookingRequestedEmail(payload: BookingRequestedEmailPa
 
 export async function sendBookingDeclinedEmail(payload: BookingDeclinedEmailPayload) {
   await sendTemplateEmail('booking-declined', payload)
+}
+
+export async function sendBookingRequestedVenueEmail(payload: BookingRequestedVenueEmailPayload) {
+  await sendTemplateEmail('booking-requested-venue', payload)
 }
 
 export async function sendBookingCancelledEmail(payload: BookingCancelledEmailPayload) {
@@ -196,4 +207,5 @@ export type {
   StatementReadyEmailPayload,
   PasswordChangedEmailPayload,
   PasswordResetEmailPayload,
+  BookingRequestedVenueEmailPayload,
 }

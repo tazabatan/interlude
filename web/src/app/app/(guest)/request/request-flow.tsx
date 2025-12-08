@@ -77,9 +77,7 @@ export default function RequestFlow({
   const trackerStep = step === "account" ? 1 : step === "confirm" ? 2 : 3
   const backHref = `/app/venue/${summary.passId}?date=${summary.dateIso}`
   const guestAgesMissing = !summary.guestAgesComplete
-  const contactMissing =
-    !isAuthenticated &&
-    (!contact.firstName.trim() || !contact.lastName.trim() || !contact.email.trim())
+  const contactMissing = !contact.firstName.trim() || !contact.lastName.trim() || !contact.email.trim() || !contact.phone.trim()
 
   const summaryList = useMemo(() => {
     const rows = [
@@ -116,6 +114,13 @@ export default function RequestFlow({
     event.preventDefault()
     setSubmitting(true)
     setError(null)
+    const contactInvalid = contactMissing
+    if (contactInvalid || guestAgesMissing) {
+      setSubmitting(false)
+      setError(contactInvalid ? "Please provide your name, email, and phone." : "Guest ages are required.")
+      window.scrollTo({ top: 0, behavior: "smooth" })
+      return
+    }
     try {
       const supabase = supabaseBrowser()
       const { data: bookingId, error: rpcError } = await supabase.rpc("fn_request_booking", {
@@ -124,14 +129,12 @@ export default function RequestFlow({
         _party_size: partySize,
         _arrival_time: arrivalTime,
         _guest_ages: guestAges.join(","),
-        _guest_contact: isAuthenticated
-          ? null
-          : {
-              first_name: contact.firstName,
-              last_name: contact.lastName,
-              email: contact.email,
-              phone: contact.phone,
-            },
+        _guest_contact: {
+          first_name: contact.firstName.trim(),
+          last_name: contact.lastName.trim(),
+          email: contact.email.trim(),
+          phone: contact.phone.trim(),
+        },
         _guest_notes: summary.guestNotes,
       })
       if (rpcError) {

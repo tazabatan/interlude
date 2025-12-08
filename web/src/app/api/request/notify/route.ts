@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getSupabaseServer } from '@/lib/supabase/server'
 import { notifyBookingRequested } from '@/lib/email/triggers'
+import { serviceRoleFetch } from '@/lib/supabase/service-role'
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,23 +11,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'bookingId required' }, { status: 400 })
     }
 
-    const supabase = await getSupabaseServer()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    }
-
-    const { data: booking } = await supabase
-      .from('bookings')
-      .select('id,user_id')
-      .eq('id', bookingId)
-      .maybeSingle()
-
-    if (!booking || booking.user_id !== user.id) {
-      return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+    // Verify booking exists via service role (works for both guests and signed-in users)
+    const verifyRes = await serviceRoleFetch(
+      `/rest/v1/bookings?id=eq.${bookingId}&select=id&limit=1`,
+      { method: "GET" }
+    )
+    const existing = (await verifyRes.json().catch(() => [])) as Array<{ id: string }>
+    if (!Array.isArray(existing) || existing.length === 0) {
+      return NextResponse.json({ error: "Booking not found" }, { status: 404 })
     }
 
     await notifyBookingRequested(bookingId)

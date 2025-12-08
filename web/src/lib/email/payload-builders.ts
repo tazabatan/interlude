@@ -6,6 +6,7 @@ import { buildScanUrl } from '@/lib/scan-link'
 import type {
   BookingApprovedEmailPayload,
   BookingRequestedEmailPayload,
+  BookingRequestedVenueEmailPayload,
   BookingDeclinedEmailPayload,
   BookingCancelledEmailPayload,
   DayOfReminderEmailPayload,
@@ -15,7 +16,12 @@ import type {
 
 type BookingEmailRow = {
   id: string
-  user_id: string
+  user_id: string | null
+  guest_first_name?: string | null
+  guest_last_name?: string | null
+  guest_email?: string | null
+  guest_phone?: string | null
+  venue_id?: string | null
   qr_jti: string | null
   hotel_code?: string | null
   date: string
@@ -33,6 +39,7 @@ type BookingEmailRow = {
     no_show_amount_per_person: number | null
     currency: string | null
     venue: {
+      id: string | null
       name: string | null
       tz: string | null
       profile?: Record<string, unknown> | null
@@ -48,6 +55,11 @@ type BookingEmailRow = {
 const BOOKING_EMAIL_SELECT = [
   'id',
   'user_id',
+  'guest_first_name',
+  'guest_last_name',
+  'guest_email',
+  'guest_phone',
+  'venue_id',
   'qr_jti',
   'hotel_code',
   'date',
@@ -57,7 +69,7 @@ const BOOKING_EMAIL_SELECT = [
   'hold_amount',
   'hold_currency',
   'status',
-  'pass:passes(kind,profile,display_price_text,min_spend_amount,no_show_amount_per_person,currency,venue:venues(name,tz,profile))',
+  'pass:passes(kind,profile,display_price_text,min_spend_amount,no_show_amount_per_person,currency,venue:venues(id,name,tz,profile))',
   'venue:venues(name,tz,profile)',
 ].join(',')
 
@@ -176,8 +188,13 @@ async function fetchBookingRow(bookingId: string) {
 async function buildBookingContext(bookingId: string): Promise<BookingEmailContext | null> {
   const booking = await fetchBookingRow(bookingId)
   if (!booking) return null
-  const guestProfile = await fetchGuestProfileById(booking.user_id)
-  if (!guestProfile?.email) return null
+  const guestProfile = booking.user_id ? await fetchGuestProfileById(booking.user_id) : null
+
+  const contactName = `${booking.guest_first_name ?? ''} ${booking.guest_last_name ?? ''}`.trim()
+  const guestName = contactName || guestProfile?.name || 'Guest'
+  const guestFirstName = contactName.split(' ')[0] || guestProfile?.firstName || guestName
+  const guestEmail = booking.guest_email ?? guestProfile?.email ?? null
+  if (!guestEmail) return null
 
   const siteUrl = getSiteUrl()
   const venueName = booking.pass?.venue?.name ?? booking.venue?.name ?? 'Your venue'
@@ -192,9 +209,9 @@ async function buildBookingContext(bookingId: string): Promise<BookingEmailConte
 
   return {
     booking,
-    guestName: guestProfile.name,
-    guestFirstName: guestProfile.firstName,
-    guestEmail: guestProfile.email,
+    guestName,
+    guestFirstName,
+    guestEmail,
     venueName,
     venueTz,
     passName,
@@ -337,6 +354,25 @@ export async function buildBookingRequestedEmailPayload(
     walletUrl: context.walletUrl,
     qrCodeValue: context.qrCodeValue,
     confirmationNumber,
+  }
+}
+
+export async function buildBookingRequestedVenueEmailPayload(
+  bookingId: string
+): Promise<Omit<BookingRequestedVenueEmailPayload, 'recipient'> | null> {
+  const context = await buildBookingContext(bookingId)
+  if (!context) return null
+
+  const siteUrl = getSiteUrl()
+  return {
+    venueName: context.venueName,
+    guestName: context.guestName,
+    guestEmail: context.guestEmail,
+    passName: context.passName,
+    partySize: context.booking.party_size,
+    arrivalDateDisplay: context.arrivalDateDisplay,
+    arrivalWindowDisplay: context.arrivalWindowDisplay,
+    reviewUrl: new URL(`/desk/requests/${context.booking.id}`, siteUrl).toString(),
   }
 }
 

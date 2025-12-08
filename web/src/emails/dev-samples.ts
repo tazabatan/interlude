@@ -5,6 +5,7 @@ import type {
   BookingDeclinedEmailPayload,
   BookingEmailCommon,
   BookingRequestedEmailPayload,
+  BookingRequestedVenueEmailPayload,
   DayOfReminderEmailPayload,
   HoldStatusEmailPayload,
   NoScanNoticeEmailPayload,
@@ -64,6 +65,21 @@ export function buildBookingRequestedSample(): BookingRequestedEmailPayload {
   return {
     ...baseBooking,
     confirmationNumber: 'REQ-12345',
+  }
+}
+
+export function buildBookingRequestedVenueSample(): BookingRequestedVenueEmailPayload {
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  return {
+    recipient: { email: 'desk@venue.local', name: 'Venue Desk' },
+    venueName: 'Belmond Cap Juluca',
+    guestName: 'Avery Guest',
+    guestEmail: 'guest@interlude.local',
+    passName: 'Beach Club Pass',
+    partySize: 2,
+    arrivalDateDisplay: '16 Nov · Sunday',
+    arrivalWindowDisplay: '10:00 – 12:00',
+    reviewUrl: `${base}/desk/requests/booking-dev-123`,
   }
 }
 

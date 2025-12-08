@@ -38,6 +38,18 @@ export type BookingRequestedEmailPayload = BookingEmailCommon & {
   confirmationNumber: string
 }
 
+export type BookingRequestedVenueEmailPayload = {
+  recipient: EmailRecipient
+  venueName: string
+  guestName: string
+  guestEmail?: string | null
+  passName: string
+  partySize: number
+  arrivalDateDisplay: string
+  arrivalWindowDisplay: string
+  reviewUrl: string
+}
+
 export type BookingDeclinedEmailPayload = BookingEmailCommon & {
   declineReason: string | null
 }

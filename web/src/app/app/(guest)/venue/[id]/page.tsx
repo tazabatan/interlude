@@ -77,6 +77,10 @@ export default async function VenuePassPage({ params }: VenuePassPageProps) {
         heroImageUrl.startsWith('https://127.0.0.1') ||
         heroImageUrl.startsWith('https://localhost'))
   )
+  const heroFocal = (pass.profile as { heroImage?: { focalX?: number | null; focalY?: number | null; zoom?: number | null } } | null)?.heroImage
+  const heroObjectPosition = `${heroFocal?.focalX ?? 50}% ${heroFocal?.focalY ?? 50}%`
+  const PASS_IMAGE_BASE_SCALE = 1
+  const heroScale = (Math.max(50, Math.min(150, heroFocal?.zoom ?? 100)) / 100) * PASS_IMAGE_BASE_SCALE
   const derivedKind = derivePresentationKind(pass)
   const passLabel = formatPassLabel(derivedKind ?? pass.kind, { detail: true })
   const simplePassLabel = formatPassLabel(derivedKind ?? pass.kind)
@@ -145,13 +149,14 @@ export default async function VenuePassPage({ params }: VenuePassPageProps) {
       </div>
 
       <div className="space-y-6">
-        <div className="relative h-96 w-full overflow-hidden rounded-[32px] border border-[#E8E4D7] bg-white shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)]">
+        <div className="relative w-full overflow-hidden rounded-[32px] border border-[#E8E4D7] bg-white shadow-[0px_4px_23.1px_6px_rgba(0,0,0,0.15)] aspect-[3/2] max-h-[42rem] min-h-[26rem]">
           <Image
             src={heroSrc}
             alt={pass.venue?.name ?? 'Pass'}
             fill
             priority
-            className="object-cover object-center"
+            className="object-cover"
+            style={{ objectPosition: heroObjectPosition, transformOrigin: heroObjectPosition, transform: `scale(${heroScale})` }}
             sizes="(min-width: 1280px) 60vw, 100vw"
             unoptimized={heroNeedsUnoptimized}
           />

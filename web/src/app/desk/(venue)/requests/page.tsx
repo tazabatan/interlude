@@ -49,7 +49,9 @@ function resolvePartySummary(booking: DeskBooking) {
 
 function mapBookingToPayload(booking: DeskBooking, profileMap: Record<string, GuestProfile>): RequestCardPayload {
   const guestProfile = profileMap[booking.user_id] ?? buildGuestProfile()
-  const firstName = guestProfile.firstName || guestProfile.name
+  const contactName = `${booking.guest_first_name ?? ''} ${booking.guest_last_name ?? ''}`.trim()
+  const resolvedName = contactName || guestProfile.name
+  const firstName = contactName.split(' ')[0] || guestProfile.firstName || resolvedName
   const guestLabel = `${firstName}'s group of ${booking.party_size}`
   const imageSrc = guestProfile.avatarUrl ?? '/icons/user-circle.svg'
   const imageUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal

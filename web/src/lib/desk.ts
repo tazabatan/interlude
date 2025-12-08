@@ -46,6 +46,9 @@ type PassProfileAsset = {
   name?: string | null
   storagePath?: string | null
   url?: string | null
+  focalX?: number | null
+  focalY?: number | null
+  zoom?: number | null
 }
 
 type PassProfilePayload = {
@@ -66,6 +69,10 @@ export type DeskBooking = {
   guest_adult_count: number | null
   guest_child_count: number | null
   guest_ages: number[] | null
+  guest_first_name?: string | null
+  guest_last_name?: string | null
+  guest_email?: string | null
+  guest_phone?: string | null
   status: string
   arrival_window_start: string | null
   arrival_window_end: string | null
@@ -132,6 +139,10 @@ const BOOKING_SELECT = [
   'guest_adult_count',
   'guest_child_count',
   'guest_ages',
+  'guest_first_name',
+  'guest_last_name',
+  'guest_email',
+  'guest_phone',
   'status',
   'arrival_window_start',
   'arrival_window_end',

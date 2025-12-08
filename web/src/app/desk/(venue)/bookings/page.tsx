@@ -83,7 +83,10 @@ function mapBooking(booking: DeskBooking, profileMap: Record<string, GuestProfil
   const canMarkArrived = isToday && booking.status === 'issued'
   const ctaLabel = isDeclined ? 'Undo Decline' : canMarkArrived ? 'Mark Arrived' : null
   const guestProfile = profileMap[booking.user_id] ?? buildGuestProfile()
-  const guestLabel = `${guestProfile.firstName || guestProfile.name}'s group of ${booking.party_size}`
+  const contactName = `${booking.guest_first_name ?? ''} ${booking.guest_last_name ?? ''}`.trim()
+  const resolvedName = contactName || guestProfile.name
+  const resolvedFirst = contactName.split(' ')[0] || guestProfile.firstName || resolvedName
+  const guestLabel = `${resolvedFirst}'s group of ${booking.party_size}`
   const imageSrc = guestProfile.avatarUrl ?? '/icons/user-circle.svg'
   const imageUnoptimized = Boolean(guestProfile.avatarUrl) && guestProfile.avatarIsLocal
   const paymentState = mapPaymentState(booking.hold_status)
@@ -116,9 +119,9 @@ function mapBooking(booking: DeskBooking, profileMap: Record<string, GuestProfil
     paymentStateLabel: paymentState.label,
     qrJti: booking.qr_jti,
     guestDetails: {
-      name: guestProfile.name,
-      email: guestProfile.email,
-      phone: guestProfile.phone,
+      name: resolvedName,
+      email: booking.guest_email ?? guestProfile.email,
+      phone: booking.guest_phone ?? guestProfile.phone,
       contactPreference: guestProfile.contactPreference,
       dietaryNotes: guestProfile.dietaryNotes,
       loungePreferences: guestProfile.loungePreferences,

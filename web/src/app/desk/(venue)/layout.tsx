@@ -7,12 +7,19 @@ import AccountMenu from "@/components/account-menu"
 import { serviceRoleFetch } from "@/lib/supabase/service-role"
 import Footer from "@/components/footer"
 import { montserrat } from "@/app/fonts"
+import { redirect } from "next/navigation"
 
 // Force all desk routes to be dynamic
 export const dynamic = 'force-dynamic'
 
 export default async function DeskLayout({ children }: { children: ReactNode }) {
   const { user, role } = await getUserRole()
+  const venueId = (user?.user_metadata?.venue_id as string | undefined) ?? null
+
+  if ((role === "venue_manager" || role === "venue_staff") && !venueId) {
+    redirect("/app/explore")
+  }
+
   const displayName =
     (user?.user_metadata?.full_name as string | undefined) ??
     (user?.user_metadata?.name as string | undefined) ??

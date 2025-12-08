@@ -5,6 +5,7 @@ import {
   buildHoldStatusSample,
   buildNoScanSample,
   buildBookingRequestedSample,
+  buildBookingRequestedVenueSample,
   buildBookingDeclinedSample,
   buildBookingCancelledSample,
   buildAccountWelcomeSample,
@@ -33,6 +34,12 @@ export const EMAIL_TEMPLATE_DEFINITIONS: EmailTemplateDefinition[] = [
     label: 'Booking Requested',
     templateId: 'booking-requested',
     buildPayload: buildBookingRequestedSample,
+  },
+  {
+    key: 'request_received_venue',
+    label: 'Booking Requested (Venue)',
+    templateId: 'booking-requested-venue',
+    buildPayload: buildBookingRequestedVenueSample,
   },
   {
     key: 'day_of_reminder',

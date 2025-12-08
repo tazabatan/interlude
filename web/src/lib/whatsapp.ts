@@ -15,7 +15,11 @@ type BookingNotificationRow = {
   arrival_window_start: string | null
   arrival_window_end: string | null
   party_size: number | null
-  user_id: string
+  user_id: string | null
+  guest_first_name?: string | null
+  guest_last_name?: string | null
+  guest_email?: string | null
+  guest_phone?: string | null
   venue_id: string | null
   pass: {
     kind: string | null
@@ -98,6 +102,10 @@ async function fetchBooking(bookingId: string): Promise<BookingNotificationRow |
     "arrival_window_end",
     "party_size",
     "user_id",
+    "guest_first_name",
+    "guest_last_name",
+    "guest_email",
+    "guest_phone",
     "venue_id",
     "pass:passes(kind,profile,venue:venues(id,name,tz))",
     "venue:venues(id,name,tz)",
@@ -209,8 +217,10 @@ export async function sendBookingRequestWhatsApp(bookingId: string) {
     const booking = await fetchBooking(bookingId)
     if (!booking) return
 
-    const guest = await fetchGuestProfileById(booking.user_id)
-    if (!guest) return
+    const guest = booking.user_id ? await fetchGuestProfileById(booking.user_id) : null
+    const fallbackName = `${booking.guest_first_name ?? ''} ${booking.guest_last_name ?? ''}`.trim()
+    const guestName = fallbackName || guest?.name || "Guest"
+    const guestEmail = booking.guest_email ?? guest?.email ?? null
 
     const venueName = booking.pass?.venue?.name ?? booking.venue?.name ?? "Your venue"
     const venueTz = booking.pass?.venue?.tz ?? booking.venue?.tz ?? "America/Anguilla"
@@ -218,7 +228,7 @@ export async function sendBookingRequestWhatsApp(bookingId: string) {
     const arrivalDateDisplay = formatArrivalDate(booking.date)
     const arrivalWindowDisplay = formatArrivalWindow(booking.arrival_window_start, booking.arrival_window_end, venueTz)
     const partyLabel = formatPartySize(booking.party_size)
-    const guestLabel = guest.email ? `${guest.name} (${guest.email})` : guest.name
+    const guestLabel = guestEmail ? `${guestName} (${guestEmail})` : guestName
     const siteUrl = getSiteUrl()
     const reviewUrl = `${siteUrl}/desk/requests/${booking.id}`
 
