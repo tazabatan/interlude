@@ -52,6 +52,9 @@ type PassProfilePayload = {
   heroImage?: PassProfileAsset | null
   economicsType?: string | null
   prepaidCreditAmountCents?: number | null
+  shortDescription?: string | null
+  presentationKind?: string | null
+  displayName?: string | null
 }
 
 export type DeskBooking = {
