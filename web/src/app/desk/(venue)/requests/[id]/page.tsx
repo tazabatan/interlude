@@ -201,8 +201,8 @@ export default async function DeskRequestDetailPage({
         {backLink.label}
       </Link>
 
-      <div className="grid gap-10 lg:grid-cols-[2fr,1fr]">
-        <section className="space-y-8 rounded-3xl bg-white/80 p-8 shadow-sm backdrop-blur">
+      <div className="grid gap-8 lg:grid-cols-[1.9fr,1.1fr]">
+        <section className="space-y-8 rounded-3xl bg-white/80 p-5 shadow-sm backdrop-blur md:p-7 lg:p-8">
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#6F716D]">Request</p>
             <h1 className="text-3xl font-semibold uppercase tracking-wide">{passVenue}</h1>
@@ -260,7 +260,7 @@ export default async function DeskRequestDetailPage({
             </div>
           )}
 
-          <div className="rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-6 text-[#02374D]">
+          <div className="rounded-[28px] border border-[#E8E4D7] bg-[#F9F6ED] p-5 text-[#02374D] sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="h-20 w-20 overflow-hidden rounded-full border-4 border-[#DBD8C9] bg-white shadow-[0px_10px_22px_rgba(0,0,0,0.12)]">
                 <Image
@@ -300,7 +300,7 @@ export default async function DeskRequestDetailPage({
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-7">
             {errorMessage && (
               <div className="rounded-3xl border border-[#F5B8B8] bg-[#FFF7F7] p-4 text-sm text-[#B4231F]">
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#B4231F]">Approval failed</p>
@@ -318,7 +318,7 @@ export default async function DeskRequestDetailPage({
 
             <form
               action={approveCustomAction}
-              className="space-y-3 rounded-3xl border border-[#E8E4D7] bg-white/70 p-4 text-xs uppercase tracking-[0.25em] text-[#6F716D]"
+              className="space-y-4 rounded-3xl border border-[#E8E4D7] bg-white/70 p-4 text-xs uppercase tracking-[0.25em] text-[#6F716D]"
             >
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#02374D]">Custom arrival window</p>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -351,18 +351,18 @@ export default async function DeskRequestDetailPage({
 
             <form
               action={declineAction}
-              className="space-y-3 rounded-3xl border border-[#F5B8B8] bg-white/70 p-4 text-xs uppercase tracking-[0.25em] text-[#B4231F]"
+              className="space-y-4 rounded-3xl border border-[#F5B8B8] bg-white/70 p-4 text-xs uppercase tracking-[0.25em] text-[#B4231F]"
             >
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#B4231F]">Decline request</p>
               <input type="hidden" name="bookingId" value={booking.id} />
               <label className="space-y-1 text-[#6F716D]">
                 <span>Reason (optional)</span>
                 <input
-                  name="reason"
-                  placeholder="e.g., capacity reached"
-                  className="w-full rounded border border-[#F5B8B8] px-3 py-2 text-sm text-[#B4231F]"
-                />
-              </label>
+                    name="reason"
+                    placeholder="e.g., capacity reached"
+                    className="w-full rounded border border-[#F5B8B8] px-3 py-2 text-sm text-[#B4231F]"
+                  />
+                </label>
               <button className="w-full rounded-full border border-[#B4231F] px-4 py-2 text-sm font-semibold uppercase tracking-wide text-[#B4231F] transition hover:bg-[#FCE1E1]">
                 Decline
               </button>
