@@ -108,21 +108,23 @@ export default function GuestHeader({ user, role, roleLabel, displayName, credit
                 </svg>
               </button>
             </div>
-            <nav className="flex flex-col gap-1 px-5 py-4">
-              {guestNavLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="rounded-2xl px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-[#02374D] hover:bg-[#F1EDE1]"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <div className="mt-2 h-px bg-[#E8E4D7]" />
+            <nav className="flex flex-col gap-6 px-5 py-6">
+              <div className="space-y-3">
+                {guestNavLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="block rounded-2xl px-2 py-1 text-2xl font-normal uppercase tracking-[0.08em] text-black transition hover:text-[#02374D]"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+              <div className="h-px bg-[#E8E4D7]" />
               <Link
                 href="/auth"
-                className="mt-2 rounded-2xl px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-[#02374D] hover:bg-[#F1EDE1]"
+                className="inline-flex items-center justify-center rounded-full bg-[#02374D] px-5 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#02486A]"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Sign in
