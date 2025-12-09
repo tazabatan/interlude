@@ -78,6 +78,7 @@ export default function RequestFlow({
   const backHref = `/app/venue/${summary.passId}?date=${summary.dateIso}`
   const guestAgesMissing = !summary.guestAgesComplete
   const contactMissing = !contact.firstName.trim() || !contact.lastName.trim() || !contact.email.trim() || !contact.phone.trim()
+  const contactMissingForConfirm = !isAuthenticated && contactMissing
 
   const summaryList = useMemo(() => {
     const rows = [
@@ -102,7 +103,7 @@ export default function RequestFlow({
   }, [summary])
 
   const startPaymentStep = () => {
-    if (guestAgesMissing || contactMissing) {
+    if (guestAgesMissing || contactMissingForConfirm) {
       window.scrollTo({ top: 0, behavior: "smooth" })
       return
     }
@@ -258,7 +259,7 @@ export default function RequestFlow({
             <button
               type="button"
               onClick={startPaymentStep}
-              disabled={guestAgesMissing || contactMissing}
+              disabled={guestAgesMissing || contactMissingForConfirm}
               className="self-start rounded-full bg-[#02374D] px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#02486A] disabled:cursor-not-allowed disabled:bg-[#6F716D]"
             >
               Confirm booking
@@ -268,7 +269,7 @@ export default function RequestFlow({
                 Add an age for each guest before confirming. Use the back arrow to edit your party details.
               </p>
             )}
-            {contactMissing && (
+            {contactMissingForConfirm && (
               <p className="text-sm text-[#B4231F]">Please add your name and email so the team can reach you.</p>
             )}
           </div>
@@ -277,7 +278,7 @@ export default function RequestFlow({
               summary={summary}
               primaryCtaLabel="Confirm booking"
               onPrimaryClick={startPaymentStep}
-              ctaDisabled={guestAgesMissing || contactMissing}
+              ctaDisabled={guestAgesMissing || contactMissingForConfirm}
             />
           </div>
         </section>

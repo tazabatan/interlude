@@ -104,6 +104,7 @@ type BuilderOverlayProps = {
   onClose: () => void
   onPublish: () => void
   formError: string | null
+  setFormError: (message: string | null) => void
   onFormInteraction: () => void
   isEditing: boolean
   isSubmitting: boolean
@@ -115,6 +116,7 @@ type PassBuilderOverlayProps = {
   onClose: () => void
   onPublish: () => void
   formError: string | null
+  setFormError: (message: string | null) => void
   onFormInteraction: () => void
   isEditing: boolean
   venueName: string
@@ -295,6 +297,8 @@ const centsToInputString = (value: number | null) => {
   return String(value / 100)
 }
 
+const SUPABASE_PUBLIC_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "")
+
 const fileToDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
@@ -302,6 +306,48 @@ const fileToDataUrl = (file: File) =>
     reader.onerror = () => reject(reader.error)
     reader.readAsDataURL(file)
   })
+
+const uploadImageAndGetPublicUrl = async (
+  file: File,
+  setError: (message: string | null) => void
+): Promise<{ path: string; url: string }> => {
+  try {
+    const presignRes = await fetch("/api/admin/uploads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileName: file.name }),
+    })
+    if (!presignRes.ok) {
+      const text = await presignRes.text().catch(() => "Upload failed")
+      throw new Error(text || "Upload failed")
+    }
+    const { uploadUrl, path } = (await presignRes.json()) as { uploadUrl?: string; path?: string }
+    if (!uploadUrl || !path) {
+      throw new Error("Upload URL missing")
+    }
+
+    const uploadRes = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+    })
+    if (!uploadRes.ok) {
+      throw new Error(`Upload failed (${uploadRes.status})`)
+    }
+
+    const publicUrl =
+      SUPABASE_PUBLIC_URL && path
+        ? `${SUPABASE_PUBLIC_URL}/storage/v1/object/public/venue-media/${path.replace(/^\/+/, "")}`
+        : ""
+
+    return { path, url: publicUrl }
+  } catch (error) {
+    console.error("Image upload failed", error)
+    const message = error instanceof Error ? error.message : "Upload failed. Try a smaller file."
+    setError(message)
+    throw error
+  }
+}
 
 type AdminVenueExperienceProps = {
   initialVenues: VenueRecord[]
@@ -723,6 +769,7 @@ export default function AdminVenueExperience({ initialVenues }: AdminVenueExperi
           onClose={closeBuilder}
           onPublish={handlePublish}
           formError={formError}
+          setFormError={setFormError}
           onFormInteraction={() => setFormError(null)}
           isEditing={Boolean(editingVenueId)}
           isSubmitting={isSavingVenue}
@@ -736,6 +783,7 @@ export default function AdminVenueExperience({ initialVenues }: AdminVenueExperi
           onClose={closePassBuilder}
           onPublish={handlePassPublish}
           formError={passFormError}
+          setFormError={setPassFormError}
           onFormInteraction={() => setPassFormError(null)}
           isEditing={Boolean(editingPassId)}
           venueName={activeVenue.displayName || "Venue"}
@@ -753,6 +801,7 @@ function VenueBuilderOverlay({
   onClose,
   onPublish,
   formError,
+  setFormError,
   onFormInteraction,
   isEditing,
   isSubmitting,
@@ -783,20 +832,27 @@ function VenueBuilderOverlay({
     const input = event.target
     const file = input.files?.[0]
     if (!file) return
-    const url = await fileToDataUrl(file)
-    onFormInteraction()
-    setFormState((prev) => ({
-      ...prev,
-      heroImage: {
-        id: createId(),
-        name: file.name,
-        url,
-        storagePath: null,
-        file,
-        focalX: 50,
-        focalY: 50,
-      },
-    }))
+    try {
+      const { path, url } = await uploadImageAndGetPublicUrl(file, setFormError)
+      const fallbackUrl = await fileToDataUrl(file)
+      onFormInteraction()
+      setFormState((prev) => ({
+        ...prev,
+        heroImage: {
+          id: createId(),
+          name: file.name,
+          url: url || fallbackUrl,
+          storagePath: path,
+          file: null,
+          focalX: 50,
+          focalY: 50,
+          zoom: 100,
+        },
+      }))
+      setFormError(null)
+    } catch {
+      // error already handled in upload helper
+    }
     input.value = ""
   }
 
@@ -804,20 +860,29 @@ function VenueBuilderOverlay({
     const input = event.target
     const files = Array.from(input.files ?? [])
     if (files.length === 0) return
-    const assets = await Promise.all(
-      files.map(async (file) => ({
-        id: createId(),
-        name: file.name,
-        url: await fileToDataUrl(file),
-        storagePath: null,
-        file,
+    try {
+      const assets = await Promise.all(
+        files.map(async (file) => {
+          const { path, url } = await uploadImageAndGetPublicUrl(file, setFormError)
+          const fallbackUrl = await fileToDataUrl(file)
+          return {
+            id: createId(),
+            name: file.name,
+            url: url || fallbackUrl,
+            storagePath: path,
+            file: null,
+          }
+        })
+      )
+      onFormInteraction()
+      setFormState((prev) => ({
+        ...prev,
+        galleryImages: [...prev.galleryImages, ...assets],
       }))
-    )
-    onFormInteraction()
-    setFormState((prev) => ({
-      ...prev,
-      galleryImages: [...prev.galleryImages, ...assets],
-    }))
+      setFormError(null)
+    } catch {
+      // errors are reported via setFormError
+    }
     input.value = ""
   }
 
@@ -1575,6 +1640,7 @@ function PassBuilderOverlay({
   onClose,
   onPublish,
   formError,
+  setFormError,
   onFormInteraction,
   isEditing,
   venueName,
@@ -1628,20 +1694,27 @@ function PassBuilderOverlay({
   const handleHeroImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-    const url = await fileToDataUrl(file)
-    onFormInteraction()
-    setFormState((prev) => ({
-      ...prev,
-      heroImage: {
-        id: createId(),
-        name: file.name,
-        url,
-        storagePath: null,
-        file,
-        focalX: 50,
-        focalY: 50,
-      },
-    }))
+    try {
+      const { path, url } = await uploadImageAndGetPublicUrl(file, setFormError)
+      const fallbackUrl = await fileToDataUrl(file)
+      onFormInteraction()
+      setFormState((prev) => ({
+        ...prev,
+        heroImage: {
+          id: createId(),
+          name: file.name,
+          url: url || fallbackUrl,
+          storagePath: path,
+          file: null,
+          focalX: 50,
+          focalY: 50,
+          zoom: 100,
+        },
+      }))
+      setFormError(null)
+    } catch {
+      // errors are surfaced via setFormError
+    }
     event.target.value = ""
   }
 

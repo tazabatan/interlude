@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { getPassHeroImageUrl } from '@/lib/desk'
-import { audienceFromRole, derivePresentationKind, fetchExplorePasses } from '@/lib/explore'
+import { audienceFromRole, derivePresentationKind, fetchExplorePasses, fetchPassPopularityCounts } from '@/lib/explore'
 import { getUserRole } from '@/lib/get-user-role'
 import { formatTimezoneLabel } from '@/lib/timezone'
 import ExploreClient, { type ExplorePass, type PopularPassGroup } from './explore-client'
@@ -12,7 +12,7 @@ export default async function ExplorePage() {
   const isGuestAudience = audience === 'guest'
 
   const passes = await fetchExplorePasses(audience)
-  const popularityRows: Array<{ pass_id: string | null; count: number | null }> = []
+  const popularityRows = await fetchPassPopularityCounts()
 
   const popularityMap = new Map<string, number>()
   popularityRows.forEach((row) => {
@@ -50,6 +50,16 @@ export default async function ExplorePage() {
       return a.originalIndex - b.originalIndex
     })
 
+  const ensureLagunaInThirdPosition = (list: PassWithMeta[]) => {
+    const lagunaIndex = list.findIndex((pass) => (pass.name ?? '').toLowerCase().includes('laguna'))
+    if (lagunaIndex === -1 || lagunaIndex === 2 || list.length < 3) return list
+
+    const reordered = [...list]
+    const [lagunaPass] = reordered.splice(lagunaIndex, 1)
+    reordered.splice(2, 0, lagunaPass)
+    return reordered
+  }
+
   const stripMeta = ({ popularityScore: _popularity, originalIndex: _index, ...pass }: PassWithMeta): ExplorePass => pass
 
   const popularGroups: PopularPassGroup[] = [
@@ -57,11 +67,13 @@ export default async function ExplorePage() {
       key: 'hotel',
       title: 'Hotel day access',
       description: 'Beach clubs, pool decks, and spa escapes.',
-      passes: sortByPopularity(
-        explorePasses.filter((pass) => {
-          const kind = pass.kind?.toUpperCase()
-          return kind !== 'BOAT_DAY' && kind !== 'PRIVATE_CHEF'
-        })
+      passes: ensureLagunaInThirdPosition(
+        sortByPopularity(
+          explorePasses.filter((pass) => {
+            const kind = pass.kind?.toUpperCase()
+            return kind !== 'BOAT_DAY' && kind !== 'PRIVATE_CHEF'
+          })
+        )
       )
         .slice(0, 3)
         .map(stripMeta),
