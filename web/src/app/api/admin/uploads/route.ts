@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     const admin = getSupabaseAdminClient()
     const path = `uploads/${randomUUID()}/${normalizeFileName(fileName)}`
-    const { data, error } = await admin.storage.from(STORAGE_BUCKET).createSignedUploadUrl(path, 300)
+    const { data, error } = await admin.storage.from(STORAGE_BUCKET).createSignedUploadUrl(path, { upsert: true })
 
     if (error || !data?.signedUrl) {
       return NextResponse.json({ error: error?.message ?? 'Failed to create upload URL' }, { status: 500 })
