@@ -120,7 +120,7 @@ export default async function SupportPage() {
           <div className="hidden w-full justify-center md:flex">{nav}</div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-8">
+      <main className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 md:px-8">
         <div className="space-y-10">
           <div className="space-y-4 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6F716D]">Interlude Support</p>
@@ -131,7 +131,7 @@ export default async function SupportPage() {
 
           <section className="rounded-[36px] border border-[#E8E4D7] bg-[#FBF7ED] p-6 shadow-[0px_20px_45px_rgba(0,0,0,0.15)] sm:p-8">
             <div className="grid gap-6 sm:grid-cols-2 sm:gap-8">
-              <div className="space-y-4 rounded-[28px] border border-[#ECE8DA] bg-white/60 p-6 backdrop-blur">
+              <div className="space-y-4 rounded-[28px] border border-[#ECE8DA] bg-white/60 p-6 backdrop-blur break-words">
                 <div className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6F716D]">Call us</div>
                 <p className="text-sm text-[#4F514D]">
                   Immediate help with an arrival, check-in, or anything unexpected.
@@ -144,7 +144,7 @@ export default async function SupportPage() {
                 </a>
               </div>
 
-              <div className="space-y-4 rounded-[28px] border border-[#ECE8DA] bg-white/60 p-6 backdrop-blur">
+              <div className="space-y-4 rounded-[28px] border border-[#ECE8DA] bg-white/60 p-6 backdrop-blur break-words">
                 <div className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6F716D]">Email concierge</div>
                 <p className="text-sm text-[#4F514D]">
                   Share itinerary details, post-visit notes, or anything that needs thoughtful follow-up.
