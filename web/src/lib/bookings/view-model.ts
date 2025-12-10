@@ -17,6 +17,7 @@ type PassLike = {
   venue?: {
     name?: string | null
     tz?: string | null
+    provider_type?: string | null
   } | null
 } | null
 
@@ -42,6 +43,7 @@ export type GuestBookingRow = {
     venue: {
       name: string | null
       tz: string | null
+      provider_type?: string | null
     } | null
   } | null
 }
@@ -55,11 +57,23 @@ type BaseDerivedFields = {
   hold_banner: string | null
 }
 
+function derivePassPresentationKind(pass: PassLike) {
+  if (!pass) return null
+  const providerType = pass.venue?.provider_type?.toLowerCase?.() ?? ''
+  if (providerType === 'boat_company') return 'BOAT_DAY'
+  if (providerType === 'private_chef') return 'PRIVATE_CHEF'
+
+  const profileKind = (pass.profile as { presentationKind?: string | null } | null)?.presentationKind
+  if (profileKind) return profileKind
+  return pass.kind ?? null
+}
+
 export type GuestBookingView = GuestBookingRow &
   BaseDerivedFields & {
     venue_name: string | null
     venue_tz: string | null
     pass_kind: string | null
+    pass_presentation_kind: string | null
     hero_image_url: string | null
     price_display: string
     pass_display_price_text: string | null
@@ -128,6 +142,7 @@ export function buildGuestBookingView(row: GuestBookingRow, passOverride?: PassL
   const hero_source = passOverride ?? row.pass ?? null
   const hero_image_url = getPassHeroImageUrl(hero_source ?? undefined)
   const pass_kind = passOverride?.kind ?? row.pass?.kind ?? null
+  const pass_presentation_kind = derivePassPresentationKind(passOverride ?? row.pass ?? null)
   const price_source = passOverride ?? row.pass ?? null
   const price_display = resolvePriceDisplay(
     pass_kind,
@@ -147,6 +162,7 @@ export function buildGuestBookingView(row: GuestBookingRow, passOverride?: PassL
     venue_name: venue_source?.venue?.name ?? null,
     venue_tz: venue_source?.venue?.tz ?? null,
     pass_kind,
+    pass_presentation_kind,
     hero_image_url,
     price_display,
     pass_display_price_text,

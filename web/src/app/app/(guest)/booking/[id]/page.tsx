@@ -76,7 +76,7 @@ export default async function BookingDetailPage({ params }: { params: Params }) 
   }))
 
   const finalStatus = FINAL_STATUS_LABEL[booking.status] ?? null
-  const passLabel = formatPassLabel(booking.pass_kind)
+  const passLabel = formatPassLabel(booking.pass_presentation_kind ?? booking.pass_kind)
   const isMinSpend = booking.pass_kind === 'MIN_SPEND'
   const formattedMinSpend = formatPassPrice(null, booking.pass_min_spend_amount ?? null, booking.pass_currency ?? null)
   const priceDisplay = isMinSpend

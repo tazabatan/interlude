@@ -161,7 +161,7 @@ function BookingCard({ booking }: { booking: GuestBookingView }) {
               {booking.venue_name ?? 'Venue TBD'}
             </div>
             <div className="text-sm text-[#31332f]">
-              {formatPassLabel(booking.pass_kind)} · Party {booking.party_size}
+              {formatPassLabel(booking.pass_presentation_kind ?? booking.pass_kind)} · Party {booking.party_size}
             </div>
             <div className="text-xs uppercase tracking-[0.2em] text-[#6F716D]">{booking.price_display}</div>
           </div>

@@ -61,10 +61,9 @@ export async function fetchExplorePasses(audience: ExploreAudience) {
 
 export async function fetchPassPopularityCounts(lookbackDays = 180) {
   try {
-    const select = 'select=pass_id,count:count()'
+    const select = 'select=pass_id'
     const statusFilter = `status=in.(${POPULARITY_STATUSES.join(',')})`
-
-    const queryParts = [select, statusFilter, 'order=count.desc.nullslast']
+    const queryParts = [select, statusFilter, 'pass_id=not.is.null', 'limit=5000', 'order=created_at.desc']
     if (Number.isFinite(lookbackDays) && lookbackDays > 0) {
       const cutoff = new Date()
       cutoff.setDate(cutoff.getDate() - lookbackDays)
@@ -72,9 +71,14 @@ export async function fetchPassPopularityCounts(lookbackDays = 180) {
     }
 
     const res = await serviceRoleFetch(`/rest/v1/bookings?${queryParts.join('&')}`)
-    type Row = { pass_id: string | null; count: number | null }
+    type Row = { pass_id: string | null }
     const rows = (await res.json()) as Row[]
-    return rows.filter((row) => Boolean(row.pass_id))
+    const counts = new Map<string, number>()
+    rows.forEach((row) => {
+      if (!row.pass_id) return
+      counts.set(row.pass_id, (counts.get(row.pass_id) ?? 0) + 1)
+    })
+    return Array.from(counts.entries()).map(([pass_id, count]) => ({ pass_id, count }))
   } catch (error) {
     console.warn('fetchPassPopularityCounts skipped; falling back to default ordering', error)
     return []

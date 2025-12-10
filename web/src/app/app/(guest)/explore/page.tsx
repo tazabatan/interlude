@@ -119,7 +119,7 @@ export default async function ExplorePage() {
             <div className="w-full max-w-5xl px-6 text-white sm:px-10">
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/80">Day access for the in-between</p>
               <h1 className="mt-5 text-4xl font-normal uppercase leading-tight tracking-[0.05em] text-white drop-shadow-[0_12px_30px_rgba(0,0,0,0.48)] sm:text-5xl">
-                Access the world&apos;s best hotels. No room required
+                Access the Caribbean&apos;s best hotels. No room required
               </h1>
               <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/90 drop-shadow-[0_8px_20px_rgba(0,0,0,0.35)]">
                 Book day access to private beaches, rooftop pools, and signature spa rituals for a{' '}
